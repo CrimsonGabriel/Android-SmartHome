@@ -1,0 +1,62 @@
+package com.example.bazunia;
+
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.content.Context;
+import android.os.Build;
+import androidx.core.app.NotificationCompat;
+import android.util.Log;
+
+public class NotificationHelper {
+
+    private static final String TAG = "NotificationHelper";
+    private static final String CHANNEL_ID = "AlertChannel";
+    private static final String CHANNEL_NAME = "Alerty Czujników";
+
+    private final Context context;
+    private final NotificationManager notificationManager;
+
+    public NotificationHelper(Context context) {
+        this.context = context;
+        // Wymaga getSystemService()
+        this.notificationManager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+        createNotificationChannel();
+    }
+
+    private void createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationChannel channel = new NotificationChannel(
+                    CHANNEL_ID,
+                    CHANNEL_NAME,
+                    NotificationManager.IMPORTANCE_HIGH
+            );
+            channel.setDescription("Powiadomienia o przekroczeniu progów czujników.");
+
+            if (notificationManager != null) {
+                notificationManager.createNotificationChannel(channel);
+            }
+        }
+    }
+
+    /**
+     * Wyświetla powiadomienie.
+     * @param title Tytuł powiadomienia
+     * @param message Treść powiadomienia
+     * @param notificationId Unikalny ID powiadomienia (np. ID czujnika)
+     */
+    public void showNotification(String title, String message, int notificationId) {
+
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(context, CHANNEL_ID)
+                .setSmallIcon(R.mipmap.ic_launcher) // Użyj ikony swojej aplikacji
+                .setContentTitle(title)
+                .setContentText(message)
+                .setStyle(new NotificationCompat.BigTextStyle().bigText(message))
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setAutoCancel(true);
+
+        if (notificationManager != null) {
+            notificationManager.notify(notificationId, builder.build());
+            Log.i(TAG, "Wyslano powiadomienie: " + title + " - " + message);
+        }
+    }
+}
