@@ -22,7 +22,7 @@ import java.util.List;
 import java.util.Locale;
 
 public class SensorDetailActivity extends AppCompatActivity {
-    // ... (deklaracje zmiennych bez zmian)
+
     private static final String TYPE_DOOR_CONTACT = "door_contact";
     private static final int HISTORY_LIMIT = 10;
     private TextView textSensorTitle, textSensorDetails, textThresholdMin, textThresholdMax;
@@ -47,7 +47,7 @@ public class SensorDetailActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
 
-        new ThemeManager(this).applyTheme();
+        new AppearanceManager(this).applyAppearance(this);
 
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_sensor_detail);
@@ -64,6 +64,16 @@ public class SensorDetailActivity extends AppCompatActivity {
         textThresholdMax = findViewById(R.id.textThresholdMax);
         thresholdContainer = findViewById(R.id.thresholdContainer);
         listSensorHistory = findViewById(R.id.listSensorHistory);
+
+        // PODŁĄCZENIE IKONY USTAWIEŃ (już to masz)
+        findViewById(R.id.btnSettings).setOnClickListener(v -> {
+            startActivity(new Intent(this, SettingsActivity.class));
+        });
+
+        // PODŁĄCZENIE IKONY POWROTU
+        findViewById(R.id.btnBackSensorDetail).setOnClickListener(v -> {
+            finish(); // Zamyka ekran szczegółów i wraca do listy
+        });
 
         Intent intent = getIntent();
         gatewayId = intent.getStringExtra("GATEWAY_ID");

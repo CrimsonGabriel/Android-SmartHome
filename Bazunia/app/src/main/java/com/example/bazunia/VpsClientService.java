@@ -97,7 +97,7 @@ public class VpsClientService extends Service {
         return new NotificationCompat.Builder(this, CHANNEL_ID)
                 .setContentTitle("Monitorowanie czujników")
                 .setContentText("Serwis aktywnie pobiera dane z VPS.")
-                .setSmallIcon(R.mipmap.ic_launcher)
+                .setSmallIcon(R.drawable.ic_notification_alert)
                 .setPriority(NotificationCompat.PRIORITY_LOW)
                 .setCategory(Notification.CATEGORY_SERVICE)
                 .build();

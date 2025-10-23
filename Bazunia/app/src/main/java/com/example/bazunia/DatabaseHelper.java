@@ -149,24 +149,52 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     }
 
     /**
-     * NOWA METODA: Pobiera unikalne, najnowsze dane ze wszystkich czujników, filtrując je.
-     * * @param filter Tekst użyty do filtrowania (np. po ID bramki lub ID czujnika).
+     * NOWA METODA: Pobiera unikalne, najnowsze dane, filtrując je według różnych kryteriów.
+     * @param filterQuery Wartość do filtrowania (np. "GW-01" lub "temp" lub "salon")
+     * @param filterMode Tryb filtrowania ("TYPE", "GATEWAY", "SEARCH")
      * @return Przefiltrowana lista najnowszych obiektów SensorModel.
      */
-    public List<SensorModel> getLatestSensorDataByFilter(String filter) {
-        // Pobierz wszystkie najnowsze dane (nie da się tego zrobić efektywnie w jednym zapytaniu SQLite)
+    public List<SensorModel> getLatestSensorDataByFilter(String filterQuery, String filterMode) {
+        // Pobierz wszystkie najnowsze dane (tak jak wcześniej)
         List<SensorModel> latestDataList = getLatestUniqueSensorData();
-        if (filter == null || filter.trim().isEmpty()) {
+
+        if (filterQuery == null || filterQuery.trim().isEmpty()) {
             return latestDataList; // Jeśli filtr jest pusty, zwróć wszystko
         }
 
         List<SensorModel> filteredList = new ArrayList<>();
-        String lowerCaseFilter = filter.toLowerCase();
+        String lowerCaseQuery = filterQuery.toLowerCase();
 
         for (SensorModel sensor : latestDataList) {
-            // Filtruj po ID bramki lub ID czujnika
-            if (sensor.gatewayId.toLowerCase().contains(lowerCaseFilter) ||
-                    sensor.sensorId.toLowerCase().contains(lowerCaseFilter)) {
+            boolean matches = false;
+
+            // Użyj "SEARCH" jako domyślnego trybu, jeśli tryb jest nieznany
+            String mode = (filterMode != null) ? filterMode : "SEARCH";
+
+            switch (mode) {
+                case "TYPE":
+                    // Dopasowanie ścisłe (z listy)
+                    if (sensor.type.equalsIgnoreCase(filterQuery)) {
+                        matches = true;
+                    }
+                    break;
+                case "GATEWAY":
+                    // Dopasowanie ścisłe (z listy)
+                    if (sensor.gatewayId.equalsIgnoreCase(filterQuery)) {
+                        matches = true;
+                    }
+                    break;
+                case "SEARCH":
+                default:
+                    // Dopasowanie luźne (wyszukiwanie tekstowe)
+                    if (sensor.gatewayId.toLowerCase().contains(lowerCaseQuery) ||
+                            sensor.sensorId.toLowerCase().contains(lowerCaseQuery)) {
+                        matches = true;
+                    }
+                    break;
+            }
+
+            if (matches) {
                 filteredList.add(sensor);
             }
         }
@@ -188,4 +216,58 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         String[] selectionArgs = new String[]{gateId, sensorId};
         return db.rawQuery(query, selectionArgs);
     }
+    public void clearAllSensorData() {
+        SQLiteDatabase db = this.getWritableDatabase();
+        try {
+            // Użyj prywatnej stałej TABLE_NAME, która jest widoczna w tej klasie
+            db.delete(TABLE_NAME, null, null);
+            Log.d("DB_CLEAR", "Wyczyszczono tabele: " + TABLE_NAME);
+        } catch (SQLException e) {
+            Log.e("DB_CLEAR", "Błąd czyszczenia tabeli: " + e.getMessage());
+        }
+    }
+    /**
+     * Pobiera listę unikalnych typów czujników z bazy.
+     */
+    public List<String> getUniqueSensorTypes() {
+        List<String> types = new ArrayList<>();
+        SQLiteDatabase db = this.getReadableDatabase();
+        Cursor cursor = null;
+        try {
+            cursor = db.rawQuery("SELECT DISTINCT " + COLUMN_TYPE + " FROM " + TABLE_NAME + " ORDER BY " + COLUMN_TYPE, null);
+            if (cursor != null && cursor.moveToFirst()) {
+                do {
+                    types.add(cursor.getString(0));
+                } while (cursor.moveToNext());
+            }
+        } catch (Exception e) {
+            Log.e("DB_QUERY", "Błąd pobierania typów: " + e.getMessage());
+        } finally {
+            if (cursor != null) cursor.close();
+        }
+        return types;
+    }
+
+    /**
+     * Pobiera listę unikalnych ID bramek z bazy.
+     */
+    public List<String> getUniqueGatewayIds() {
+        List<String> gateways = new ArrayList<>();
+        SQLiteDatabase db = this.getReadableDatabase();
+        Cursor cursor = null;
+        try {
+            cursor = db.rawQuery("SELECT DISTINCT " + COLUMN_GATE_ID + " FROM " + TABLE_NAME + " ORDER BY " + COLUMN_GATE_ID, null);
+            if (cursor != null && cursor.moveToFirst()) {
+                do {
+                    gateways.add(cursor.getString(0));
+                } while (cursor.moveToNext());
+            }
+        } catch (Exception e) {
+            Log.e("DB_QUERY", "Błąd pobierania bramek: " + e.getMessage());
+        } finally {
+            if (cursor != null) cursor.close();
+        }
+        return gateways;
+    }
+
 }

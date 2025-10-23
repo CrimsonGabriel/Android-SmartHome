@@ -39,6 +39,7 @@
             android:exported="false"
             android:foregroundServiceType="dataSync" /> <!-- DODANO: dataSync, ponieważ serwis synchronizuje dane z VPS -->
 
+        <activity android:name=".SettingsActivity" />
         <activity
             android:name=".LoginActivity"
             android:exported="true">
@@ -47,7 +48,6 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-
         <activity android:name=".MainActivity" />
         <activity android:name=".DataActivity" />
         <activity android:name=".SensorDetailActivity"

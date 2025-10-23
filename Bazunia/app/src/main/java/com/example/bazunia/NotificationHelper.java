@@ -47,7 +47,7 @@ public class NotificationHelper {
     public void showNotification(String title, String message, int notificationId) {
 
         NotificationCompat.Builder builder = new NotificationCompat.Builder(context, CHANNEL_ID)
-                .setSmallIcon(R.mipmap.ic_launcher) // Użyj ikony swojej aplikacji
+                .setSmallIcon(R.drawable.ic_notification_alert)
                 .setContentTitle(title)
                 .setContentText(message)
                 .setStyle(new NotificationCompat.BigTextStyle().bigText(message))

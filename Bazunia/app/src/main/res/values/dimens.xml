@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="textSizeSmall">14sp</dimen>
+    <dimen name="textSizeMedium">18sp</dimen>
+    <dimen name="textSizeLarge">22sp</dimen>
+
+    <dimen name="iconButtonSizeSmall">40dp</dimen>
+    <dimen name="iconButtonSizeMedium">48dp</dimen>
+    <dimen name="iconButtonSizeLarge">56dp</dimen>
+
+</resources>

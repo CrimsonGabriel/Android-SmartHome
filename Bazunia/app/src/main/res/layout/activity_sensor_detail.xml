@@ -1,78 +1,113 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:padding="16dp">
-
-    <TextView
-        android:id="@+id/textSensorTitle"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Dane dla czujnika: "
-        android:textSize="20sp"
-        android:textStyle="bold" />
+    android:fitsSystemWindows="true">
 
     <LinearLayout
-        android:id="@+id/thresholdContainer"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="match_parent"
         android:orientation="vertical"
-        android:layout_marginTop="16dp"
-        android:padding="8dp"
-        android:background="#f0f0f0">
+        android:padding="16dp">
 
         <TextView
-            android:id="@+id/textThresholdMin"
+            android:id="@+id/textSensorTitle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Próg minimalny:"
-            android:textSize="16sp" />
+            android:text="Dane dla czujnika: "
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android.layout_marginTop="56dp"/>
 
-        <SeekBar
-            android:id="@+id/seekBarThresholdMin"
+        <LinearLayout
+            android:id="@+id/thresholdContainer"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:max="100"
-            android:layout_marginTop="4dp" />
+            android:orientation="vertical"
+            android:layout_marginTop="16dp"
+            android:padding="8dp"
+            android:background="#f0f0f0">
+
+            <TextView
+                android:id="@+id/textThresholdMin"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Próg minimalny:"
+                android:textSize="16sp" />
+
+            <SeekBar
+                android:id="@+id/seekBarThresholdMin"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:max="100"
+                android:layout_marginTop="4dp" />
+
+            <TextView
+                android:id="@+id/textThresholdMax"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Próg maksymalny:"
+                android:layout_marginTop="12dp"
+                android:textSize="16sp" />
+
+            <SeekBar
+                android:id="@+id/seekBarThresholdMax"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:max="100"
+                android:layout_marginTop="4dp" />
+        </LinearLayout>
 
         <TextView
-            android:id="@+id/textThresholdMax"
+            android:id="@+id/textSensorDetails"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Próg maksymalny:"
-            android:layout_marginTop="12dp"
-            android:textSize="16sp" />
+            android:layout_marginTop="24dp"
+            android:text="Oczekiwanie na dane..."
+            android:textSize="18sp"
+            android:lineSpacingExtra="8dp" />
 
-        <SeekBar
-            android:id="@+id/seekBarThresholdMax"
+        <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:max="100"
-            android:layout_marginTop="4dp" />
+            android:layout_marginTop="24dp"
+            android:text="Historia odczytów (ostatnie 10):"
+            android:textStyle="bold" />
+
+        <ListView
+            android:id="@+id/listSensorHistory"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:layout_marginTop="8dp" />
+
     </LinearLayout>
 
-    <TextView
-        android:id="@+id/textSensorDetails"
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnBackSensorDetail"
+        style="?attr/myIconButtonTextStyle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="24dp"
-        android:text="Oczekiwanie na dane..."
-        android:textSize="18sp"
-        android:lineSpacingExtra="8dp" />
+        app:icon="@drawable/ic_arrow_back"
+        android:contentDescription="Powrót"
+        android:layout_gravity="top|start"
+        android:layout_margin="16dp"
+        app:tint="?attr/colorOnSurface"
+        android:elevation="4dp" />
 
-    <TextView
-        android:layout_width="match_parent"
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnSettings"
+        style="?attr/myIconButtonTextStyle"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="24dp"
-        android:text="Historia odczytów (ostatnie 10):"
-        android:textStyle="bold" />
+        app:icon="@drawable/ic_settings"
+        android:contentDescription="Ustawienia"
+        android:layout_gravity="top|end"
+        android:layout_margin="16dp"
+        app:tint="?attr/colorOnSurface"
+        android:elevation="4dp" />
 
-    <ListView
-        android:id="@+id/listSensorHistory"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:layout_marginTop="8dp" />
-
-</LinearLayout>
+</FrameLayout>

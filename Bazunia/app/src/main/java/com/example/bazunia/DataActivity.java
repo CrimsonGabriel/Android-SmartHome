@@ -7,19 +7,22 @@ import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
-import android.text.Editable;
-import android.text.TextWatcher;
 import android.view.View;
-import android.widget.Button;
+import android.widget.ArrayAdapter;
+import android.widget.Button; // Zostaje
 import android.widget.EditText;
+import com.google.android.material.button.MaterialButton; // DODAJ TEN IMPORT
 import android.widget.ExpandableListView;
+import android.widget.Spinner;
 import android.widget.Toast;
-
+import androidx.appcompat.app.AlertDialog;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
+
+import com.google.android.material.bottomsheet.BottomSheetDialog;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -36,22 +39,40 @@ public class DataActivity extends AppCompatActivity {
     private ExpandableListView expandableListView;
     private List<String> listBramek;
     private HashMap<String, List<SensorModel>> czujnikiMap;
-    private EditText editTextFilter; // Deklaracja pola filtra
     private DatabaseHelper dbHelper;
     private ExpandableListAdapter adapter;
     private BroadcastReceiver dataUpdateReceiver;
 
+    // NOWE POLA STANU FILTRA
+    private String currentFilterQuery = "";
+    private String currentFilterMode = "SEARCH"; // Domyślny tryb to wyszukiwanie
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+
+        new AppearanceManager(this).applyAppearance(this);
+
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_data); // Zakładam, że masz taki layout
 
         // Inicjalizacja komponentów
         expandableListView = findViewById(R.id.expandableListView);
-        editTextFilter = findViewById(R.id.editTextFilter); // Inicjalizacja widoku filtra
         dbHelper = new DatabaseHelper(this);
         listBramek = new ArrayList<>();
         czujnikiMap = new HashMap<>();
+
+        // NOWE PRZYCISKI (z pliku activity_data.xml)
+// Używamy MaterialButton, aby poprawnie je znaleźć
+        MaterialButton btnClearRefresh = findViewById(R.id.btnClearRefresh);
+        MaterialButton btnRefresh = findViewById(R.id.btnRefresh);
+        MaterialButton btnBack = findViewById(R.id.btnBack);
+        MaterialButton btnFilter = findViewById(R.id.btnFilter);
+        MaterialButton btnSettings = findViewById(R.id.btnSettings); // Znajdź też ten
+
+// PODŁĄCZENIE IKONY USTAWIEŃ
+        btnSettings.setOnClickListener(v -> {
+            startActivity(new Intent(this, SettingsActivity.class));
+        });
 
         // Adapter
         adapter = new ExpandableListAdapter(this, listBramek, czujnikiMap);
@@ -71,30 +92,45 @@ public class DataActivity extends AppCompatActivity {
             return true;
         });
 
-        // Ustawienie listenera dla pola filtra
-        editTextFilter.addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-                // Ignorujemy
-            }
+        // USUNIĘTO: Listener dla editTextFilter.addTextChangedListener
 
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
-                // Ignorujemy
-            }
-
-            @Override
-            public void afterTextChanged(Editable s) {
-                // Wywołaj ładowanie danych z użyciem aktualnego tekstu filtra
-                loadSensorData(s.toString());
-            }
+        // NOWE LISTENERY PRZYCISKÓW
+        btnBack.setOnClickListener(v -> {
+            finish(); // Zamyka aktualną aktywność (wraca do MainActivity)
         });
+
+        btnRefresh.setOnClickListener(v -> {
+            // Wymuś ręczne odświeżenie danych
+            loadSensorData(currentFilterQuery, currentFilterMode);
+            Toast.makeText(this, "Ręcznie odświeżono dane", Toast.LENGTH_SHORT).show();
+        });
+
+        btnClearRefresh.setOnClickListener(v -> {
+            // NOWY DIALOG POTWIERDZAJĄCY
+            new AlertDialog.Builder(DataActivity.this)
+                    .setTitle("Potwierdzenie")
+                    .setMessage("Czy na pewno chcesz trwale usunąć całą historię czujników? Tej operacji nie można cofnąć.")
+                    .setIcon(R.drawable.ic_delete) // Ikona kosza w tytule okna
+                    .setPositiveButton("Tak, usuń", (dialog, which) -> {
+                        // Logika, która była tu wcześniej, uruchomi się tylko po kliknięciu "Tak"
+                        dbHelper.clearAllSensorData();
+                        currentFilterQuery = ""; // Zresetuj filtry po wyczyszczeniu
+                        currentFilterMode = "SEARCH";
+                        loadSensorData(currentFilterQuery, currentFilterMode); // Załaduj ponownie (lista będzie pusta)
+                        Toast.makeText(this, "Baza danych wyczyszczona", Toast.LENGTH_SHORT).show();
+                    })
+                    .setNegativeButton("Anuluj", null) // Nic nie rób, zamknij okno
+                    .show();
+        });
+
+        btnFilter.setOnClickListener(v -> showFilterBottomSheet());
+
 
         // Inicjalizacja BroadcastReceivera
         setupBroadcastReceiver();
 
         // Pierwsze ładowanie danych
-        loadSensorData();
+        loadSensorData(currentFilterQuery, currentFilterMode);
 
         // Żądanie uprawnień do powiadomień
         requestNotificationPermission();
@@ -107,8 +143,8 @@ public class DataActivity extends AppCompatActivity {
         dataUpdateReceiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
-                // Załaduj dane ponownie, używając aktualnego filtra z pola tekstowego
-                loadSensorData(editTextFilter.getText().toString());
+                // Załaduj dane ponownie, używając aktualnego filtra
+                loadSensorData(currentFilterQuery, currentFilterMode);
             }
         };
     }
@@ -118,8 +154,8 @@ public class DataActivity extends AppCompatActivity {
         super.onResume();
         // Rejestracja odbiornika wznawiając aktywność
         LocalBroadcastManager.getInstance(this).registerReceiver(dataUpdateReceiver, new IntentFilter(Constants.ACTION_DATA_UPDATED));
-        // Ponowne załadowanie danych na wypadek, gdyby zostały zaktualizowane w innej aktywności (np. SensorDetailActivity)
-        loadSensorData(editTextFilter.getText().toString());
+        // Ponowne załadowanie danych na wypadek, gdyby zostały zaktualizowane w innej aktywności
+        loadSensorData(currentFilterQuery, currentFilterMode);
     }
 
     @Override
@@ -134,16 +170,17 @@ public class DataActivity extends AppCompatActivity {
      * Wersja bez filtra (domyślnie ładuje wszystko).
      */
     private void loadSensorData() {
-        loadSensorData("");
+        loadSensorData(currentFilterQuery, currentFilterMode);
     }
 
     /**
      * Ładuje najnowsze dane czujników z bazy, filtrując je, i aktualizuje widok ExpandableListView.
-     * * @param filter Tekst użyty do filtrowania
+     * @param filterQuery Tekst użyty do filtrowania
+     * @param filterMode Tryb filtrowania ("SEARCH", "TYPE", "GATEWAY")
      */
-    private void loadSensorData(String filter) {
+    private void loadSensorData(String filterQuery, String filterMode) {
         // Użyj nowo dodanej metody, która obsługuje filtrowanie w DatabaseHelper.
-        List<SensorModel> latestData = dbHelper.getLatestSensorDataByFilter(filter);
+        List<SensorModel> latestData = dbHelper.getLatestSensorDataByFilter(filterQuery, filterMode);
 
         // Czyszczenie i ponowne budowanie struktury danych dla adaptera
         listBramek.clear();
@@ -165,8 +202,81 @@ public class DataActivity extends AppCompatActivity {
         adapter.notifyDataSetChanged();
     }
 
+    /**
+     * Wyświetla panel (Bottom Sheet) z zaawansowanymi opcjami filtrowania.
+     */
+    private void showFilterBottomSheet() {
+        // Utwórz dialog na bazie naszego nowego layoutu
+        final BottomSheetDialog bottomSheetDialog = new BottomSheetDialog(this);
+        View bottomSheetView = getLayoutInflater().inflate(R.layout.bottom_sheet_filter, null);
+        bottomSheetDialog.setContentView(bottomSheetView);
 
-    // --- OBSŁUGA UPRAWNIEŃ (Dodano w poprzedniej odpowiedzi, aby uniknąć błędów kompilacji) ---
+        // Znajdź kontrolki wewnątrz panelu
+        EditText editSearch = bottomSheetView.findViewById(R.id.editSearchFilter);
+        Spinner spinnerType = bottomSheetView.findViewById(R.id.spinnerTypeFilter);
+        Spinner spinnerGateway = bottomSheetView.findViewById(R.id.spinnerGatewayFilter);
+        Button btnApply = bottomSheetView.findViewById(R.id.btnApplyFilter);
+        Button btnClear = bottomSheetView.findViewById(R.id.btnClearFilter);
+
+        // --- Logika wypełniania Spinnerów (Picklist) ---
+
+        // Wypełnij Spinner typów
+        List<String> sensorTypes = dbHelper.getUniqueSensorTypes();
+        sensorTypes.add(0, "Wszystkie typy"); // Dodaj opcję "Wszystkie"
+        ArrayAdapter<String> typeAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, sensorTypes);
+        spinnerType.setAdapter(typeAdapter);
+
+        // Wypełnij Spinner bramek
+        List<String> gatewayIds = dbHelper.getUniqueGatewayIds();
+        gatewayIds.add(0, "Wszystkie bramki"); // Dodaj opcję "Wszystkie"
+        ArrayAdapter<String> gatewayAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, gatewayIds);
+        spinnerGateway.setAdapter(gatewayAdapter);
+
+        // --- Ustawienie przycisku Wyczyść ---
+        btnClear.setOnClickListener(v -> {
+            currentFilterQuery = "";
+            currentFilterMode = "SEARCH"; // Resetuj do domyślnego trybu
+            loadSensorData(currentFilterQuery, currentFilterMode);
+            bottomSheetDialog.dismiss();
+        });
+
+        // --- Ustawienie przycisku Zastosuj ---
+        btnApply.setOnClickListener(v -> {
+            // Logika wyboru filtra (złożona, ale daje priorytet)
+            // 1. Sprawdź wyszukiwanie tekstowe
+            String searchQuery = editSearch.getText().toString();
+            // 2. Sprawdź spinner typów
+            String typeQuery = (spinnerType.getSelectedItemPosition() > 0) ? spinnerType.getSelectedItem().toString() : "";
+            // 3. Sprawdź spinner bramek
+            String gatewayQuery = (spinnerGateway.getSelectedItemPosition() > 0) ? spinnerGateway.getSelectedItem().toString() : "";
+
+            // Ustal priorytet: Wyszukiwarka > Typ > Bramka
+            if (!searchQuery.isEmpty()) {
+                currentFilterQuery = searchQuery;
+                currentFilterMode = "SEARCH";
+            } else if (!typeQuery.isEmpty()) {
+                currentFilterQuery = typeQuery;
+                currentFilterMode = "TYPE";
+            } else if (!gatewayQuery.isEmpty()) {
+                currentFilterQuery = gatewayQuery;
+                currentFilterMode = "GATEWAY";
+            } else {
+                // Jeśli nic nie wybrano, ale kliknięto "Zastosuj" (traktuj jak wyczyszczenie)
+                currentFilterQuery = "";
+                currentFilterMode = "SEARCH";
+            }
+
+            // Załaduj dane z nowymi filtrami
+            loadSensorData(currentFilterQuery, currentFilterMode);
+            bottomSheetDialog.dismiss();
+        });
+
+        // Pokaż panel
+        bottomSheetDialog.show();
+    }
+
+
+    // --- OBSŁUGA UPRAWNIEŃ (Bez zmian) ---
 
     /**
      * Wymagane na Android 13+ (API 33) do wyświetlania powiadomień.

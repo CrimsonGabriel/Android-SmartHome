@@ -1,31 +1,46 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:padding="16dp">
+    android:fitsSystemWindows="true"
+    tools:context=".MainActivity">
 
-    <TextView
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnSettings"
+        style="?attr/myIconButtonTextStyle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Panel Główny"
-        android:textAppearance="@style/TextAppearance.Material3.DisplaySmall" />
+        app:icon="@drawable/ic_settings"
+        android:contentDescription="Ustawienia"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_margin="16dp"
+        app:tint="?attr/colorOnSurface"
+        android:elevation="4dp" />
 
-    <TextView
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnLogout"
+        style="?attr/myIconButtonTextStyle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="24dp"
-        android:text="Witaj w systemie monitorowania czujników."
-        android:textAppearance="@style/TextAppearance.Material3.BodyLarge"
-        android:textColor="?attr/colorOnSurfaceVariant" />
+        app:icon="@drawable/ic_logout"
+        android:contentDescription="Wyloguj"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        android:layout_margin="16dp"
+        app:tint="?attr/colorOnSurface"
+        android:elevation="4dp" />
 
-    <com.google.android.material.card.MaterialCardView
+    <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        app:cardCornerRadius="16dp"
-        app:strokeWidth="1dp"
-        app:strokeColor="?attr/colorSurfaceVariant">
+        android:layout_height="match_parent"
+        android:fillViewport="true"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        android:layout_marginTop="64dp">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -33,46 +48,81 @@
             android:orientation="vertical"
             android:padding="16dp">
 
-            <ImageView
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:src="@drawable/ic_gateway"
-                app:tint="?attr/colorPrimary"/>
-
-            <TextView
-                android:layout_width="wrap_content"
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardAlerts"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:text="Zarządzaj czujnikami"
-                android:textAppearance="@style/TextAppearance.Material3.TitleLarge" />
+                app:cardCornerRadius="16dp"
+                app:cardElevation="4dp"
+                app:cardBackgroundColor="@android:color/holo_red_light"
+                android:visibility="gone"
+                tools:visibility="visible"
+                android:layout_marginBottom="16dp">
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp"
-                android:text="Przeglądaj listę czujników, historię odczytów i ustawiaj progi alarmowe."
-                android:textAppearance="@style/TextAppearance.Material3.BodyMedium" />
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:padding="16dp"
+                    android:gravity="center_vertical">
 
-            <Button
-                android:id="@+id/btnView"
-                android:layout_width="wrap_content"
+                    <ImageView
+                        android:layout_width="32dp"
+                        android:layout_height="32dp"
+                        android:src="@drawable/ic_notification_alert"
+                        app:tint="@android:color/white"/>
+
+                    <TextView
+                        android:id="@+id/textAlertSummary"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="16dp"
+                        tools:text="Uwaga! 2 czujniki są w stanie alarmu."
+                        android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
+                        android:textColor="@android:color/white"/>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardAllSensors"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Zobacz dane" />
+                app:cardCornerRadius="16dp"
+                app:strokeWidth="1dp"
+                app:cardElevation="2dp"
+                android:clickable="true"
+                android:focusable="true"
+                app:strokeColor="?attr/colorSurfaceVariant">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <ImageView
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:src="@drawable/ic_gateway"
+                        app:tint="?attr/colorPrimary"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="16dp"
+                        android:text="Wszystkie czujniki"
+                        android:textAppearance="@style/TextAppearance.Material3.TitleLarge" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="16dp"
+                        android:text="Przeglądaj listę czujników, historię i ustawiaj progi."
+                        android:textAppearance="@style/TextAppearance.Material3.BodyMedium" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
 
         </LinearLayout>
-    </com.google.android.material.card.MaterialCardView>
+    </androidx.core.widget.NestedScrollView>
 
-    <Space
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"/>
-
-    <com.google.android.material.materialswitch.MaterialSwitch
-        android:id="@+id/switchTheme"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center_horizontal"
-        android:text="Tryb Ciemny"
-        android:textSize="16sp" />
-
-</LinearLayout>
+</androidx.constraintlayout.widget.ConstraintLayout>
