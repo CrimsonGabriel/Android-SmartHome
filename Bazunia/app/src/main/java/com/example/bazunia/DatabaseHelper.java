@@ -68,8 +68,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             }
         } catch (SQLException e) {
             Log.e("DB_INSERT", "SQLException podczas dodawania danych: " + e.getMessage());
-        } finally {
-            // Nie zamykamy bazy tutaj, bo jest ona zarządzana przez SQLiteOpenHelper.
         }
     }
 
@@ -80,18 +78,14 @@ public class DatabaseHelper extends SQLiteOpenHelper {
      */
     public SensorModel getLatestSensorData(String gateId, String sensorId) {
         SQLiteDatabase db = this.getReadableDatabase();
-        Cursor cursor = null;
         SensorModel latestModel = null;
+        String query = "SELECT * FROM " + TABLE_NAME +
+                " WHERE " + COLUMN_GATE_ID + " = ? AND " + COLUMN_SENSOR_ID + " = ? " +
+                " ORDER BY " + COLUMN_TIMESTAMP + " DESC " +
+                " LIMIT 1";
 
-        try {
-            String query = "SELECT * FROM " + TABLE_NAME +
-                    " WHERE " + COLUMN_GATE_ID + " = ? AND " + COLUMN_SENSOR_ID + " = ? " +
-                    " ORDER BY " + COLUMN_TIMESTAMP + " DESC " +
-                    " LIMIT 1";
-
-            cursor = db.rawQuery(query, new String[]{gateId, sensorId});
-
-            if (cursor != null && cursor.moveToFirst()) {
+        try (Cursor cursor = db.rawQuery(query, new String[]{gateId, sensorId})) {
+            if (cursor.moveToFirst()) {
                 String gatewayId = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_GATE_ID));
                 String sId = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_SENSOR_ID));
                 String type = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_TYPE));
@@ -100,13 +94,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
                 latestModel = new SensorModel(gatewayId, sId, type, value, timestamp);
             }
-
         } catch (Exception e) {
             Log.e("DB_QUERY_ERROR", "Błąd pobierania najnowszych danych: " + e.getMessage());
-        } finally {
-            if (cursor != null) {
-                cursor.close();
-            }
         }
         return latestModel;
     }
@@ -117,14 +106,10 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     public List<SensorModel> getLatestUniqueSensorData() {
         List<SensorModel> latestDataList = new ArrayList<>();
         SQLiteDatabase db = this.getReadableDatabase();
-        Cursor uniqueSensorsCursor = null;
+        String distinctQuery = "SELECT DISTINCT " + COLUMN_GATE_ID + ", " + COLUMN_SENSOR_ID + " FROM " + TABLE_NAME;
 
-        try {
-            // 1. Znajdź wszystkie unikalne pary gate_id i sensor_id
-            String distinctQuery = "SELECT DISTINCT " + COLUMN_GATE_ID + ", " + COLUMN_SENSOR_ID + " FROM " + TABLE_NAME;
-            uniqueSensorsCursor = db.rawQuery(distinctQuery, null);
-
-            if (uniqueSensorsCursor != null && uniqueSensorsCursor.moveToFirst()) {
+        try (Cursor uniqueSensorsCursor = db.rawQuery(distinctQuery, null)) {
+            if (uniqueSensorsCursor.moveToFirst()) {
                 do {
                     String gateId = uniqueSensorsCursor.getString(uniqueSensorsCursor.getColumnIndexOrThrow(COLUMN_GATE_ID));
                     String sensorId = uniqueSensorsCursor.getString(uniqueSensorsCursor.getColumnIndexOrThrow(COLUMN_SENSOR_ID));
@@ -136,13 +121,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                     }
                 } while (uniqueSensorsCursor.moveToNext());
             }
-
         } catch (Exception e) {
             Log.e("DB_FILTER_ERROR", "Błąd filtrowania danych: " + e.getMessage());
-        } finally {
-            if (uniqueSensorsCursor != null) {
-                uniqueSensorsCursor.close();
-            }
         }
 
         return latestDataList;
@@ -232,18 +212,15 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     public List<String> getUniqueSensorTypes() {
         List<String> types = new ArrayList<>();
         SQLiteDatabase db = this.getReadableDatabase();
-        Cursor cursor = null;
-        try {
-            cursor = db.rawQuery("SELECT DISTINCT " + COLUMN_TYPE + " FROM " + TABLE_NAME + " ORDER BY " + COLUMN_TYPE, null);
-            if (cursor != null && cursor.moveToFirst()) {
+        String query = "SELECT DISTINCT " + COLUMN_TYPE + " FROM " + TABLE_NAME + " ORDER BY " + COLUMN_TYPE;
+        try (Cursor cursor = db.rawQuery(query, null)) {
+            if (cursor.moveToFirst()) {
                 do {
                     types.add(cursor.getString(0));
                 } while (cursor.moveToNext());
             }
         } catch (Exception e) {
             Log.e("DB_QUERY", "Błąd pobierania typów: " + e.getMessage());
-        } finally {
-            if (cursor != null) cursor.close();
         }
         return types;
     }
@@ -254,18 +231,15 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     public List<String> getUniqueGatewayIds() {
         List<String> gateways = new ArrayList<>();
         SQLiteDatabase db = this.getReadableDatabase();
-        Cursor cursor = null;
-        try {
-            cursor = db.rawQuery("SELECT DISTINCT " + COLUMN_GATE_ID + " FROM " + TABLE_NAME + " ORDER BY " + COLUMN_GATE_ID, null);
-            if (cursor != null && cursor.moveToFirst()) {
+        String query = "SELECT DISTINCT " + COLUMN_GATE_ID + " FROM " + TABLE_NAME + " ORDER BY " + COLUMN_GATE_ID;
+        try (Cursor cursor = db.rawQuery(query, null)) {
+            if (cursor.moveToFirst()) {
                 do {
                     gateways.add(cursor.getString(0));
                 } while (cursor.moveToNext());
             }
         } catch (Exception e) {
             Log.e("DB_QUERY", "Błąd pobierania bramek: " + e.getMessage());
-        } finally {
-            if (cursor != null) cursor.close();
         }
         return gateways;
     }

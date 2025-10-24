@@ -5,7 +5,11 @@
     <dimen name="textSizeLarge">22sp</dimen>
 
     <dimen name="iconButtonSizeSmall">40dp</dimen>
-    <dimen name="iconButtonSizeMedium">48dp</dimen>
-    <dimen name="iconButtonSizeLarge">56dp</dimen>
+    <dimen name="iconButtonSizeMedium">56dp</dimen>
+    <dimen name="iconButtonSizeLarge">72dp</dimen>
 
+    <!-- NOWE WYMIARY DLA IKON WEWNĄTRZ PRZYCISKÓW -->
+    <dimen name="icon_size_small">20dp</dimen>
+    <dimen name="icon_size_medium">28dp</dimen>
+    <dimen name="icon_size_large">36dp</dimen>
 </resources>

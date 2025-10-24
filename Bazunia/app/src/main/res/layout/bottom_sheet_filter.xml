@@ -10,14 +10,14 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Opcje Filtrowania"
+        android:text="@string/filter_options_title"
         android:textAppearance="@style/TextAppearance.Material3.TitleLarge"
         android:layout_marginBottom="16dp"/>
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Wyszukaj po ID (czujnika lub bramki)"
+        android:text="@string/search_by_id_label"
         android:textAppearance="@style/TextAppearance.Material3.LabelLarge"/>
 
     <com.google.android.material.textfield.TextInputLayout
@@ -31,14 +31,14 @@
             android:id="@+id/editSearchFilter"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="np. 'salon' lub 'GW-01'"
+            android:hint="@string/search_by_id_hint"
             android:inputType="text" />
     </com.google.android.material.textfield.TextInputLayout>
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Filtruj po typie czujnika"
+        android:text="@string/filter_by_type_label"
         android:textAppearance="@style/TextAppearance.Material3.LabelLarge"
         android:layout_marginTop="16dp"/>
 
@@ -51,7 +51,7 @@
         android:background="@drawable/spinner_background" /> <TextView
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
-    android:text="Filtruj po bramce"
+    android:text="@string/filter_by_gateway_label"
     android:textAppearance="@style/TextAppearance.Material3.LabelLarge"
     android:layout_marginTop="16dp"/>
 
@@ -75,14 +75,15 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             style="@style/Widget.Material3.Button.TextButton"
-            android:text="Wyczyść filtry"
+            android:text="@string/clear_filters_button"
             android:layout_marginEnd="8dp"/>
 
         <Button
             android:id="@+id/btnApplyFilter"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Zastosuj"/>
+            style="@style/Widget.Material3.Button.TextButton"
+            android:text="@string/apply_button"/>
     </LinearLayout>
 
 </LinearLayout>

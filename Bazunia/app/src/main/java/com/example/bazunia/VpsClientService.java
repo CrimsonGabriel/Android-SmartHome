@@ -4,12 +4,11 @@ import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.Service;
-import android.content.Context;
 import android.content.Intent;
-import android.os.Build;
 import android.os.IBinder;
 import android.util.Log;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
@@ -19,8 +18,6 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -74,7 +71,7 @@ public class VpsClientService extends Service {
         registerAndroidIp();
 
         // 2. Cykliczne pobieranie danych (Polling)
-        executorService.scheduleAtFixedRate(this::fetchSensorData, 0, POLLING_INTERVAL_SECONDS, TimeUnit.SECONDS);
+        executorService.scheduleWithFixedDelay(this::fetchSensorData, 0, POLLING_INTERVAL_SECONDS, TimeUnit.SECONDS);
     }
 
     /**
@@ -82,16 +79,14 @@ public class VpsClientService extends Service {
      */
     private Notification createNotification() {
         // Wymagane utworzenie kanału powiadomień dla Androida 8.0+ (Oreo)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            NotificationChannel channel = new NotificationChannel(
-                    CHANNEL_ID,
-                    "Serwis Klienta VPS",
-                    NotificationManager.IMPORTANCE_LOW // Niska ważność, ponieważ to tło
-            );
-            NotificationManager manager = getSystemService(NotificationManager.class);
-            if (manager != null) {
-                manager.createNotificationChannel(channel);
-            }
+        NotificationChannel channel = new NotificationChannel(
+                CHANNEL_ID,
+                "Serwis Klienta VPS",
+                NotificationManager.IMPORTANCE_LOW // Niska ważność, ponieważ to tło
+        );
+        NotificationManager manager = getSystemService(NotificationManager.class);
+        if (manager != null) {
+            manager.createNotificationChannel(channel);
         }
 
         return new NotificationCompat.Builder(this, CHANNEL_ID)
@@ -116,12 +111,12 @@ public class VpsClientService extends Service {
 
         httpClient.newCall(request).enqueue(new Callback() {
             @Override
-            public void onFailure(Call call, IOException e) {
+            public void onFailure(@NonNull Call call, @NonNull IOException e) {
                 Log.e(TAG, "BLAD POBIERANIA danych z VPS: " + e.getMessage());
             }
 
             @Override
-            public void onResponse(Call call, Response response) throws IOException {
+            public void onResponse(@NonNull Call call, @NonNull Response response) {
                 try (Response resp = response) {
                     if (resp.isSuccessful() && resp.body() != null) {
                         String jsonResponse = resp.body().string();
@@ -152,8 +147,6 @@ public class VpsClientService extends Service {
                 return;
             }
 
-            List<SensorModel> latestSensorData = new ArrayList<>();
-
             for (int i = 0; i < jsonArray.length(); i++) {
                 JSONObject sensorJson = jsonArray.getJSONObject(i);
 
@@ -166,7 +159,6 @@ public class VpsClientService extends Service {
 
                 // UWAGA: Konstruktor SensorModel używa camelCase, co jest poprawne.
                 SensorModel sensor = new SensorModel(gatewayId, sensorId, type, value, timestamp);
-                latestSensorData.add(sensor);
 
                 // 1. Zapis do bazy danych (poprawiony w poprzednim kroku, akceptuje SensorModel)
                 dbHelper.addSensorData(sensor);
@@ -267,11 +259,11 @@ public class VpsClientService extends Service {
                 .build();
 
         httpClient.newCall(request).enqueue(new Callback() {
-            @Override public void onFailure(Call call, IOException e) {
+            @Override public void onFailure(@NonNull Call call, @NonNull IOException e) {
                 Log.e(TAG, "BLAD POST rejestracji do VPS: " + e.getMessage());
             }
 
-            @Override public void onResponse(Call call, Response response) throws IOException {
+            @Override public void onResponse(@NonNull Call call, @NonNull Response response) {
                 if (response.isSuccessful()) {
                     Log.i(TAG, "SUKCES: IP Androida zarejestrowane: " + Constants.ANDROID_LISTEN_PORT);
                 } else {

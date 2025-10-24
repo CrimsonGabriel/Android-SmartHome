@@ -7,6 +7,8 @@ import android.content.IntentFilter;
 import android.database.Cursor;
 import android.graphics.Color;
 import android.os.Bundle;
+import android.util.Log;
+import android.util.TypedValue;
 import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.LinearLayout;
@@ -15,6 +17,7 @@ import android.widget.SeekBar;
 import android.widget.TextView;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
+import com.google.android.material.button.MaterialButton;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -23,9 +26,8 @@ import java.util.Locale;
 
 public class SensorDetailActivity extends AppCompatActivity {
 
-    private static final String TYPE_DOOR_CONTACT = "door_contact";
     private static final int HISTORY_LIMIT = 10;
-    private TextView textSensorTitle, textSensorDetails, textThresholdMin, textThresholdMax;
+    private TextView textSensorDetails, textThresholdMin, textThresholdMax;
     private SeekBar seekBarThresholdMin, seekBarThresholdMax;
     private LinearLayout thresholdContainer;
     private ListView listSensorHistory;
@@ -33,12 +35,14 @@ public class SensorDetailActivity extends AppCompatActivity {
     private String gatewayId, sensorId, currentSensorType = "";
     private ThresholdManager thresholdManager;
 
-    // NOWOŚĆ: BroadcastReceiver do odbierania sygnałów z serwisu
+    private AppearanceManager appearanceManager;
+    private String currentTextScale;
+    private String currentButtonScale;
+
     private final BroadcastReceiver dataUpdateReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             if (Constants.ACTION_DATA_UPDATED.equals(intent.getAction())) {
-                // Po prostu odśwież widok z najnowszych danych w bazie
                 loadLatestDataAndHistory();
             }
         }
@@ -46,8 +50,10 @@ public class SensorDetailActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-
-        new AppearanceManager(this).applyAppearance(this);
+        appearanceManager = new AppearanceManager(this);
+        currentTextScale = appearanceManager.getTextScale();
+        currentButtonScale = appearanceManager.getButtonScale();
+        appearanceManager.applyAppearance(this);
 
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_sensor_detail);
@@ -55,8 +61,7 @@ public class SensorDetailActivity extends AppCompatActivity {
         dbHelper = new DatabaseHelper(this);
         thresholdManager = new ThresholdManager(this);
 
-        // ... (findViewById bez zmian)
-        textSensorTitle = findViewById(R.id.textSensorTitle);
+        TextView textSensorTitle = findViewById(R.id.textSensorTitle);
         textSensorDetails = findViewById(R.id.textSensorDetails);
         seekBarThresholdMin = findViewById(R.id.seekBarThresholdMin);
         textThresholdMin = findViewById(R.id.textThresholdMin);
@@ -64,31 +69,39 @@ public class SensorDetailActivity extends AppCompatActivity {
         textThresholdMax = findViewById(R.id.textThresholdMax);
         thresholdContainer = findViewById(R.id.thresholdContainer);
         listSensorHistory = findViewById(R.id.listSensorHistory);
+        MaterialButton btnSettings = findViewById(R.id.btnSettings);
+        MaterialButton btnBack = findViewById(R.id.btnBackSensorDetail);
 
-        // PODŁĄCZENIE IKONY USTAWIEŃ (już to masz)
-        findViewById(R.id.btnSettings).setOnClickListener(v -> {
-            startActivity(new Intent(this, SettingsActivity.class));
-        });
+        appearanceManager.applyIconScale(btnSettings);
+        appearanceManager.applyIconScale(btnBack);
 
-        // PODŁĄCZENIE IKONY POWROTU
-        findViewById(R.id.btnBackSensorDetail).setOnClickListener(v -> {
-            finish(); // Zamyka ekran szczegółów i wraca do listy
-        });
+        btnSettings.setOnClickListener(v -> startActivity(new Intent(this, SettingsActivity.class)));
+        btnBack.setOnClickListener(v -> finish());
 
         Intent intent = getIntent();
-        gatewayId = intent.getStringExtra("GATEWAY_ID");
-        sensorId = intent.getStringExtra("SENSOR_ID");
+        gatewayId = intent.getStringExtra(getString(R.string.intent_extra_gateway_id));
+        sensorId = intent.getStringExtra(getString(R.string.intent_extra_sensor_id));
 
-        textSensorTitle.setText("Dane dla Czujnika " + sensorId + " (Bramka " + gatewayId + ")");
+        if (gatewayId == null || sensorId == null) {
+            Log.e("SensorDetailActivity", "Gateway ID or Sensor ID is null. Finishing activity.");
+            finish();
+            return;
+        }
+
+        textSensorTitle.setText(String.format(getString(R.string.sensor_detail_title), sensorId, gatewayId));
 
         loadLatestDataAndHistory();
         setupThresholdControls();
-        // USUNIĘTO: `setupSocket()` - już niepotrzebne
     }
 
     @Override
     protected void onResume() {
         super.onResume();
+        if (appearanceManager != null && (!currentTextScale.equals(appearanceManager.getTextScale()) ||
+                !currentButtonScale.equals(appearanceManager.getButtonScale()))) {
+            recreate();
+            return;
+        }
         LocalBroadcastManager.getInstance(this).registerReceiver(dataUpdateReceiver, new IntentFilter(Constants.ACTION_DATA_UPDATED));
         loadLatestDataAndHistory();
     }
@@ -99,19 +112,16 @@ public class SensorDetailActivity extends AppCompatActivity {
         LocalBroadcastManager.getInstance(this).unregisterReceiver(dataUpdateReceiver);
     }
 
-    // Logika setupThresholdControls, updateSeekBarUI, loadLatestDataAndHistory,
-    // updateSensorDetailsUI, loadSensorHistory pozostaje BEZ ZMIAN
-
     private void setupThresholdControls() {
-        boolean isHumidity = "humidity".equalsIgnoreCase(currentSensorType);
+        boolean isHumidity = getString(R.string.sensor_type_humidity).equalsIgnoreCase(currentSensorType);
         float defaultMin = isHumidity ? 5.0f : 18.0f;
         float defaultMax = isHumidity ? 30.0f : 22.0f;
 
         float savedMin = thresholdManager.getMinThreshold(gatewayId, sensorId, defaultMin);
         float savedMax = thresholdManager.getMaxThreshold(gatewayId, sensorId, defaultMax);
 
-        updateSeekBarUI(seekBarThresholdMin, textThresholdMin, "Próg minimalny", savedMin);
-        updateSeekBarUI(seekBarThresholdMax, textThresholdMax, "Próg maksymalny", savedMax);
+        updateSeekBarUI(seekBarThresholdMin, textThresholdMin, getString(R.string.threshold_min_label), savedMin);
+        updateSeekBarUI(seekBarThresholdMax, textThresholdMax, getString(R.string.threshold_max_label), savedMax);
 
         seekBarThresholdMin.setOnSeekBarChangeListener(createSeekBarListener(false));
         seekBarThresholdMax.setOnSeekBarChangeListener(createSeekBarListener(true));
@@ -123,8 +133,8 @@ public class SensorDetailActivity extends AppCompatActivity {
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
                 float value = (float) progress / 2.0f;
                 TextView targetTextView = isMaxSlider ? textThresholdMax : textThresholdMin;
-                String label = isMaxSlider ? "Próg maksymalny" : "Próg minimalny";
-                targetTextView.setText(String.format(Locale.getDefault(), "%s: %.1f", label, value));
+                String label = isMaxSlider ? getString(R.string.threshold_max_label) : getString(R.string.threshold_min_label);
+                targetTextView.setText(String.format(Locale.getDefault(), getString(R.string.threshold_label_format), label, value));
             }
 
             @Override public void onStartTrackingTouch(SeekBar seekBar) {}
@@ -134,7 +144,6 @@ public class SensorDetailActivity extends AppCompatActivity {
                 float newMin = (float) seekBarThresholdMin.getProgress() / 2.0f;
                 float newMax = (float) seekBarThresholdMax.getProgress() / 2.0f;
                 thresholdManager.saveThresholds(gatewayId, sensorId, newMin, newMax);
-                // Po zapisaniu progu odśwież UI, aby natychmiast zobaczyć zmianę koloru
                 loadLatestDataAndHistory();
             }
         };
@@ -142,7 +151,7 @@ public class SensorDetailActivity extends AppCompatActivity {
 
     private void updateSeekBarUI(SeekBar seekBar, TextView textView, String label, float value) {
         seekBar.setProgress((int) (value * 2.0));
-        textView.setText(String.format(Locale.getDefault(), "%s: %.1f", label, value));
+        textView.setText(String.format(Locale.getDefault(), getString(R.string.threshold_label_format), label, value));
     }
 
     private void loadLatestDataAndHistory() {
@@ -151,49 +160,61 @@ public class SensorDetailActivity extends AppCompatActivity {
             currentSensorType = latestModel.type;
             updateSensorDetailsUI(latestModel);
         } else {
-            textSensorDetails.setText("Brak danych w bazie dla tego czujnika.");
+            textSensorDetails.setText(getString(R.string.sensor_detail_no_data));
+            loadSensorHistory();
         }
     }
 
     private void updateSensorDetailsUI(SensorModel model) {
-        String displayData = "Typ: " + model.type + "\n"
-                + "Wartość: " + model.value + "\n"
-                + "Timestamp: " + model.getFormattedTimestamp();
+        String displayData = getString(R.string.sensor_detail_type, model.type) + "\n"
+                + getString(R.string.sensor_detail_value, model.value) + "\n"
+                + getString(R.string.sensor_detail_timestamp, model.getFormattedTimestamp());
         textSensorDetails.setText(displayData);
 
-        if (TYPE_DOOR_CONTACT.equalsIgnoreCase(model.type)) {
+        // POPRAWKA: Użycie koloru z motywu zamiast stałego Color.BLACK
+        int defaultColor;
+        TypedValue typedValue = new TypedValue();
+        getTheme().resolveAttribute(com.google.android.material.R.attr.colorOnSurface, typedValue, true);
+        defaultColor = typedValue.data;
+
+        if (getString(R.string.sensor_type_door_contact).equalsIgnoreCase(model.type)) {
             thresholdContainer.setVisibility(View.GONE);
-            textSensorDetails.setTextColor("1".equals(model.value) ? Color.RED : Color.BLACK);
+            textSensorDetails.setTextColor(getString(R.string.door_contact_open_value).equals(model.value) ? Color.RED : defaultColor);
         } else {
             thresholdContainer.setVisibility(View.VISIBLE);
-            // POPRAWKA: Pobierz prawidłowe domyślne progi
-            boolean isHumidity = "humidity".equalsIgnoreCase(model.type);
+            boolean isHumidity = getString(R.string.sensor_type_humidity).equalsIgnoreCase(model.type);
             float defaultMin = isHumidity ? 5.0f : 18.0f;
             float defaultMax = isHumidity ? 30.0f : 22.0f;
             float min = thresholdManager.getMinThreshold(gatewayId, sensorId, defaultMin);
             float max = thresholdManager.getMaxThreshold(gatewayId, sensorId, defaultMax);
             try {
                 float currentValue = Float.parseFloat(model.value);
-                textSensorDetails.setTextColor(currentValue < min || currentValue > max ? Color.RED : Color.BLACK);
+                textSensorDetails.setTextColor(currentValue < min || currentValue > max ? Color.RED : defaultColor);
             } catch (NumberFormatException e) {
-                textSensorDetails.setTextColor(Color.BLACK);
+                textSensorDetails.setTextColor(defaultColor);
             }
         }
         loadSensorHistory();
     }
 
     private void loadSensorHistory() {
-        Cursor historyCursor = dbHelper.getSensorHistory(gatewayId, sensorId, HISTORY_LIMIT);
         List<String> historyList = new ArrayList<>();
         SimpleDateFormat sdf = new SimpleDateFormat("HH:mm:ss", Locale.getDefault());
-        if (historyCursor != null && historyCursor.moveToFirst()) {
-            do {
-                String value = historyCursor.getString(historyCursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_VALUE));
-                long timestamp = Long.parseLong(historyCursor.getString(historyCursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_TIMESTAMP)));
-                String type = historyCursor.getString(historyCursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_TYPE));
-                historyList.add(String.format(Locale.getDefault(), "[%s] Typ: %s, Wartość: %s", sdf.format(new Date(timestamp)), type, value));
-            } while (historyCursor.moveToNext());
-            historyCursor.close();
+        try (Cursor historyCursor = dbHelper.getSensorHistory(gatewayId, sensorId, HISTORY_LIMIT)) {
+            if (historyCursor != null && historyCursor.moveToFirst()) {
+                do {
+                    try {
+                        String value = historyCursor.getString(historyCursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_VALUE));
+                        long timestamp = Long.parseLong(historyCursor.getString(historyCursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_TIMESTAMP)));
+                        String type = historyCursor.getString(historyCursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_TYPE));
+                        historyList.add(String.format(Locale.getDefault(), getString(R.string.sensor_history_item_format), sdf.format(new Date(timestamp)), type, value));
+                    } catch (Exception e) {
+                        Log.e("SensorDetailActivity", "Error processing one history row.", e);
+                    }
+                } while (historyCursor.moveToNext());
+            }
+        } catch (Exception e) {
+            Log.e("SensorDetailActivity", "Error loading sensor history cursor.", e);
         }
         ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, historyList);
         listSensorHistory.setAdapter(adapter);

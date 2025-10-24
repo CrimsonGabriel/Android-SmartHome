@@ -3,8 +3,8 @@ package com.example.bazunia;
 import android.os.Bundle;
 import android.widget.RadioGroup;
 import androidx.appcompat.app.AppCompatActivity;
+import com.google.android.material.button.MaterialButton;
 import com.google.android.material.materialswitch.MaterialSwitch;
-import android.widget.ImageButton;
 
 public class SettingsActivity extends AppCompatActivity {
 
@@ -25,11 +25,13 @@ public class SettingsActivity extends AppCompatActivity {
         switchTheme = findViewById(R.id.switchThemeSettings);
         radioGroupTextScale = findViewById(R.id.radioGroupTextScale);
         radioGroupButtonScale = findViewById(R.id.radioGroupButtonScale);
+        MaterialButton btnBack = findViewById(R.id.btnBackSettings);
+
+        // Zastosuj skalowanie ikony
+        appearanceManager.applyIconScale(btnBack);
 
         // Podłącz przycisk powrotu
-        findViewById(R.id.btnBackSettings).setOnClickListener(v -> {
-            finish();
-        });
+        btnBack.setOnClickListener(v -> finish());
 
         loadCurrentSettings();
         setupListeners();
@@ -52,7 +54,7 @@ public class SettingsActivity extends AppCompatActivity {
         // 3. Ustaw przełącznik rozmiaru PRZYCISKÓW
         String buttonScale = appearanceManager.getButtonScale();
         if (AppearanceManager.SCALE_SMALL.equals(buttonScale)) {
-            radioGroupButtonScale.check(R.id.radioBuottonSmall);
+            radioGroupButtonScale.check(R.id.radioButtonSmall);
         } else if (AppearanceManager.SCALE_LARGE.equals(buttonScale)) {
             radioGroupButtonScale.check(R.id.radioButtonLarge);
         } else {
@@ -81,7 +83,7 @@ public class SettingsActivity extends AppCompatActivity {
 
         // 3. Listener rozmiaru PRZYCISKÓW
         radioGroupButtonScale.setOnCheckedChangeListener((group, checkedId) -> {
-            if (checkedId == R.id.radioBuottonSmall) {
+            if (checkedId == R.id.radioButtonSmall) {
                 appearanceManager.saveButtonScale(AppearanceManager.SCALE_SMALL);
             } else if (checkedId == R.id.radioButtonLarge) {
                 appearanceManager.saveButtonScale(AppearanceManager.SCALE_LARGE);

@@ -3,7 +3,6 @@ package com.example.bazunia;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.content.Context;
-import android.os.Build;
 import androidx.core.app.NotificationCompat;
 import android.util.Log;
 
@@ -24,17 +23,15 @@ public class NotificationHelper {
     }
 
     private void createNotificationChannel() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            NotificationChannel channel = new NotificationChannel(
-                    CHANNEL_ID,
-                    CHANNEL_NAME,
-                    NotificationManager.IMPORTANCE_HIGH
-            );
-            channel.setDescription("Powiadomienia o przekroczeniu progów czujników.");
+        NotificationChannel channel = new NotificationChannel(
+                CHANNEL_ID,
+                CHANNEL_NAME,
+                NotificationManager.IMPORTANCE_HIGH
+        );
+        channel.setDescription("Powiadomienia o przekroczeniu progów czujników.");
 
-            if (notificationManager != null) {
-                notificationManager.createNotificationChannel(channel);
-            }
+        if (notificationManager != null) {
+            notificationManager.createNotificationChannel(channel);
         }
     }
 

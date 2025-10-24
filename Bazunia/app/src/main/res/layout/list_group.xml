@@ -11,7 +11,8 @@
         android:id="@+id/iconGroup"
         android:layout_width="28dp"
         android:layout_height="28dp"
-        android:src="@drawable/ic_gateway" />
+        android:src="@drawable/ic_gateway"
+        android:contentDescription="@string/gateway_icon_description" />
 
     <TextView
         android:id="@+id/textGroup"

@@ -1,113 +1,120 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout
+<androidx.constraintlayout.widget.ConstraintLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:fitsSystemWindows="true">
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:orientation="vertical"
-        android:padding="16dp">
-
-        <TextView
-            android:id="@+id/textSensorTitle"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Dane dla czujnika: "
-            android:textSize="20sp"
-            android:textStyle="bold"
-            android.layout_marginTop="56dp"/>
-
-        <LinearLayout
-            android:id="@+id/thresholdContainer"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:layout_marginTop="16dp"
-            android:padding="8dp"
-            android:background="#f0f0f0">
-
-            <TextView
-                android:id="@+id/textThresholdMin"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Próg minimalny:"
-                android:textSize="16sp" />
-
-            <SeekBar
-                android:id="@+id/seekBarThresholdMin"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:max="100"
-                android:layout_marginTop="4dp" />
-
-            <TextView
-                android:id="@+id/textThresholdMax"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Próg maksymalny:"
-                android:layout_marginTop="12dp"
-                android:textSize="16sp" />
-
-            <SeekBar
-                android:id="@+id/seekBarThresholdMax"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:max="100"
-                android:layout_marginTop="4dp" />
-        </LinearLayout>
-
-        <TextView
-            android:id="@+id/textSensorDetails"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
-            android:text="Oczekiwanie na dane..."
-            android:textSize="18sp"
-            android:lineSpacingExtra="8dp" />
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
-            android:text="Historia odczytów (ostatnie 10):"
-            android:textStyle="bold" />
-
-        <ListView
-            android:id="@+id/listSensorHistory"
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1"
-            android:layout_marginTop="8dp" />
-
-    </LinearLayout>
+    android:fitsSystemWindows="true"
+    android:padding="16dp"
+    tools:context=".SensorDetailActivity">
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btnBackSensorDetail"
         style="?attr/myIconButtonTextStyle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:contentDescription="@string/back_content_description"
         app:icon="@drawable/ic_arrow_back"
-        android:contentDescription="Powrót"
-        android:layout_gravity="top|start"
-        android:layout_margin="16dp"
-        app:tint="?attr/colorOnSurface"
-        android:elevation="4dp" />
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:tint="?attr/colorOnSurface" />
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btnSettings"
         style="?attr/myIconButtonTextStyle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:contentDescription="@string/settings_content_description"
         app:icon="@drawable/ic_settings"
-        android:contentDescription="Ustawienia"
-        android:layout_gravity="top|end"
-        android:layout_margin="16dp"
-        app:tint="?attr/colorOnSurface"
-        android:elevation="4dp" />
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:tint="?attr/colorOnSurface" />
 
-</FrameLayout>
+    <TextView
+        android:id="@+id/textSensorTitle"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:text="@string/sensor_data_title"
+        android:textAppearance="@style/TextAppearance.Material3.TitleLarge"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/btnBackSensorDetail" />
+
+    <LinearLayout
+        android:id="@+id/thresholdContainer"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:background="#f0f0f0"
+        android:orientation="vertical"
+        android:padding="8dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/textSensorTitle">
+
+        <TextView
+            android:id="@+id/textThresholdMin"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/threshold_min_label"
+            android:textSize="16sp" />
+
+        <SeekBar
+            android:id="@+id/seekBarThresholdMin"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:max="100" />
+
+        <TextView
+            android:id="@+id/textThresholdMax"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="@string/threshold_max_label"
+            android:textSize="16sp" />
+
+        <SeekBar
+            android:id="@+id/seekBarThresholdMax"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:max="100" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/textSensorDetails"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:lineSpacingExtra="8dp"
+        android:text="@string/waiting_for_data"
+        android:textSize="18sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/thresholdContainer" />
+
+    <TextView
+        android:id="@+id/readingHistoryLabel"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:text="@string/reading_history_label"
+        android:textStyle="bold"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/textSensorDetails" />
+
+    <ListView
+        android:id="@+id/listSensorHistory"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_marginTop="8dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/readingHistoryLabel" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

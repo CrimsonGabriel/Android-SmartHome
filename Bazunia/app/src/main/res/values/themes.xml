@@ -1,4 +1,4 @@
-<resources xmlns:tools="http://schemas.android.com/tools">
+<resources>
     <style name="Base.Theme.Bazunia" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="colorPrimary">@color/colorPrimary</item>
         <item name="colorOnPrimary">@color/colorOnPrimary</item>
@@ -26,32 +26,42 @@
         <item name="android:textSize">@dimen/textSizeLarge</item>
     </style>
 
-    <style name="AppIconButton.Small" parent="Widget.Material3.Button.IconButton">
+    <!-- PRZEZROCZYSTY STYL BAZOWY DLA PRZYCISKÓW-IKON -->
+    <style name="Widget.App.Button.Icon" parent="Widget.Material3.Button.IconButton">
+        <item name="backgroundTint">@android:color/transparent</item>
+        <item name="elevation">0dp</item>
+        <item name="strokeWidth">0dp</item>
+    </style>
+
+    <!-- Style dla standardowych przycisków-ikon (nieużywane bezpośrednio przez myIconButtonTextStyle) -->
+    <style name="AppIconButton.Small" parent="Widget.App.Button.Icon">
         <item name="android:minWidth">@dimen/iconButtonSizeSmall</item>
         <item name="android:minHeight">@dimen/iconButtonSizeSmall</item>
     </style>
-    <style name="AppIconButton.Medium" parent="Widget.Material3.Button.IconButton">
+    <style name="AppIconButton.Medium" parent="Widget.App.Button.Icon">
         <item name="android:minWidth">@dimen/iconButtonSizeMedium</item>
         <item name="android:minHeight">@dimen/iconButtonSizeMedium</item>
     </style>
-    <style name="AppIconButton.Large" parent="Widget.Material3.Button.IconButton">
+    <style name="AppIconButton.Large" parent="Widget.App.Button.Icon">
         <item name="android:minWidth">@dimen/iconButtonSizeLarge</item>
         <item name="android:minHeight">@dimen/iconButtonSizeLarge</item>
     </style>
 
-    <style name="AppIconButton.Outlined.Small" parent="Widget.Material3.Button.IconButton.Outlined">
+    <!-- Style dla przycisków z obramowaniem (teraz też przezroczyste) -->
+    <style name="AppIconButton.Outlined.Small" parent="Widget.App.Button.Icon">
         <item name="android:minWidth">@dimen/iconButtonSizeSmall</item>
         <item name="android:minHeight">@dimen/iconButtonSizeSmall</item>
     </style>
-    <style name="AppIconButton.Outlined.Medium" parent="Widget.Material3.Button.IconButton.Outlined">
+    <style name="AppIconButton.Outlined.Medium" parent="Widget.App.Button.Icon">
         <item name="android:minWidth">@dimen/iconButtonSizeMedium</item>
         <item name="android:minHeight">@dimen/iconButtonSizeMedium</item>
     </style>
-    <style name="AppIconButton.Outlined.Large" parent="Widget.Material3.Button.IconButton.Outlined">
+    <style name="AppIconButton.Outlined.Large" parent="Widget.App.Button.Icon">
         <item name="android:minWidth">@dimen/iconButtonSizeLarge</item>
         <item name="android:minHeight">@dimen/iconButtonSizeLarge</item>
     </style>
 
+    <!-- OSTATECZNA POPRAWKA: Użycie TextButton jako stylu bazowego dla przezroczystych ikon -->
     <style name="AppTextButton.Icon.Small" parent="Widget.Material3.Button.TextButton">
         <item name="android:minWidth">@dimen/iconButtonSizeSmall</item>
         <item name="android:minHeight">@dimen/iconButtonSizeSmall</item>
@@ -65,6 +75,7 @@
         <item name="android:minHeight">@dimen/iconButtonSizeLarge</item>
     </style>
 
+    <!-- Definicje atrybutów motywu (bez zmian) -->
     <style name="ButtonScale_Small">
         <item name="myIconButtonStyle">@style/AppIconButton.Small</item>
         <item name="myIconButtonOutlinedStyle">@style/AppIconButton.Outlined.Small</item>

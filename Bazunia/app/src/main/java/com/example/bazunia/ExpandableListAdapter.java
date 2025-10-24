@@ -2,12 +2,14 @@ package com.example.bazunia;
 
 import android.content.Context;
 import android.graphics.Color;
+import android.util.TypedValue;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.BaseExpandableListAdapter;
-import android.widget.TextView;
 import android.widget.ImageView;
+import android.widget.TextView;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -16,13 +18,24 @@ public class ExpandableListAdapter extends BaseExpandableListAdapter {
     private final Context context;
     private final List<String> listBramek;
     private final HashMap<String, List<SensorModel>> czujnikiMap;
-    private final ThresholdManager thresholdManager; // Dodano manager progów
+    private final ThresholdManager thresholdManager;
+
+    // ViewHolder dla grupy
+    private static class GroupViewHolder {
+        ImageView iconView;
+        TextView textView;
+    }
+
+    // ViewHolder dla dziecka (czujnika)
+    private static class ChildViewHolder {
+        TextView textView;
+    }
 
     public ExpandableListAdapter(Context context, List<String> listBramek, HashMap<String, List<SensorModel>> czujnikiMap) {
         this.context = context;
         this.listBramek = listBramek;
         this.czujnikiMap = czujnikiMap;
-        this.thresholdManager = new ThresholdManager(context); // Inicjalizacja
+        this.thresholdManager = new ThresholdManager(context);
     }
 
     @Override
@@ -43,7 +56,8 @@ public class ExpandableListAdapter extends BaseExpandableListAdapter {
 
     @Override
     public Object getChild(int groupPosition, int childPosition) {
-        return czujnikiMap.get(listBramek.get(groupPosition)).get(childPosition);
+        List<SensorModel> sensors = czujnikiMap.get(listBramek.get(groupPosition));
+        return (sensors != null) ? sensors.get(childPosition) : null;
     }
 
     @Override
@@ -64,51 +78,69 @@ public class ExpandableListAdapter extends BaseExpandableListAdapter {
     @Override
     public View getGroupView(int groupPosition, boolean isExpanded, View convertView, ViewGroup parent) {
         String bramka = (String) getGroup(groupPosition);
+        GroupViewHolder holder;
+
         if (convertView == null) {
             LayoutInflater inflater = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-            convertView = inflater.inflate(R.layout.list_group, null);
+            convertView = inflater.inflate(R.layout.list_group, parent, false);
+            holder = new GroupViewHolder();
+            holder.iconView = convertView.findViewById(R.id.iconGroup);
+            holder.textView = convertView.findViewById(R.id.textGroup);
+            convertView.setTag(holder);
+        } else {
+            holder = (GroupViewHolder) convertView.getTag();
         }
 
-        // Ustaw ikonę i tekst dla grupy (bramki)
-        ImageView iconView = convertView.findViewById(R.id.iconGroup);
-        iconView.setImageResource(R.drawable.ic_gateway);
-
-        TextView textView = convertView.findViewById(R.id.textGroup);
-        textView.setText("Bramka: " + bramka);
+        holder.iconView.setImageResource(R.drawable.ic_gateway);
+        holder.textView.setText(context.getString(R.string.gateway_label, bramka));
         return convertView;
     }
 
     @Override
     public View getChildView(int groupPosition, int childPosition, boolean isLastChild, View convertView, ViewGroup parent) {
         SensorModel sensor = (SensorModel) getChild(groupPosition, childPosition);
+        ChildViewHolder holder;
+
         if (convertView == null) {
             LayoutInflater inflater = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-            convertView = inflater.inflate(R.layout.list_item, null);
+            convertView = inflater.inflate(R.layout.list_item, parent, false);
+            holder = new ChildViewHolder();
+            holder.textView = (TextView) convertView; // Nasz layout list_item to tylko TextView
+            convertView.setTag(holder);
+        } else {
+            holder = (ChildViewHolder) convertView.getTag();
         }
 
-        // Ustaw dynamiczną ikonę na podstawie typu i wartości czujnika
-        ImageView iconView = convertView.findViewById(R.id.iconChild);
-        iconView.setImageResource(sensor.getIconResourceId());
+        if (sensor != null) {
+            holder.textView.setCompoundDrawablesWithIntrinsicBounds(sensor.getIconResourceId(), 0, 0, 0);
+            String formattedText = String.format(Locale.getDefault(), context.getString(R.string.sensor_list_item_format), sensor.sensorId, sensor.type, sensor.value);
+            holder.textView.setText(formattedText);
 
-        TextView textView = convertView.findViewById(R.id.textChild);
-        String formattedText = String.format(Locale.getDefault(), "Czujnik %s (%s) - Ost. %s", sensor.sensorId, sensor.type, sensor.value);
-        textView.setText(formattedText);
+            // POPRAWKA: Użycie koloru z motywu zamiast stałego Color.BLACK
+            int defaultColor;
+            TypedValue typedValue = new TypedValue();
+            context.getTheme().resolveAttribute(com.google.android.material.R.attr.colorOnSurface, typedValue, true);
+            defaultColor = typedValue.data;
 
-        // ZMIANA: Sprawdź progi i pokoloruj tekst na liście, jeśli jest alert
-        textView.setTextColor(isSensorValueInAlertState(sensor) ? Color.RED : Color.BLACK);
+            holder.textView.setTextColor(isSensorValueInAlertState(sensor) ? Color.RED : defaultColor);
+        }
 
         return convertView;
     }
 
-    /**
-     * Helper, który sprawdza, czy ostatnia wartość czujnika jest poza ustawionymi progami.
-     */
+    @Override
+    public boolean isChildSelectable(int groupPosition, int childPosition) {
+        return true;
+    }
+
     private boolean isSensorValueInAlertState(SensorModel sensor) {
-        if ("door_contact".equalsIgnoreCase(sensor.type)) {
-            return "1".equals(sensor.value);
+        if (sensor == null) return false;
+
+        if (context.getString(R.string.sensor_type_door_contact).equalsIgnoreCase(sensor.type)) {
+            return context.getString(R.string.door_contact_open_value).equals(sensor.value);
         }
 
-        boolean isHumidity = "humidity".equalsIgnoreCase(sensor.type);
+        boolean isHumidity = context.getString(R.string.sensor_type_humidity).equalsIgnoreCase(sensor.type);
         float defaultMin = isHumidity ? 5.0f : 18.0f;
         float defaultMax = isHumidity ? 30.0f : 22.0f;
 
@@ -119,12 +151,7 @@ public class ExpandableListAdapter extends BaseExpandableListAdapter {
             float currentValue = Float.parseFloat(sensor.value);
             return currentValue < min || currentValue > max;
         } catch (NumberFormatException e) {
-            return false; // Jeśli wartość nie jest liczbą, nie jest w stanie alertu
+            return false;
         }
-    }
-
-    @Override
-    public boolean isChildSelectable(int groupPosition, int childPosition) {
-        return true;
     }
 }

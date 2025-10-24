@@ -1,7 +1,6 @@
 package com.example.bazunia;
 
 import android.content.Intent;
-import android.os.Build;
 import android.os.Bundle;
 import android.widget.Button;
 import android.widget.EditText;
@@ -10,25 +9,22 @@ import androidx.appcompat.app.AppCompatActivity;
 
 public class LoginActivity extends AppCompatActivity {
 
-    private EditText editTextLogin;
-    private EditText editTextPassword;
-    private Button buttonLogin;
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+
         new AppearanceManager(this).applyAppearance(this);
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_login);
 
-        editTextLogin = findViewById(R.id.editTextLogin);
-        editTextPassword = findViewById(R.id.editTextPassword);
-        buttonLogin = findViewById(R.id.buttonLogin);
+        EditText editTextLogin = findViewById(R.id.editTextLogin);
+        EditText editTextPassword = findViewById(R.id.editTextPassword);
+        Button buttonLogin = findViewById(R.id.buttonLogin);
 
         buttonLogin.setOnClickListener(v -> {
             String login = editTextLogin.getText().toString();
             String password = editTextPassword.getText().toString();
 
-            if (login.equals("admin") && password.equals("admin")) {
+            if (login.equals(getString(R.string.login_admin_username)) && password.equals(getString(R.string.login_admin_password))) {
 
                 // URUCHOMIENIE TYLKO SERWISU KLIENTA VPS (REST)
                 startVpsClientService();
@@ -37,7 +33,7 @@ public class LoginActivity extends AppCompatActivity {
                 startActivity(intent);
                 finish();
             } else {
-                Toast.makeText(this, "Nieprawidłowy login lub hasło", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, getString(R.string.login_invalid_credentials), Toast.LENGTH_SHORT).show();
             }
         });
     }
@@ -47,11 +43,7 @@ public class LoginActivity extends AppCompatActivity {
         Intent serviceIntent = new Intent(this, VpsClientService.class);
 
         // Uruchomienie jako foreground service
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            startForegroundService(serviceIntent);
-        } else {
-            startService(serviceIntent);
-        }
+        startForegroundService(serviceIntent);
     }
 
     // USUNIĘTO starą metodę startMonitoringService(), która uruchamiała Socket.IO

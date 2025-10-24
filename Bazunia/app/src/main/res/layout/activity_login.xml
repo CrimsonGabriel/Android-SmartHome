@@ -12,13 +12,13 @@
         android:layout_height="96dp"
         android:src="@drawable/ic_sensor"
         app:tint="?attr/colorPrimary"
-        android:contentDescription="Logo aplikacji" />
+        android:contentDescription="@string/app_logo_description" />
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
-        android:text="System Monitorowania"
+        android:text="@string/monitoring_system_title"
         android:textAppearance="@style/TextAppearance.Material3.HeadlineSmall"
         android:textColor="?attr/colorPrimary" />
 
@@ -26,7 +26,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginBottom="32dp"
-        android:text="Zaloguj się, aby kontynuować"
+        android:text="@string/login_to_continue"
         android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
         android:textColor="?attr/colorOnSurfaceVariant" />
 
@@ -34,7 +34,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
-        android:hint="Login">
+        android:hint="@string/login_hint">
 
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/editTextLogin"
@@ -50,7 +50,7 @@
         android:layout_marginTop="16dp"
         app:passwordToggleEnabled="true"
         style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
-        android:hint="Hasło">
+        android:hint="@string/password_hint">
 
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/editTextPassword"
@@ -65,6 +65,6 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="24dp"
         android:paddingVertical="12dp"
-        android:text="Zaloguj się" />
+        android:text="@string/login_button_text" />
 
 </LinearLayout>

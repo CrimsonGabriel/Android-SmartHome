@@ -15,12 +15,12 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         app:icon="@drawable/ic_settings"
-        android:contentDescription="Ustawienia"
+        app:iconPadding="0dp"
+        android:contentDescription="@string/settings_content_description"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         android:layout_margin="16dp"
-        app:tint="?attr/colorOnSurface"
-        android:elevation="4dp" />
+        app:tint="?attr/colorOnSurface" />
 
     <LinearLayout
         android:id="@+id/bottomButtonContainer"
@@ -38,26 +38,32 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             app:icon="@drawable/ic_filter"
-            android:contentDescription="Filtruj"
-            style="?attr/myIconButtonOutlinedStyle" android:layout_marginEnd="8dp"/>
+            app:iconPadding="0dp"
+            android:contentDescription="@string/filter_content_description"
+            style="?attr/myIconButtonOutlinedStyle"
+            android:layout_marginEnd="8dp"/>
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnRefresh"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             app:icon="@drawable/ic_refresh"
-            android:contentDescription="Odśwież"
-            style="?attr/myIconButtonOutlinedStyle" android:layout_marginEnd="8dp"/>
+            app:iconPadding="0dp"
+            android:contentDescription="@string/refresh_content_description"
+            style="?attr/myIconButtonOutlinedStyle"
+            android:layout_marginEnd="8dp"/>
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnClearRefresh"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             app:icon="@drawable/ic_delete"
+            app:iconPadding="0dp"
             app:iconTint="@android:color/white"
             app:backgroundTint="@android:color/holo_red_dark"
-            android:contentDescription="Wyczyść bazę"
-            style="?attr/myIconButtonStyle" android:layout_marginEnd="8dp"/>
+            android:contentDescription="@string/clear_database_content_description"
+            style="?attr/myIconButtonStyle"
+            android:layout_marginEnd="8dp"/>
 
         <Space
             android:layout_width="0dp"
@@ -69,8 +75,10 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             app:icon="@drawable/ic_arrow_back"
-            android:contentDescription="Powrót"
-            style="?attr/myIconButtonOutlinedStyle" />
+            app:iconPadding="0dp"
+            android:contentDescription="@string/back_content_description"
+            style="?attr/myIconButtonOutlinedStyle"
+            />
 
     </LinearLayout>
 
@@ -81,7 +89,7 @@
         android:divider="@android:color/darker_gray"
         android:dividerHeight="1dp"
         android:groupIndicator="@null"
-        android:layout_marginTop="64dp"
+        android:layout_marginTop="80dp"
         android:layout_marginBottom="10dp"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toTopOf="@id/bottomButtonContainer"

@@ -19,7 +19,7 @@ public class Constants {
     public static final String SENSOR_DATA_ENDPOINT = VPS_SERVER_IP + "/data/android";
 
     // Nazwa endpointu nasluchiwanego przez NanoHTTPD (do odbierania POWIADOMIEN)
-    public static final String NOTIFICATION_ENDPOINT = "/notify";
+
 
     // ... inne stałe ...
 }
