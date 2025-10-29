@@ -2,12 +2,18 @@ package com.example.bazunia;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.util.Log; // Dodaj ten import
 import android.view.View;
 import android.widget.TextView;
 import androidx.appcompat.app.AppCompatActivity;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.card.MaterialCardView;
 import androidx.appcompat.app.AlertDialog;
+
+// Importy dla Google Sign Out
+import com.google.android.gms.auth.api.signin.GoogleSignIn;
+import com.google.android.gms.auth.api.signin.GoogleSignInClient;
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
 
 import java.util.List;
 import java.util.Locale;
@@ -22,6 +28,9 @@ public class MainActivity extends AppCompatActivity {
 
     private MaterialCardView cardAlerts;
     private TextView textAlertSummary;
+
+    // [NOWA ZMIENNA] Klient Google potrzebny do wylogowania
+    private GoogleSignInClient mGoogleSignInClient;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -45,6 +54,15 @@ public class MainActivity extends AppCompatActivity {
         appearanceManager.applyIconScale(btnSettings);
         appearanceManager.applyIconScale(btnLogout);
 
+        // [NOWY KOD] Inicjalizuj klienta Google (tak samo jak w LoginActivity)
+        // WAŻNE: Użyj tego samego WEB Client ID, co w LoginActivity i na serwerze!
+        String webClientId = "79063316759-iva8uesd0vlj3in6eaeralk2kdkgv5or.apps.googleusercontent.com"; // Upewnij się, że to WEB ID!
+        GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                .requestIdToken(webClientId) // To jest ważne dla weryfikacji na serwerze
+                .requestEmail()
+                .build();
+        mGoogleSignInClient = GoogleSignIn.getClient(this, gso);
+
         btnSettings.setOnClickListener(v -> startActivity(new Intent(this, SettingsActivity.class)));
 
         btnLogout.setOnClickListener(v -> showLogoutDialog());
@@ -58,17 +76,38 @@ public class MainActivity extends AppCompatActivity {
                 .setMessage(getString(R.string.logout_confirmation_message))
                 .setIcon(R.drawable.ic_logout)
                 .setPositiveButton(getString(R.string.logout_positive_button), (dialog, which) -> {
-                    Intent serviceIntent = new Intent(this, VpsClientService.class);
-                    stopService(serviceIntent);
 
-                    Intent intent = new Intent(this, LoginActivity.class);
-                    intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-                    startActivity(intent);
-                    finish();
+                    // [NOWA LOGIKA] Wyloguj się z Google NAJPIERW!
+                    if (mGoogleSignInClient != null) {
+                        mGoogleSignInClient.signOut().addOnCompleteListener(this, task -> {
+                            Log.d("MainActivity", "Google Sign Out completed.");
+                            // Dopiero PO wylogowaniu z Google, zatrzymaj serwis i wróć do logowania
+                            stopServiceAndGoToLogin();
+                        });
+                    } else {
+                        // Na wszelki wypadek, gdyby klient nie był zainicjowany
+                        Log.w("MainActivity", "GoogleSignInClient nie został zainicjowany przed wylogowaniem.");
+                        stopServiceAndGoToLogin();
+                    }
                 })
                 .setNegativeButton(getString(R.string.dialog_cancel_button), null)
                 .show();
     }
+
+    // [NOWA METODA POMOCNICZA] Wydzielona logika po wylogowaniu z Google
+    private void stopServiceAndGoToLogin() {
+        Log.d("MainActivity", "Zatrzymywanie serwisu i powrót do LoginActivity...");
+        // Zatrzymuje serwis
+        Intent serviceIntent = new Intent(this, VpsClientService.class);
+        stopService(serviceIntent);
+
+        // Wraca do LoginActivity
+        Intent intent = new Intent(this, LoginActivity.class);
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        startActivity(intent);
+        finish(); // Zakończ MainActivity
+    }
+
 
     @Override
     protected void onResume() {
@@ -119,13 +158,19 @@ public class MainActivity extends AppCompatActivity {
             float currentValue = Float.parseFloat(sensor.value);
             return currentValue < min || currentValue > max;
         } catch (NumberFormatException e) {
+            Log.w("MainActivity", "Nie można sparsować wartości sensora jako liczby: " + sensor.value);
             return false;
         }
     }
 
     private String getPolishSensorSuffix(int count) {
         if (count == 1) return getString(R.string.sensor_suffix_one);
-        if (count >= 2 && count <= 4) return getString(R.string.sensor_suffix_few);
+        // Poprawka dla polskich przypadków: 2,3,4 to "czujniki", reszta "czujników"
+        int lastDigit = count % 10;
+        int lastTwoDigits = count % 100;
+        if (count > 1 && lastDigit >= 2 && lastDigit <= 4 && (lastTwoDigits < 12 || lastTwoDigits > 14) ) {
+            return getString(R.string.sensor_suffix_few);
+        }
         return getString(R.string.sensor_suffix_many);
     }
 }

@@ -11,15 +11,14 @@ public class Constants {
     public static final String SECRET_PASSWORD = "ZMIEN_TO_HASLO_XD";
 
     // --- KLUCZOWE STAŁE URL ---
-    // Endpoint do rejestracji (NanoHTTPD/Powiadomienia)
+    // Endpoint do rejestracji
     public static final String REGISTRATION_ENDPOINT = VPS_SERVER_IP + "/register/android";
 
-    // NOWA STAŁA: Endpoint do pobierania danych (Polling)
-    // Zmienia starą nazwę DATA_PULL_ENDPOINT na SENSOR_DATA_ENDPOINT
+    // Endpoint do pobierania danych (Polling)
     public static final String SENSOR_DATA_ENDPOINT = VPS_SERVER_IP + "/data/android";
 
-    // Nazwa endpointu nasluchiwanego przez NanoHTTPD (do odbierania POWIADOMIEN)
+    // --- NOWY ENDPOINT DLA GOOGLE AUTH ---
+    public static final String GOOGLE_AUTH_ENDPOINT = VPS_SERVER_IP + "/auth/google";
 
-
-    // ... inne stałe ...
 }
+

@@ -1,35 +1,49 @@
 [versions]
-agp = "8.9.1"
-json = "20210307"
-jsonVersion = "20240303"
-junit = "4.13.2"
-junitVersion = "1.2.1"
-espressoCore = "3.6.1"
+# Wersje wtyczek
+agp = "8.9.1" # Zakładam, że 8.9.1 jest poprawną wersją, zostawiam
+
+# Wersje bibliotek
 appcompat = "1.7.0"
 material = "1.12.0"
-activity = "1.10.1"
-constraintlayout = "2.2.1"
+activity = "1.10.1" # Zaktualizowałem do twojej wersji
+constraintlayout = "2.2.1" # Zaktualizowałem do twojej wersji
+# --- DODANA WERSJA GOOGLE AUTH ---
+play-services-auth = "21.2.0" # Dodajemy nową wersję
+# Sieciowe
+okhttp = "4.12.0" # Używamy nowszej wersji 4.12.0
 nanohttpd = "2.3.1"
-okhttp = "4.9.3"
-okhttpVersion = "4.12.0"
-socketIoClient = "2.1.0"
+json = "20240303" # Używamy nowszej wersji 20240303
+# Testowe
+junit = "4.13.2"
+junitVersion = "1.2.1" # Zmieniam nazwę na ext-junit dla spójności
+espressoCore = "3.6.1" # Zmieniam nazwę na espresso-core dla spójności
+# Usunięte stare/zduplikowane wersje: json, okhttp, socketIoClient (jeśli nie używasz Socket.IO)
 
 [libraries]
-json = { module = "org.json:json", version.ref = "json" }
-json-v20240303 = { module = "org.json:json", version.ref = "jsonVersion" }
-junit = { group = "junit", name = "junit", version.ref = "junit" }
-ext-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
+# Aliasy, których używasz w build.gradle
 appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
 material = { group = "com.google.android.material", name = "material", version.ref = "material" }
 activity = { group = "androidx.activity", name = "activity", version.ref = "activity" }
 constraintlayout = { group = "androidx.constraintlayout", name = "constraintlayout", version.ref = "constraintlayout" }
+
+# --- DODANA BIBLIOTEKA GOOGLE ---
+# Teraz alias "libs.play.services.auth" będzie działać
+play-services-auth = { module = "com.google.android.gms:play-services-auth", version.ref = "play-services-auth" }
+
+# Sieciowe
+# Używamy tylko jednego aliasu dla OkHttp, tego z poprawną wersją
+okhttp-v4120 = { module = "com.squareup.okhttp3:okhttp", version.ref = "okhttp" }
 nanohttpd = { module = "org.nanohttpd:nanohttpd", version.ref = "nanohttpd" }
-nanohttpd-websocket = { module = "org.nanohttpd:nanohttpd-websocket", version.ref = "nanohttpd" }
-okhttp = { module = "com.squareup.okhttp3:okhttp", version.ref = "okhttp" }
-okhttp-v4120 = { module = "com.squareup.okhttp3:okhttp", version.ref = "okhttpVersion" }
-socket-io-client = { module = "io.socket:socket.io-client", version.ref = "socketIoClient" }
+# Usunięto nanohttpd-websocket, jeśli go nie używasz - dodaj z powrotem jeśli tak
+# Używamy tylko jednego aliasu dla JSON
+json-v20240303 = { module = "org.json:json", version.ref = "json" }
+# Usunięto socket-io-client, jeśli nie używasz Socket.IO
+
+# Testowe
+junit = { group = "junit", name = "junit", version.ref = "junit" }
+ext-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" } # Używamy nazwy ext-junit
+espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" } # Używamy nazwy espresso-core
 
 [plugins]
+# Alias dla wtyczki
 android-application = { id = "com.android.application", version.ref = "agp" }
-

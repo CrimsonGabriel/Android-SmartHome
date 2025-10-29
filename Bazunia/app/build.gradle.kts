@@ -29,7 +29,6 @@ android {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
-    buildToolsVersion = "35.0.0"
 }
 
 dependencies {
@@ -39,14 +38,12 @@ dependencies {
     implementation(libs.activity)
     implementation(libs.constraintlayout)
 
+    // --- NOWA, POPRAWNA LINIA DLA GOOGLE AUTH ---
+    implementation(libs.play.services.auth)
+
     // --- KOMUNIKACJA SIECIOWA (REST/HTTP) ---
-    // OkHttp (do rejestracji IP na VPS i pobierania publicznego IP)
     implementation(libs.okhttp.v4120)
-
-    // NanoHTTPD (do odbierania powiadomien na porcie 3000)
     implementation(libs.nanohttpd)
-
-    // org.json (do obslugi JSON, jesli nie jest juz dostepny przez Android SDK/libs.json)
     implementation(libs.json.v20240303)
 
     // --- ZALEŻNOŚCI TESTOWE ---
@@ -54,3 +51,4 @@ dependencies {
     androidTestImplementation(libs.ext.junit)
     androidTestImplementation(libs.espresso.core)
 }
+

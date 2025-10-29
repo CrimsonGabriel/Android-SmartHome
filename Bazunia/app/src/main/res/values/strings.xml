@@ -74,4 +74,5 @@
     <string name="text_size_medium">Średni (Domyślny)</string>
     <string name="text_size_large">Duży</string>
     <string name="button_size_label">Rozmiar przycisków (Ikony)</string>
+    <string name="login_welcome_default">Witaj!</string>
 </resources>
