@@ -1,10 +1,12 @@
-package com.example.bazunia;
+package com.example.bazunia.utils;
 
 import android.app.Activity;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.res.Resources;
 import androidx.appcompat.app.AppCompatDelegate;
+
+import com.example.bazunia.R;
 import com.google.android.material.button.MaterialButton;
 
 public class AppearanceManager {

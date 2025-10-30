@@ -1,4 +1,4 @@
-package com.example.bazunia;
+package com.example.bazunia.ui;
 
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -17,6 +17,13 @@ import android.widget.SeekBar;
 import android.widget.TextView;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
+
+import com.example.bazunia.utils.AppearanceManager;
+import com.example.bazunia.utils.Constants;
+import com.example.bazunia.data.DatabaseHelper;
+import com.example.bazunia.R;
+import com.example.bazunia.data.SensorModel;
+import com.example.bazunia.data.ThresholdManager;
 import com.google.android.material.button.MaterialButton;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;

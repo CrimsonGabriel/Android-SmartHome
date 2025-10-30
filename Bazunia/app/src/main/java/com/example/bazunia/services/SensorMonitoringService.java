@@ -1,4 +1,4 @@
-package com.example.bazunia;
+package com.example.bazunia.services;
 
 import android.app.Service;
 import android.content.Intent;

@@ -1,4 +1,4 @@
-package com.example.bazunia;
+package com.example.bazunia.ui;
 
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -12,6 +12,12 @@ import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.Button; // Zostaje
 import android.widget.EditText;
+
+import com.example.bazunia.utils.AppearanceManager;
+import com.example.bazunia.utils.Constants;
+import com.example.bazunia.data.DatabaseHelper;
+import com.example.bazunia.R;
+import com.example.bazunia.data.SensorModel;
 import com.google.android.material.button.MaterialButton; // DODAJ TEN IMPORT
 import android.widget.ExpandableListView;
 import android.widget.Spinner;

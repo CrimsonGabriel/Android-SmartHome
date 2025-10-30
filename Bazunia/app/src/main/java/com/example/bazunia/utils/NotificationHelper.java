@@ -1,10 +1,12 @@
-package com.example.bazunia;
+package com.example.bazunia.utils;
 
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.content.Context;
 import androidx.core.app.NotificationCompat;
 import android.util.Log;
+
+import com.example.bazunia.R;
 
 public class NotificationHelper {
 

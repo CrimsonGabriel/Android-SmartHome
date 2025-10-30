@@ -1,4 +1,4 @@
-package com.example.bazunia;
+package com.example.bazunia.data;
 
 import android.content.Context;
 import android.content.SharedPreferences;

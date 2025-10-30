@@ -7,7 +7,7 @@
     android:layout_height="match_parent"
     android:fitsSystemWindows="true"
     android:padding="16dp"
-    tools:context=".DataActivity">
+    tools:context=".ui.DataActivity">
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btnSettings"

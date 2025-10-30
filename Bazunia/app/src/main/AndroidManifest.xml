@@ -26,31 +26,31 @@
 
         <!-- Serwis Socket.IO (obecnie nieaktywny, ale zdefiniowany z typem) -->
         <service
-            android:name=".SensorMonitoringService"
+            android:name=".services.SensorMonitoringService"
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="dataSync" />
 
         <!-- Serwis Klienta VPS (Polling/REST). Ustawiony typ na dataSync. -->
-        <service android:name=".VpsClientService"
+        <service android:name=".data.VpsClientService"
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="dataSync" />
 
-        <activity android:name=".SettingsActivity" />
-        <activity android:name=".AccountSettingsActivity" />
+        <activity android:name=".ui.SettingsActivity" />
+        <activity android:name=".ui.AccountSettingsActivity" />
         <activity
-            android:name=".LoginActivity"
+            android:name=".ui.LoginActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name=".MainActivity" />
-        <activity android:name=".DataActivity" />
-        <activity android:name=".SensorDetailActivity"
-            android:parentActivityName=".DataActivity" />
+        <activity android:name=".ui.MainActivity" />
+        <activity android:name=".ui.DataActivity" />
+        <activity android:name=".ui.SensorDetailActivity"
+            android:parentActivityName=".ui.DataActivity" />
 
     </application>
 </manifest>

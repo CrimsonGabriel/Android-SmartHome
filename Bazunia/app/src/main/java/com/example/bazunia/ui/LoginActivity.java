@@ -1,4 +1,4 @@
-package com.example.bazunia;
+package com.example.bazunia.ui;
 
 import android.app.Activity;
 import android.content.Context;
@@ -10,7 +10,6 @@ import android.view.View;
 import android.widget.EditText; // Potrzebny import
 import android.widget.LinearLayout; // Potrzebny import
 import android.widget.ProgressBar;
-import android.widget.TextView; // Potrzebny import
 import android.widget.Toast;
 
 import androidx.activity.result.ActivityResultLauncher;
@@ -18,6 +17,10 @@ import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.example.bazunia.utils.AppearanceManager;
+import com.example.bazunia.utils.Constants;
+import com.example.bazunia.R;
+import com.example.bazunia.data.VpsClientService;
 import com.google.android.gms.auth.api.signin.GoogleSignIn;
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
 import com.google.android.gms.auth.api.signin.GoogleSignInClient;

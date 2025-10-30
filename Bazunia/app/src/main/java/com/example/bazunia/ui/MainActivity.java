@@ -1,4 +1,4 @@
-package com.example.bazunia;
+package com.example.bazunia.ui;
 
 import android.content.Intent;
 import android.os.Bundle;
@@ -6,6 +6,13 @@ import android.util.Log; // Dodaj ten import
 import android.view.View;
 import android.widget.TextView;
 import androidx.appcompat.app.AppCompatActivity;
+
+import com.example.bazunia.utils.AppearanceManager;
+import com.example.bazunia.data.DatabaseHelper;
+import com.example.bazunia.R;
+import com.example.bazunia.data.SensorModel;
+import com.example.bazunia.data.ThresholdManager;
+import com.example.bazunia.data.VpsClientService;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.card.MaterialCardView;
 import androidx.appcompat.app.AlertDialog;

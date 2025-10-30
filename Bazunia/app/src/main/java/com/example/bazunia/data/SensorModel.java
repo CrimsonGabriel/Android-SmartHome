@@ -1,4 +1,6 @@
-package com.example.bazunia;
+package com.example.bazunia.data;
+
+import com.example.bazunia.R;
 
 import java.io.Serializable;
 import java.text.SimpleDateFormat;

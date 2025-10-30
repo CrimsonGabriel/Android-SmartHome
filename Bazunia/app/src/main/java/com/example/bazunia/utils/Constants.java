@@ -1,4 +1,4 @@
-package com.example.bazunia;
+package com.example.bazunia.utils;
 
 public class Constants {
     // Definiuje unikalną nazwę dla sygnału (broadcast)

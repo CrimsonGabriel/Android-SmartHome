@@ -1,12 +1,13 @@
-package com.example.bazunia;
+package com.example.bazunia.ui;
 
 import android.content.Intent; // ⭐️ NOWY IMPORT
 import android.os.Bundle;
 import android.widget.RadioGroup;
-import android.widget.Toast; // Zachowany na wszelki wypadek
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.example.bazunia.utils.AppearanceManager;
+import com.example.bazunia.R;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.materialswitch.MaterialSwitch;
 

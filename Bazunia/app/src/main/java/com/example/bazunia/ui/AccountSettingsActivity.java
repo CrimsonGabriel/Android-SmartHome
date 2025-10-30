@@ -1,4 +1,4 @@
-package com.example.bazunia;
+package com.example.bazunia.ui;
 
 import android.content.ClipData;
 import android.content.ClipboardManager;
@@ -18,6 +18,9 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.example.bazunia.utils.AppearanceManager;
+import com.example.bazunia.utils.Constants;
+import com.example.bazunia.R;
 import com.google.android.gms.auth.api.signin.GoogleSignIn;
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
 import com.google.android.material.appbar.MaterialToolbar; // ⭐️ NOWY IMPORT

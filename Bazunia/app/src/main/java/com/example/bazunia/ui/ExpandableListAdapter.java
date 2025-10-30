@@ -1,4 +1,4 @@
-package com.example.bazunia;
+package com.example.bazunia.ui;
 
 import android.content.Context;
 import android.graphics.Color;
@@ -9,6 +9,10 @@ import android.view.ViewGroup;
 import android.widget.BaseExpandableListAdapter;
 import android.widget.ImageView;
 import android.widget.TextView;
+
+import com.example.bazunia.R;
+import com.example.bazunia.data.SensorModel;
+import com.example.bazunia.data.ThresholdManager;
 
 import java.util.HashMap;
 import java.util.List;
