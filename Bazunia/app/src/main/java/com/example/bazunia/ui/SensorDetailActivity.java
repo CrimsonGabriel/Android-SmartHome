@@ -17,7 +17,7 @@ import android.widget.SeekBar;
 import android.widget.TextView;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
-
+import com.example.bazunia.utils.LocaleManager;
 import com.example.bazunia.utils.AppearanceManager;
 import com.example.bazunia.utils.Constants;
 import com.example.bazunia.data.DatabaseHelper;
@@ -90,7 +90,7 @@ public class SensorDetailActivity extends AppCompatActivity {
         sensorId = intent.getStringExtra(getString(R.string.intent_extra_sensor_id));
 
         if (gatewayId == null || sensorId == null) {
-            Log.e("SensorDetailActivity", "Gateway ID or Sensor ID is null. Finishing activity.");
+            Log.e("SensorDetailActivity", getString(R.string.log_error_gateway_sensor_null));
             finish();
             return;
         }
@@ -104,6 +104,12 @@ public class SensorDetailActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
+
+        if (LocaleManager.languageChanged) {
+            LocaleManager.languageChanged = false; // Resetowanie flagi
+            recreate(); // Wymuszenie ponownego stworzenia Aktywności
+        }
+
         if (appearanceManager != null && (!currentTextScale.equals(appearanceManager.getTextScale()) ||
                 !currentButtonScale.equals(appearanceManager.getButtonScale()))) {
             recreate();

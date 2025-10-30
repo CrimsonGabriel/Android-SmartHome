@@ -103,8 +103,7 @@ public class VpsClientService extends Service {
         String idToken = authPrefs.getString(LoginActivity.KEY_ID_TOKEN, null);
 
         if (idToken == null) {
-            Log.e(TAG, "BLAD POBIERANIA: Brak zapisanego ID Tokena. Serwis czeka.");
-            // Serwis poczeka na następny cykl. W międzyczasie user może się zalogować.
+            Log.e(TAG, getString(R.string.log_error_no_token));
             return;
         }
 
@@ -132,12 +131,12 @@ public class VpsClientService extends Service {
                     } else {
                         // [POPRAWKA] Jeśli kod to 401 lub 403, token mógł wygasnąć
                         if (resp.code() == 401 || resp.code() == 403) {
-                            Log.e(TAG, "OSTRZEZENIE: Token odrzucony przez serwer (kod: " + resp.code() + "). Może wygasł.");
-                            // W realnej apce tu byłaby logika odświeżenia tokena
-                            // Na razie po prostu usuwamy stary token, żeby wymusić ponowne logowanie
+                            Log.e(TAG, String.format(Locale.getDefault(),
+                                    getString(R.string.log_warn_token_rejected), resp.code()));
                             authPrefs.edit().remove(LoginActivity.KEY_ID_TOKEN).apply();
                         } else {
-                            Log.w(TAG, "OSTRZEZENIE: Pobieranie danych nieudane, kod: " + resp.code());
+                            Log.w(TAG, String.format(Locale.getDefault(),
+                                    getString(R.string.log_warn_data_failed), resp.code()));
                         }
                     }
                 } catch (Exception e) {
@@ -191,12 +190,18 @@ public class VpsClientService extends Service {
                 float defaultMax = isHumidity ? 30.0f : 22.0f;
                 float min = thresholdManager.getMinThreshold(sensor.gatewayId, sensor.sensorId, defaultMin);
                 float max = thresholdManager.getMaxThreshold(sensor.gatewayId, sensor.sensorId, defaultMax);
-                String alertTitle = String.format(Locale.getDefault(), "Alert: %s %s", sensor.type, sensor.sensorId);
+                String alertTitle = String.format(Locale.getDefault(),
+
+                        getString(R.string.alert_title_temp_humidity), sensor.type, sensor.sensorId);
                 String alertMessage = null;
                 if (currentValue < min) {
-                    alertMessage = String.format(Locale.getDefault(), "Wartość %s jest za niska: %.1f. Próg min: %.1f.", sensor.type, currentValue, min);
+
+                    alertMessage = String.format(Locale.getDefault(),
+                            getString(R.string.alert_msg_too_low), sensor.type, currentValue, min);
                 } else if (currentValue > max) {
-                    alertMessage = String.format(Locale.getDefault(), "Wartość %s jest za wysoka: %.1f. Próg max: %.1f.", sensor.type, currentValue, max);
+
+                    alertMessage = String.format(Locale.getDefault(),
+                            getString(R.string.alert_msg_too_high), sensor.type, currentValue, max);
                 }
                 if (alertMessage != null) {
                     int notificationId = (sensor.gatewayId + sensor.sensorId).hashCode();
@@ -204,12 +209,17 @@ public class VpsClientService extends Service {
                     Log.w(TAG, alertMessage);
                 }
             } catch (NumberFormatException e) {
-                Log.w(TAG, "Wartość czujnika nie jest numeryczna: " + sensor.value);
+
+                Log.w(TAG, String.format(Locale.getDefault(),
+                        getString(R.string.log_error_not_numeric), sensor.value));
             }
         } else if ("door_contact".equalsIgnoreCase(sensor.type)) {
             if ("1".equals(sensor.value)) {
-                String alertTitle = "Alert: Drzwi/Okna";
-                String alertMessage = String.format("Czujnik %s (Bramka %s) ZGŁASZA OTWARTY STAN!", sensor.sensorId, sensor.gatewayId);
+
+                String alertTitle = getString(R.string.alert_title_door_window);
+
+                String alertMessage = String.format(Locale.getDefault(),
+                        getString(R.string.alert_msg_door_open), sensor.sensorId, sensor.gatewayId);
                 int notificationId = (sensor.gatewayId + sensor.sensorId).hashCode();
                 notificationHelper.showNotification(alertTitle, alertMessage, notificationId);
                 Log.w(TAG, alertMessage);

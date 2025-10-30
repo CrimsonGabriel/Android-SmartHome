@@ -1,15 +1,16 @@
 package com.example.bazunia.data;
 
 import android.content.ContentValues;
-import android.content.Context;
+import android.content.Context; // DODANY IMPORT
 import android.database.Cursor;
 import android.database.SQLException;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.util.Log;
-
+import com.example.bazunia.R; // DODANY IMPORT
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale; // DODANY IMPORT
 
 public class DatabaseHelper extends SQLiteOpenHelper {
 
@@ -22,11 +23,16 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     public static final String COLUMN_SENSOR_ID = "sensor_id";
     public static final String COLUMN_TYPE = "type";
     public static final String COLUMN_VALUE = "value";
-    public static final String COLUMN_TIMESTAMP = "timestamp"; // Przechowujemy jako INTEGER (long w Java)
+    public static final String COLUMN_TIMESTAMP = "timestamp";
+
+    private final Context context; // ⭐️ ZMIENNA PRZECHOWUJĄCA KONTEKST
 
     public DatabaseHelper(Context context) {
         super(context, DATABASE_NAME, null, DATABASE_VERSION);
+        this.context = context; // ⭐️ INICJALIZACJA KONTEKSTU
     }
+
+
 
     @Override
     public void onCreate(SQLiteDatabase db) {
@@ -36,7 +42,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 COLUMN_SENSOR_ID + " TEXT, " +
                 COLUMN_TYPE + " TEXT, " +
                 COLUMN_VALUE + " TEXT, " +
-                COLUMN_TIMESTAMP + " INTEGER" + // INTEGER przechowuje long w SQLite
+                COLUMN_TIMESTAMP + " INTEGER" +
                 ")";
         db.execSQL(CREATE_TABLE);
     }
@@ -58,7 +64,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         values.put(COLUMN_SENSOR_ID, sensor.sensorId);
         values.put(COLUMN_TYPE, sensor.type);
         values.put(COLUMN_VALUE, sensor.value);
-        values.put(COLUMN_TIMESTAMP, sensor.timestamp); // long jest bezpiecznie przechowywany jako INTEGER
+        values.put(COLUMN_TIMESTAMP, sensor.timestamp);
 
         try {
             long result = db.insertOrThrow(TABLE_NAME, null, values);
@@ -96,7 +102,9 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 latestModel = new SensorModel(gatewayId, sId, type, value, timestamp);
             }
         } catch (Exception e) {
-            Log.e("DB_QUERY_ERROR", "Błąd pobierania najnowszych danych: " + e.getMessage());
+            // ⭐️ POPRAWKA: Użycie zasobu string z kontekstu
+            Log.e("DB_QUERY_ERROR", String.format(Locale.getDefault(),
+                    context.getString(R.string.log_error_db_query), e.getMessage()));
         }
         return latestModel;
     }
@@ -123,7 +131,9 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 } while (uniqueSensorsCursor.moveToNext());
             }
         } catch (Exception e) {
-            Log.e("DB_FILTER_ERROR", "Błąd filtrowania danych: " + e.getMessage());
+            // ⭐️ POPRAWKA: Użycie zasobu string z kontekstu
+            Log.e("DB_FILTER_ERROR", String.format(Locale.getDefault(),
+                    context.getString(R.string.log_error_db_filter), e.getMessage()));
         }
 
         return latestDataList;
@@ -197,16 +207,17 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         String[] selectionArgs = new String[]{gateId, sensorId};
         return db.rawQuery(query, selectionArgs);
     }
+
     public void clearAllSensorData() {
         SQLiteDatabase db = this.getWritableDatabase();
         try {
-            // Użyj prywatnej stałej TABLE_NAME, która jest widoczna w tej klasie
             db.delete(TABLE_NAME, null, null);
             Log.d("DB_CLEAR", "Wyczyszczono tabele: " + TABLE_NAME);
         } catch (SQLException e) {
             Log.e("DB_CLEAR", "Błąd czyszczenia tabeli: " + e.getMessage());
         }
     }
+
     /**
      * Pobiera listę unikalnych typów czujników z bazy.
      */
@@ -221,7 +232,9 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 } while (cursor.moveToNext());
             }
         } catch (Exception e) {
-            Log.e("DB_QUERY", "Błąd pobierania typów: " + e.getMessage());
+            // ⭐️ POPRAWKA: Użycie zasobu string z kontekstu
+            Log.e("DB_QUERY", String.format(Locale.getDefault(),
+                    context.getString(R.string.log_error_db_types), e.getMessage()));
         }
         return types;
     }
@@ -240,7 +253,9 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 } while (cursor.moveToNext());
             }
         } catch (Exception e) {
-            Log.e("DB_QUERY", "Błąd pobierania bramek: " + e.getMessage());
+            // ⭐️ POPRAWKA: Użycie zasobu string z kontekstu
+            Log.e("DB_QUERY", String.format(Locale.getDefault(),
+                    context.getString(R.string.log_error_db_gateways), e.getMessage()));
         }
         return gateways;
     }

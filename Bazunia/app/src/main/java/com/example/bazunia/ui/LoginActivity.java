@@ -11,12 +11,11 @@ import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.Toast;
-
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
-
+import com.example.bazunia.utils.LocaleManager;
 import com.example.bazunia.utils.AppearanceManager;
 import com.example.bazunia.utils.Constants;
 import com.example.bazunia.R;
@@ -29,11 +28,11 @@ import com.google.android.gms.common.SignInButton;
 import com.google.android.gms.common.api.ApiException;
 import com.google.android.gms.tasks.Task;
 import com.google.android.material.button.MaterialButton;
-
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.IOException;
+import java.util.Locale;
 
 import okhttp3.Call;
 import okhttp3.Callback;
@@ -55,13 +54,20 @@ public class LoginActivity extends AppCompatActivity {
     private final OkHttpClient httpClient = new OkHttpClient();
 
     // Widoki Główne
-    private SignInButton btnGoogleSignIn;
+    private MaterialButton btnGoogleSignIn;
     private ProgressBar loginProgressBar;
     private LinearLayout logoSection;
 
     // Widoki dla sekcji 2FA
     private LinearLayout twoFaLoginSection;
     private EditText editTextLogin2FA;
+
+    @Override
+    protected void attachBaseContext(Context newBase) {
+        // [POPRAWNE WYWOŁANIE] To jest kluczowe dla poprawnej zmiany języka w Aktywności.
+        LocaleManager localeManager = new LocaleManager(newBase);
+        super.attachBaseContext(localeManager.setLocale(newBase));
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -84,6 +90,15 @@ public class LoginActivity extends AppCompatActivity {
                 .requestEmail()
                 .build();
         mGoogleSignInClient = GoogleSignIn.getClient(this, gso);
+
+
+
+        // UWAGA: Mimo poprawnego attachBaseContext, widżet SignInButton z Google
+        // jest odporny na lokalizację aplikacji. Najlepszym rozwiązaniem jest zamiana
+        // w activity_login.xml na standardowy MaterialButton z własnym tekstem.
+        // Jeśli nie zmienisz XML, przycisk będzie działał, ale jego tekst
+        // może pozostać w domyślnym języku urządzenia lub w ogóle się nie zmieniać.
+
 
         // 2. Rejestracja launchera
         ActivityResultLauncher<Intent> signInLauncher = registerForActivityResult(

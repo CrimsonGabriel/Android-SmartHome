@@ -97,9 +97,26 @@
     <string name="settings_account_section_title">Ustawienia Konta i Bezpieczeństwo</string>
     <string name="settings_account_button">Zarządzaj Kontem (2FA)</string>
     <string name="copy_secret_key">Kopiuj klucz</string>
-    <string name="enter_2fa_code_to_disable">Wprowadź kod z aplikacji, aby potwierdzić wyłączenie
-        2FA
-    </string>
+    <string name="enter_2fa_code_to_disable">Wprowadź kod z aplikacji, aby potwierdzić wyłączenie 2FA</string>
+    <string name="language_label">Język aplikacji</string>
+    <string name="language_polish">Polski</string>
+    <string name="language_english">English</string>
+    <string name="log_error_gateway_sensor_null">Gateway ID or Sensor ID is null. Finishing activity.</string>
+    <string name="log_error_not_numeric">Wartość czujnika nie jest numeryczna: %1$s</string>
+    <string name="log_error_no_token">BŁAD POBIERANIA: Brak zapisanego ID Tokena. Serwis czeka.</string>
+    <string name="log_warn_token_rejected">OSTRZEZENIE: Token odrzucony przez serwer (kod: %1$d). Może wygasł.</string>
+    <string name="log_warn_data_failed">OSTRZEZENIE: Pobieranie danych nieudane, kod: %1$d</string>
+    <string name="log_error_db_query">Błąd pobierania najnowszych danych: %1$s</string>
+    <string name="log_error_db_filter">Błąd filtrowania danych: %1$s</string>
+    <string name="log_error_db_types">Błąd pobierania typów: %1$s</string>
+    <string name="log_error_db_gateways">Błąd pobierania bramek: %1$s</string>
+    <string name="alert_title_temp_humidity">Alert: %1$s %2$s</string>
+    <string name="alert_msg_too_low">Wartość %1$s jest za niska: %.1f. Próg min: %.1f.</string>
+    <string name="alert_msg_too_high">Wartość %1$s jest za wysoka: %.1f. Próg max: %.1f.</string>
+    <string name="alert_title_door_window">Alert: Drzwi/Okna</string>
+    <string name="alert_msg_door_open">Czujnik %1$s (Bramka %2$s) ZGŁASZA OTWARTY STAN!</string>
+    <string name="error_numeric_parse">Nie można sparsować wartości sensora jako liczby: %1$s</string>
     <string name="disable_2fa_confirm">Potwierdź wyłączenie</string>
-    
+    <string name="sign_in_with_google">Zaloguj się przez Google</string>
+
 </resources>

@@ -1,90 +1,130 @@
 package com.example.bazunia.ui;
 
-import android.content.Intent; // ⭐️ NOWY IMPORT
+import android.content.Context;
+import android.content.Intent;
 import android.os.Bundle;
 import android.widget.RadioGroup;
+import android.util.Log;
 
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.bazunia.utils.AppearanceManager;
+import com.example.bazunia.utils.LocaleManager;
 import com.example.bazunia.R;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.materialswitch.MaterialSwitch;
+import com.google.android.material.appbar.MaterialToolbar; // Jeśli używasz Toolbara, ale tutaj go nie ma.
 
-// ⭐️ TO JEST STARA KLASA, MOCNO "ODCHUDZONA" ⭐️
 public class SettingsActivity extends AppCompatActivity {
 
+    private static final String TAG = "SettingsActivity";
 
-
-    // Zmienne Wyglądu (zostają)
+    // Zmienne Wyglądu
     private AppearanceManager appearanceManager;
+    private LocaleManager localeManager;
     private MaterialSwitch switchTheme;
     private RadioGroup radioGroupTextScale;
     private RadioGroup radioGroupButtonScale;
 
-    // --- WSZYSTKIE ZMIENNE 2FA ZOSTAŁY USUNIĘTE ---
+    // ⭐️ NOWA ZMIENNA DLA WYBORU JĘZYKA ⭐️
+    private RadioGroup radioGroupLanguage;
+
+    /**
+     * KLUCZOWA METODA DLA ZMIANY JĘZYKA
+     * Musi być nadpisana, aby zastosować LocaleManager.
+     */
+    @Override
+    protected void attachBaseContext(Context newBase) {
+        LocaleManager tempLocaleManager = new LocaleManager(newBase);
+        super.attachBaseContext(tempLocaleManager.setLocale(newBase));
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         appearanceManager = new AppearanceManager(this);
         appearanceManager.applyAppearance(this);
         super.onCreate(savedInstanceState);
-        // Upewnij się, że używasz layoutu, który wkleiłem w poprzedniej wiadomości
-        // (tego bez 2FA, a z nowym przyciskiem)
         setContentView(R.layout.activity_settings);
 
-        // --- INICJALIZACJA 2FA USUNIĘTA ---
+        localeManager = new LocaleManager(this);
 
-        // Znajdź widoki (Wygląd)
+        // Inicjalizacja komponentów
+        setupViews();
+        loadCurrentAppearanceSettings();
+        setupAppearanceListeners();
+
+        // --- LOGIKA OBSŁUGI PRZYCISKÓW ---
+
+        // Ustawienie listenerek dla przycisku konta
+        MaterialButton btnAccountSettings = findViewById(R.id.btnAccountSettings);
+        btnAccountSettings.setOnClickListener(v -> {
+            Intent intent = new Intent(SettingsActivity.this, AccountSettingsActivity.class);
+            startActivity(intent);
+        });
+
+        // Obsługa przycisku Wróć
+        MaterialButton btnBackSettings = findViewById(R.id.btnBackSettings);
+        btnBackSettings.setOnClickListener(v -> finish());
+    }
+
+    private void setupViews() {
+        // Znajdowanie widoków i przypisywanie do zmiennych składowych
         switchTheme = findViewById(R.id.switchThemeSettings);
         radioGroupTextScale = findViewById(R.id.radioGroupTextScale);
         radioGroupButtonScale = findViewById(R.id.radioGroupButtonScale);
-        MaterialButton btnBack = findViewById(R.id.btnBackSettings);
-
-        // ⭐️ NOWY PRZYCISK DO USTAWIEŃ KONTA ⭐️
-        // Ten ID musi istnieć w Twoim activity_settings.xml
-        MaterialButton btnAccountSettings = findViewById(R.id.btnAccountSettings);
-
-        // --- ZNAJDOWANIE WIDOKÓW 2FA USUNIĘTE ---
-
-        // Ustaw słuchaczy
-        appearanceManager.applyIconScale(btnBack);
-        btnBack.setOnClickListener(v -> finish());
-        setupAppearanceListeners(); // Zostaje
-
-        // ⭐️ LISTENER DLA NOWEGO PRZYCISKU ⭐️
-        btnAccountSettings.setOnClickListener(v -> startActivity(new Intent(this, AccountSettingsActivity.class)));
-
-        // --- setup2FAListeners() USUNIĘTE ---
-
-        // Załaduj ustawienia
-        loadCurrentAppearanceSettings(); // Zostaje
-
-        // --- retrieveIdToken() i fetch2FAStatusFromServer() USUNIĘTE ---
+        radioGroupLanguage = findViewById(R.id.radioGroupLanguage);
     }
 
-    // --- LOGIKA WYGLĄDU (ZOSTAJE, Z POPRAWKĄ PĘTLI) ---
     private void loadCurrentAppearanceSettings() {
-        switchTheme.setChecked(appearanceManager.getTheme() == AppearanceManager.THEME_DARK);
-        String textScale = appearanceManager.getTextScale();
-        if (AppearanceManager.SCALE_SMALL.equals(textScale)) radioGroupTextScale.check(R.id.radioTextSmall);
-        else if (AppearanceManager.SCALE_LARGE.equals(textScale)) radioGroupTextScale.check(R.id.radioTextLarge);
-        else radioGroupTextScale.check(R.id.radioTextMedium);
-        String buttonScale = appearanceManager.getButtonScale();
-        if (AppearanceManager.SCALE_SMALL.equals(buttonScale)) radioGroupButtonScale.check(R.id.radioButtonSmall);
-        else if (AppearanceManager.SCALE_LARGE.equals(buttonScale)) radioGroupButtonScale.check(R.id.radioButtonLarge);
-        else radioGroupButtonScale.check(R.id.radioButtonMedium);
+        // --- Tryb Ciemny ---
+        int currentTheme = appearanceManager.getTheme();
+        switchTheme.setChecked(currentTheme == AppearanceManager.THEME_DARK);
+
+        // --- Rozmiar Tekstu ---
+        String currentTextScale = appearanceManager.getTextScale();
+        if (AppearanceManager.SCALE_SMALL.equals(currentTextScale)) {
+            radioGroupTextScale.check(R.id.radioTextSmall);
+        } else if (AppearanceManager.SCALE_LARGE.equals(currentTextScale)) {
+            radioGroupTextScale.check(R.id.radioTextLarge);
+        } else {
+            radioGroupTextScale.check(R.id.radioTextMedium);
+        }
+
+        // --- Rozmiar Przycisków ---
+        String currentButtonScale = appearanceManager.getButtonScale();
+        if (AppearanceManager.SCALE_SMALL.equals(currentButtonScale)) {
+            radioGroupButtonScale.check(R.id.radioButtonSmall);
+        } else if (AppearanceManager.SCALE_LARGE.equals(currentButtonScale)) {
+            radioGroupButtonScale.check(R.id.radioButtonLarge);
+        } else {
+            radioGroupButtonScale.check(R.id.radioButtonMedium);
+        }
+
+        // ⭐️ POPRAWIONA LOGIKA DLA WYBORU JĘZYKA ⭐️
+        RadioGroup radioGroupLanguage = findViewById(R.id.radioGroupLanguage);
+        String currentLanguage = localeManager.getLanguage();
+
+        // Używamy logicznego sprawdzenia: PL jest domyślny, więc sprawdzamy najpierw jego
+        if (LocaleManager.LANGUAGE_POLISH.equals(currentLanguage)) {
+            radioGroupLanguage.check(R.id.radioLanguagePolish);
+        } else {
+            // Jeśli nie jest PL, zaznacz EN
+            radioGroupLanguage.check(R.id.radioLanguageEnglish);
+        }
     }
+
 
     private void setupAppearanceListeners() {
+        // Listener dla switchTheme (Poprawka pętli)
         switchTheme.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            // POPRAWKA PĘTLI (z poprzedniej rozmowy)
             int newTheme = isChecked ? AppearanceManager.THEME_DARK : AppearanceManager.THEME_LIGHT;
             if (appearanceManager.getTheme() != newTheme) {
                 appearanceManager.saveTheme(newTheme);
                 recreate();
             }
         });
+
+        // Listener dla radioGroupTextScale (Poprawka pętli)
         radioGroupTextScale.setOnCheckedChangeListener((group, checkedId) -> {
             String newScale;
             if (checkedId == R.id.radioTextSmall) newScale = AppearanceManager.SCALE_SMALL;
@@ -95,6 +135,8 @@ public class SettingsActivity extends AppCompatActivity {
                 recreate();
             }
         });
+
+        // Listener dla radioGroupButtonScale (Poprawka pętli)
         radioGroupButtonScale.setOnCheckedChangeListener((group, checkedId) -> {
             String newScale;
             if (checkedId == R.id.radioButtonSmall) newScale = AppearanceManager.SCALE_SMALL;
@@ -105,7 +147,23 @@ public class SettingsActivity extends AppCompatActivity {
                 recreate();
             }
         });
-    }
 
-    // --- CAŁA LOGIKA 2FA (WSZYSTKIE METODY) ZOSTAŁA STĄD USUNIĘTA ---
+        // ⭐️ NOWY LISTENER DLA WYBORU JĘZYKA ⭐️
+        radioGroupLanguage.setOnCheckedChangeListener((group, checkedId) -> {
+            String newLanguageCode;
+            if (checkedId == R.id.radioLanguageEnglish) {
+                newLanguageCode = LocaleManager.LANGUAGE_ENGLISH;
+            } else {
+                newLanguageCode = LocaleManager.LANGUAGE_POLISH;
+            }
+
+            if (!localeManager.getLanguage().equals(newLanguageCode)) {
+                localeManager.saveLanguage(newLanguageCode);
+                // ⭐️ KLUCZOWA ZMIANA: Ustawienie flagi na true ⭐️
+                LocaleManager.languageChanged = true;
+                // Ponowne utworzenie aktywności załaduje nowy Context z attachBaseContext
+                recreate();
+            }
+        });
+    }
 }

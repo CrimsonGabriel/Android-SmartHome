@@ -12,7 +12,7 @@ import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.Button; // Zostaje
 import android.widget.EditText;
-
+import android.content.Context;
 import com.example.bazunia.utils.AppearanceManager;
 import com.example.bazunia.utils.Constants;
 import com.example.bazunia.data.DatabaseHelper;
@@ -28,7 +28,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
-
+import com.example.bazunia.utils.LocaleManager;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 
 import java.util.ArrayList;
@@ -51,6 +51,12 @@ public class DataActivity extends AppCompatActivity {
     private String currentButtonScale;
     private String currentFilterQuery = "";
     private String currentFilterMode = "SEARCH";
+
+    @Override
+    protected void attachBaseContext(Context newBase) {
+        LocaleManager localeManager = new LocaleManager(newBase);
+        super.attachBaseContext(localeManager.setLocale(newBase));
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -142,6 +148,12 @@ public class DataActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
+
+        if (LocaleManager.languageChanged) {
+            LocaleManager.languageChanged = false; // Resetowanie flagi
+            recreate(); // Wymuszenie ponownego stworzenia Aktywności
+            return; // Ważne, aby zakończyć, jeśli wymuszono recreate
+        }
 
         if (appearanceManager != null && (!currentTextScale.equals(appearanceManager.getTextScale()) ||
                 !currentButtonScale.equals(appearanceManager.getButtonScale()))) {

@@ -2,11 +2,11 @@ package com.example.bazunia.ui;
 
 import android.content.Intent;
 import android.os.Bundle;
-import android.util.Log; // Dodaj ten import
+import android.util.Log;
 import android.view.View;
 import android.widget.TextView;
 import androidx.appcompat.app.AppCompatActivity;
-
+import android.content.Context;
 import com.example.bazunia.utils.AppearanceManager;
 import com.example.bazunia.data.DatabaseHelper;
 import com.example.bazunia.R;
@@ -16,7 +16,7 @@ import com.example.bazunia.data.VpsClientService;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.card.MaterialCardView;
 import androidx.appcompat.app.AlertDialog;
-
+import com.example.bazunia.utils.LocaleManager;
 // Importy dla Google Sign Out
 import com.google.android.gms.auth.api.signin.GoogleSignIn;
 import com.google.android.gms.auth.api.signin.GoogleSignInClient;
@@ -38,6 +38,13 @@ public class MainActivity extends AppCompatActivity {
 
     // [NOWA ZMIENNA] Klient Google potrzebny do wylogowania
     private GoogleSignInClient mGoogleSignInClient;
+
+    @Override
+    protected void attachBaseContext(Context newBase) {
+        // [POPRAWNE WYWOŁANIE] Zapewnia, że kontekst z nowym językiem jest ustawiony ZAWSZE przed onCreate.
+        LocaleManager localeManager = new LocaleManager(newBase);
+        super.attachBaseContext(localeManager.setLocale(newBase));
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -65,7 +72,6 @@ public class MainActivity extends AppCompatActivity {
         // WAŻNE: Użyj tego samego WEB Client ID, co w LoginActivity i na serwerze!
         String webClientId = "79063316759-iva8uesd0vlj3in6eaeralk2kdkgv5or.apps.googleusercontent.com"; // Upewnij się, że to WEB ID!
         GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-                .requestIdToken(webClientId) // To jest ważne dla weryfikacji na serwerze
                 .requestEmail()
                 .build();
         mGoogleSignInClient = GoogleSignIn.getClient(this, gso);
@@ -119,6 +125,14 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
+
+        /// [NOWA POPRAWKA: Wymuszenie przeładowania dla zmiany języka]
+        if (LocaleManager.languageChanged) {
+            LocaleManager.languageChanged = false; // Resetowanie flagi po użyciu
+            recreate(); // Wymuszenie ponownego stworzenia Aktywności z nowym kontekstem
+            return; // Ważne, aby zakończyć, zanim przejdziemy do dalszych sprawdzeń lub ładowania danych
+        }
+
         if (appearanceManager != null && (!currentTextScale.equals(appearanceManager.getTextScale()) ||
                 !currentButtonScale.equals(appearanceManager.getButtonScale()))) {
             recreate();
@@ -165,7 +179,8 @@ public class MainActivity extends AppCompatActivity {
             float currentValue = Float.parseFloat(sensor.value);
             return currentValue < min || currentValue > max;
         } catch (NumberFormatException e) {
-            Log.w("MainActivity", "Nie można sparsować wartości sensora jako liczby: " + sensor.value);
+            Log.w("MainActivity", String.format(Locale.getDefault(),
+                    getString(R.string.error_numeric_parse), sensor.value));
             return false;
         }
     }

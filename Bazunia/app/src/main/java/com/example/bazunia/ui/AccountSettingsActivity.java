@@ -14,7 +14,7 @@ import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
-
+import com.example.bazunia.utils.LocaleManager;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
@@ -65,6 +65,13 @@ public class AccountSettingsActivity extends AppCompatActivity {
 
     private String currentIdToken;
     private String currentSecretKey;
+
+
+    @Override
+    protected void attachBaseContext(Context newBase) {
+        LocaleManager localeManager = new LocaleManager(newBase);
+        super.attachBaseContext(localeManager.setLocale(newBase));
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {

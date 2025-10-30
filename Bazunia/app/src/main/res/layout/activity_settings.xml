@@ -94,6 +94,38 @@
                 <RadioButton android:id="@+id/radioButtonMedium" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginEnd="16dp" android:text="@string/text_size_medium" />
                 <RadioButton android:id="@+id/radioButtonLarge" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/text_size_large" />
             </RadioGroup>
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="?android:attr/listDivider"
+                android:layout_marginBottom="32dp"/>
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:text="@string/language_label"
+                android:textAppearance="@style/TextAppearance.Material3.TitleMedium" />
+
+            <RadioGroup
+                android:id="@+id/radioGroupLanguage"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="32dp"
+                android:orientation="horizontal">
+                <RadioButton
+                    android:id="@+id/radioLanguagePolish"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="16dp"
+                    android:text="@string/language_polish" />
+                <RadioButton
+                    android:id="@+id/radioLanguageEnglish"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/language_english" />
+            </RadioGroup>
+
             <View
                 android:layout_width="match_parent"
                 android:layout_height="1dp"
@@ -113,6 +145,7 @@
                 android:layout_height="wrap_content"
                 android:layout_gravity="center_horizontal"
                 android:text="@string/settings_account_button"
-                app:icon="@drawable/ic_security" /> </LinearLayout>
+                app:icon="@drawable/ic_security" />
+        </LinearLayout>
     </ScrollView>
 </androidx.constraintlayout.widget.ConstraintLayout>
