@@ -107,21 +107,19 @@ public class DataActivity extends AppCompatActivity {
             Toast.makeText(this, getString(R.string.data_refreshed_manually), Toast.LENGTH_SHORT).show();
         });
 
-        btnClearRefresh.setOnClickListener(v -> {
-            new AlertDialog.Builder(DataActivity.this)
-                    .setTitle(getString(R.string.clear_data_confirmation_title))
-                    .setMessage(getString(R.string.clear_data_confirmation_message))
-                    .setIcon(R.drawable.ic_delete)
-                    .setPositiveButton(getString(R.string.clear_data_positive_button), (dialog, which) -> {
-                        dbHelper.clearAllSensorData();
-                        currentFilterQuery = "";
-                        currentFilterMode = getString(R.string.filter_mode_search);
-                        loadSensorData(currentFilterQuery, currentFilterMode);
-                        Toast.makeText(this, getString(R.string.database_cleared), Toast.LENGTH_SHORT).show();
-                    })
-                    .setNegativeButton(getString(R.string.dialog_cancel_button), null)
-                    .show();
-        });
+        btnClearRefresh.setOnClickListener(v -> new AlertDialog.Builder(DataActivity.this)
+                .setTitle(DataActivity.this.getString(R.string.clear_data_confirmation_title))
+                .setMessage(DataActivity.this.getString(R.string.clear_data_confirmation_message))
+                .setIcon(R.drawable.ic_delete)
+                .setPositiveButton(DataActivity.this.getString(R.string.clear_data_positive_button), (dialog, which) -> {
+                    dbHelper.clearAllSensorData();
+                    currentFilterQuery = "";
+                    currentFilterMode = DataActivity.this.getString(R.string.filter_mode_search);
+                    DataActivity.this.loadSensorData(currentFilterQuery, currentFilterMode);
+                    Toast.makeText(DataActivity.this, DataActivity.this.getString(R.string.database_cleared), Toast.LENGTH_SHORT).show();
+                })
+                .setNegativeButton(DataActivity.this.getString(R.string.dialog_cancel_button), null)
+                .show());
 
         btnFilter.setOnClickListener(v -> showFilterBottomSheet());
 

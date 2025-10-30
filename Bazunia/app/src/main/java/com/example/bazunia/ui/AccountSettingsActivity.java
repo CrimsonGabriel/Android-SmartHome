@@ -23,7 +23,7 @@ import com.example.bazunia.utils.Constants;
 import com.example.bazunia.R;
 import com.google.android.gms.auth.api.signin.GoogleSignIn;
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
-import com.google.android.material.appbar.MaterialToolbar; // ⭐️ NOWY IMPORT
+import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.button.MaterialButton;
 import com.google.zxing.BarcodeFormat;
 import com.journeyapps.barcodescanner.BarcodeEncoder;
@@ -101,7 +101,7 @@ public class AccountSettingsActivity extends AppCompatActivity {
         fetch2FAStatusFromServer();
     }
 
-    // --- CAŁA LOGIKA 2FA JEST PRZENIESIONA TUTAJ (BEZ ZMIAN) ---
+    // --- CAŁA LOGIKA 2FA JEST PRZENIESIONA TUTAJ ---
 
     private void setup2FAListeners() {
         btnToggle2FA.setOnClickListener(v -> toggle2FA());
@@ -121,6 +121,7 @@ public class AccountSettingsActivity extends AppCompatActivity {
         }
     }
 
+    @SuppressWarnings("deprecation") // Używamy celowo, ponieważ nowa metoda wymaga dużego refactoringu
     private void retrieveIdToken() {
         GoogleSignInAccount account = GoogleSignIn.getLastSignedInAccount(this);
         if (account != null) {
@@ -138,14 +139,12 @@ public class AccountSettingsActivity extends AppCompatActivity {
             if (isEnabled) {
                 text2FAStatus.setText(R.string.status_2fa_enabled);
                 btnToggle2FA.setText(R.string.disable_2fa);
-                setupSection.setVisibility(View.GONE);
-                disableSection.setVisibility(View.GONE);
             } else {
                 text2FAStatus.setText(R.string.status_2fa_disabled);
                 btnToggle2FA.setText(R.string.enable_2fa);
-                setupSection.setVisibility(View.GONE);
-                disableSection.setVisibility(View.GONE);
             }
+            setupSection.setVisibility(View.GONE);
+            disableSection.setVisibility(View.GONE);
             progressBar2FA.setVisibility(View.GONE);
             editText2FA.setText("");
             editTextDisable2FA.setText("");
@@ -155,6 +154,8 @@ public class AccountSettingsActivity extends AppCompatActivity {
     private void toggle2FA() {
         if (currentIdToken == null) { return; }
         boolean isEnabled = sharedPreferences2FA.getBoolean(KEY_2FA_ENABLED, false);
+
+        // Poprawka: Wspólna część wyciągnięta przed instrukcję if
         runOnUiThread(() -> {
             if (isEnabled) {
                 setupSection.setVisibility(View.GONE);
@@ -207,12 +208,16 @@ public class AccountSettingsActivity extends AppCompatActivity {
             int qrCodeSize = 600;
             Bitmap bitmap = barcodeEncoder.encodeBitmap(text, BarcodeFormat.QR_CODE, qrCodeSize, qrCodeSize);
             runOnUiThread(() -> qrCodeImageView.setImageBitmap(bitmap));
-        } catch (Exception e) { /* ... */ }
+        } catch (Exception e) {
+            Log.e(TAG, "Błąd generowania kodu QR", e);
+            runOnUiThread(() -> showError("Nie udało się wygenerować kodu QR."));
+        }
     }
 
     private void verify2FA() {
         String code = editText2FA.getText().toString().trim();
-        if (!isValidCode(code)) return;
+        // Poprawka: Użycie odwróconej metody
+        if (isCodeInvalid(code)) return;
         showLoading(true);
         Log.d(TAG, "Weryfikowanie kodu 2FA...");
         JSONObject jsonBody = createJsonPayload(code);
@@ -248,7 +253,8 @@ public class AccountSettingsActivity extends AppCompatActivity {
 
     private void disable2FA() {
         String code = editTextDisable2FA.getText().toString().trim();
-        if (!isValidCode(code)) return;
+        // Poprawka: Użycie odwróconej metody
+        if (isCodeInvalid(code)) return;
         showLoading(true);
         Log.d(TAG, "Wyłączanie 2FA...");
         JSONObject jsonBody = createJsonPayload(code);
@@ -281,10 +287,18 @@ public class AccountSettingsActivity extends AppCompatActivity {
         } else { handleApiErrorFromServer(response.code(), responseBody, "/2fa/disable"); }
     }
 
-    private boolean isValidCode(String code) {
-        if (code == null || code.length() != 6) { runOnUiThread(() -> showError("Kod 2FA musi mieć 6 cyfr.")); return false; }
-        if (currentIdToken == null) { runOnUiThread(() -> showError(getString(R.string.two_fa_error_generic) + " (Brak tokena)")); retrieveIdToken(); return false; }
-        return true;
+    // Poprawka: Odwrócona logika, nowa nazwa
+    private boolean isCodeInvalid(String code) {
+        if (code == null || code.length() != 6) {
+            runOnUiThread(() -> showError("Kod 2FA musi mieć 6 cyfr."));
+            return true;
+        }
+        if (currentIdToken == null) {
+            runOnUiThread(() -> showError(getString(R.string.two_fa_error_generic) + " (Brak tokena)"));
+            retrieveIdToken();
+            return true;
+        }
+        return false;
     }
 
     private JSONObject createJsonPayload(String code) {

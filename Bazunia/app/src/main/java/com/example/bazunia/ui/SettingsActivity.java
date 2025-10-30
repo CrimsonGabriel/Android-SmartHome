@@ -14,7 +14,7 @@ import com.google.android.material.materialswitch.MaterialSwitch;
 // ⭐️ TO JEST STARA KLASA, MOCNO "ODCHUDZONA" ⭐️
 public class SettingsActivity extends AppCompatActivity {
 
-    private static final String TAG = "SettingsActivity";
+
 
     // Zmienne Wyglądu (zostają)
     private AppearanceManager appearanceManager;
@@ -53,9 +53,7 @@ public class SettingsActivity extends AppCompatActivity {
         setupAppearanceListeners(); // Zostaje
 
         // ⭐️ LISTENER DLA NOWEGO PRZYCISKU ⭐️
-        btnAccountSettings.setOnClickListener(v -> {
-            startActivity(new Intent(this, AccountSettingsActivity.class));
-        });
+        btnAccountSettings.setOnClickListener(v -> startActivity(new Intent(this, AccountSettingsActivity.class)));
 
         // --- setup2FAListeners() USUNIĘTE ---
 
