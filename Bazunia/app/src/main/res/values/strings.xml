@@ -82,7 +82,7 @@
     <string name="enter_2fa_code">Wpisz kod z aplikacji Authenticator:</string>
     <string name="verify_2fa_code">Weryfikuj kod</string>
     <string name="two_fa_setup_needed">Najpierw skonfiguruj 2FA</string>
-    <string name="two_fa_verifying">Weryfikowanie kodu...</string>
+    <string name="two_fa_verifying">Weryfikowanie kodu…</string>
     <string name="two_fa_enabled_success">2FA włączone pomyślnie!</string>
     <string name="two_fa_disabled_success">2FA wyłączone pomyślnie!</string>
     <string name="two_fa_error_generic">Błąd konfiguracji 2FA.</string>
@@ -96,4 +96,10 @@
     <string name="login_2fa_code_hint">Kod 2FA</string>
     <string name="settings_account_section_title">Ustawienia Konta i Bezpieczeństwo</string>
     <string name="settings_account_button">Zarządzaj Kontem (2FA)</string>
+    <string name="copy_secret_key">Kopiuj klucz</string>
+    <string name="enter_2fa_code_to_disable">Wprowadź kod z aplikacji, aby potwierdzić wyłączenie
+        2FA
+    </string>
+    <string name="disable_2fa_confirm">Potwierdź wyłączenie</string>
+    
 </resources>
