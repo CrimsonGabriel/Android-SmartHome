@@ -38,6 +38,7 @@
             android:foregroundServiceType="dataSync" />
 
         <activity android:name=".SettingsActivity" />
+        <activity android:name=".AccountSettingsActivity" />
         <activity
             android:name=".LoginActivity"
             android:exported="true">

@@ -75,4 +75,25 @@
     <string name="text_size_large">Duży</string>
     <string name="button_size_label">Rozmiar przycisków (Ikony)</string>
     <string name="login_welcome_default">Witaj!</string>
+    <string name="settings_title">Ustawienia</string>
+    <string name="enable_2fa">Włącz Uwierzytelnianie Dwuskładnikowe (2FA)</string>
+    <string name="disable_2fa">Wyłącz Uwierzytelnianie Dwuskładnikowe (2FA)</string>
+    <string name="scan_qr_code">Zeskanuj ten kod QR w aplikacji Google Authenticator:</string>
+    <string name="enter_2fa_code">Wpisz kod z aplikacji Authenticator:</string>
+    <string name="verify_2fa_code">Weryfikuj kod</string>
+    <string name="two_fa_setup_needed">Najpierw skonfiguruj 2FA</string>
+    <string name="two_fa_verifying">Weryfikowanie kodu...</string>
+    <string name="two_fa_enabled_success">2FA włączone pomyślnie!</string>
+    <string name="two_fa_disabled_success">2FA wyłączone pomyślnie!</string>
+    <string name="two_fa_error_generic">Błąd konfiguracji 2FA.</string>
+    <string name="two_fa_invalid_code">Nieprawidłowy kod 2FA.</string>
+    <string name="qr_code_content_desc">Kod QR do konfiguracji 2FA</string>
+    <string name="status_2fa_enabled">Status 2FA: Włączone</string>
+    <string name="status_2fa_disabled">Status 2FA: Wyłączone</string>
+    <string name="login_2fa_title">Wymagane 2FA</string>
+    <string name="login_2fa_subtitle">Otwórz aplikację Authenticator i wpisz kod:</string>
+    <string name="login_2fa_verify_button">Zatwierdź kod</string>
+    <string name="login_2fa_code_hint">Kod 2FA</string>
+    <string name="settings_account_section_title">Ustawienia Konta i Bezpieczeństwo</string>
+    <string name="settings_account_button">Zarządzaj Kontem (2FA)</string>
 </resources>

@@ -1,96 +1,112 @@
 package com.example.bazunia;
 
+import android.content.Intent; // ⭐️ NOWY IMPORT
 import android.os.Bundle;
 import android.widget.RadioGroup;
+import android.widget.Toast; // Zachowany na wszelki wypadek
+
 import androidx.appcompat.app.AppCompatActivity;
+
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.materialswitch.MaterialSwitch;
 
+// ⭐️ TO JEST STARA KLASA, MOCNO "ODCHUDZONA" ⭐️
 public class SettingsActivity extends AppCompatActivity {
 
+    private static final String TAG = "SettingsActivity";
+
+    // Zmienne Wyglądu (zostają)
     private AppearanceManager appearanceManager;
     private MaterialSwitch switchTheme;
     private RadioGroup radioGroupTextScale;
     private RadioGroup radioGroupButtonScale;
 
+    // --- WSZYSTKIE ZMIENNE 2FA ZOSTAŁY USUNIĘTE ---
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         appearanceManager = new AppearanceManager(this);
-        appearanceManager.applyAppearance(this); // Zastosuj motyw PRZED resztą
-
+        appearanceManager.applyAppearance(this);
         super.onCreate(savedInstanceState);
+        // Upewnij się, że używasz layoutu, który wkleiłem w poprzedniej wiadomości
+        // (tego bez 2FA, a z nowym przyciskiem)
         setContentView(R.layout.activity_settings);
 
-        // Znajdź widoki
+        // --- INICJALIZACJA 2FA USUNIĘTA ---
+
+        // Znajdź widoki (Wygląd)
         switchTheme = findViewById(R.id.switchThemeSettings);
         radioGroupTextScale = findViewById(R.id.radioGroupTextScale);
         radioGroupButtonScale = findViewById(R.id.radioGroupButtonScale);
         MaterialButton btnBack = findViewById(R.id.btnBackSettings);
 
-        // Zastosuj skalowanie ikony
+        // ⭐️ NOWY PRZYCISK DO USTAWIEŃ KONTA ⭐️
+        // Ten ID musi istnieć w Twoim activity_settings.xml
+        MaterialButton btnAccountSettings = findViewById(R.id.btnAccountSettings);
+
+        // --- ZNAJDOWANIE WIDOKÓW 2FA USUNIĘTE ---
+
+        // Ustaw słuchaczy
         appearanceManager.applyIconScale(btnBack);
-
-        // Podłącz przycisk powrotu
         btnBack.setOnClickListener(v -> finish());
+        setupAppearanceListeners(); // Zostaje
 
-        loadCurrentSettings();
-        setupListeners();
+        // ⭐️ LISTENER DLA NOWEGO PRZYCISKU ⭐️
+        btnAccountSettings.setOnClickListener(v -> {
+            startActivity(new Intent(this, AccountSettingsActivity.class));
+        });
+
+        // --- setup2FAListeners() USUNIĘTE ---
+
+        // Załaduj ustawienia
+        loadCurrentAppearanceSettings(); // Zostaje
+
+        // --- retrieveIdToken() i fetch2FAStatusFromServer() USUNIĘTE ---
     }
 
-    private void loadCurrentSettings() {
-        // 1. Ustaw przełącznik motywu
+    // --- LOGIKA WYGLĄDU (ZOSTAJE, Z POPRAWKĄ PĘTLI) ---
+    private void loadCurrentAppearanceSettings() {
         switchTheme.setChecked(appearanceManager.getTheme() == AppearanceManager.THEME_DARK);
-
-        // 2. Ustaw przełącznik rozmiaru TEKSTU
         String textScale = appearanceManager.getTextScale();
-        if (AppearanceManager.SCALE_SMALL.equals(textScale)) {
-            radioGroupTextScale.check(R.id.radioTextSmall);
-        } else if (AppearanceManager.SCALE_LARGE.equals(textScale)) {
-            radioGroupTextScale.check(R.id.radioTextLarge);
-        } else {
-            radioGroupTextScale.check(R.id.radioTextMedium);
-        }
-
-        // 3. Ustaw przełącznik rozmiaru PRZYCISKÓW
+        if (AppearanceManager.SCALE_SMALL.equals(textScale)) radioGroupTextScale.check(R.id.radioTextSmall);
+        else if (AppearanceManager.SCALE_LARGE.equals(textScale)) radioGroupTextScale.check(R.id.radioTextLarge);
+        else radioGroupTextScale.check(R.id.radioTextMedium);
         String buttonScale = appearanceManager.getButtonScale();
-        if (AppearanceManager.SCALE_SMALL.equals(buttonScale)) {
-            radioGroupButtonScale.check(R.id.radioButtonSmall);
-        } else if (AppearanceManager.SCALE_LARGE.equals(buttonScale)) {
-            radioGroupButtonScale.check(R.id.radioButtonLarge);
-        } else {
-            radioGroupButtonScale.check(R.id.radioButtonMedium);
-        }
+        if (AppearanceManager.SCALE_SMALL.equals(buttonScale)) radioGroupButtonScale.check(R.id.radioButtonSmall);
+        else if (AppearanceManager.SCALE_LARGE.equals(buttonScale)) radioGroupButtonScale.check(R.id.radioButtonLarge);
+        else radioGroupButtonScale.check(R.id.radioButtonMedium);
     }
 
-    private void setupListeners() {
-        // 1. Listener motywu
+    private void setupAppearanceListeners() {
         switchTheme.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            appearanceManager.saveTheme(isChecked ? AppearanceManager.THEME_DARK : AppearanceManager.THEME_LIGHT);
-            // Zmiana motywu nie wymaga recreate(), jest natychmiastowa
+            // POPRAWKA PĘTLI (z poprzedniej rozmowy)
+            int newTheme = isChecked ? AppearanceManager.THEME_DARK : AppearanceManager.THEME_LIGHT;
+            if (appearanceManager.getTheme() != newTheme) {
+                appearanceManager.saveTheme(newTheme);
+                recreate();
+            }
         });
-
-        // 2. Listener rozmiaru TEKSTU
         radioGroupTextScale.setOnCheckedChangeListener((group, checkedId) -> {
-            if (checkedId == R.id.radioTextSmall) {
-                appearanceManager.saveTextScale(AppearanceManager.SCALE_SMALL);
-            } else if (checkedId == R.id.radioTextLarge) {
-                appearanceManager.saveTextScale(AppearanceManager.SCALE_LARGE);
-            } else {
-                appearanceManager.saveTextScale(AppearanceManager.SCALE_MEDIUM);
+            String newScale;
+            if (checkedId == R.id.radioTextSmall) newScale = AppearanceManager.SCALE_SMALL;
+            else if (checkedId == R.id.radioTextLarge) newScale = AppearanceManager.SCALE_LARGE;
+            else newScale = AppearanceManager.SCALE_MEDIUM;
+            if (!appearanceManager.getTextScale().equals(newScale)) {
+                appearanceManager.saveTextScale(newScale);
+                recreate();
             }
-            recreate(); // Zmiana rozmiaru wymaga odtworzenia aktywności
         });
-
-        // 3. Listener rozmiaru PRZYCISKÓW
         radioGroupButtonScale.setOnCheckedChangeListener((group, checkedId) -> {
-            if (checkedId == R.id.radioButtonSmall) {
-                appearanceManager.saveButtonScale(AppearanceManager.SCALE_SMALL);
-            } else if (checkedId == R.id.radioButtonLarge) {
-                appearanceManager.saveButtonScale(AppearanceManager.SCALE_LARGE);
-            } else {
-                appearanceManager.saveButtonScale(AppearanceManager.SCALE_MEDIUM);
+            String newScale;
+            if (checkedId == R.id.radioButtonSmall) newScale = AppearanceManager.SCALE_SMALL;
+            else if (checkedId == R.id.radioButtonLarge) newScale = AppearanceManager.SCALE_LARGE;
+            else newScale = AppearanceManager.SCALE_MEDIUM;
+            if (!appearanceManager.getButtonScale().equals(newScale)) {
+                appearanceManager.saveButtonScale(newScale);
+                recreate();
             }
-            recreate(); // Zmiana rozmiaru wymaga odtworzenia aktywności
         });
     }
+
+    // --- CAŁA LOGIKA 2FA (WSZYSTKIE METODY) ZOSTAŁA STĄD USUNIĘTA ---
 }

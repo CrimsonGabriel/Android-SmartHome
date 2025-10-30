@@ -1,42 +1,90 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:gravity="center"
     android:orientation="vertical"
     android:padding="24dp">
 
-    <ImageView
-        android:layout_width="96dp"
-        android:layout_height="96dp"
-        android:src="@drawable/ic_sensor"
-        app:tint="?attr/colorPrimary"
-        android:contentDescription="@string/app_logo_description" />
-
-    <TextView
+    <LinearLayout
+        android:id="@+id/logoSection"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:orientation="vertical">
+        <ImageView
+            android:id="@+id/logoImageView"
+            android:layout_width="96dp"
+            android:layout_height="96dp"
+            android:src="@drawable/ic_sensor"
+            app:tint="?attr/colorPrimary"
+            android:contentDescription="@string/app_logo_description" /> <TextView
+        android:id="@+id/titleTextView"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
-        android:text="@string/monitoring_system_title"
-        android:textAppearance="@style/TextAppearance.Material3.HeadlineSmall"
+        android:text="@string/monitoring_system_title" android:textAppearance="@style/TextAppearance.Material3.HeadlineSmall"
         android:textColor="?attr/colorPrimary" />
+        <TextView
+            android:id="@+id/subtitleTextView"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="48dp"
+            android:text="@string/login_to_continue" android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
+            android:textColor="?attr/colorOnSurfaceVariant" />
+    </LinearLayout>
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="48dp"
-        android:text="@string/login_to_continue"
-        android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
-        android:textColor="?attr/colorOnSurfaceVariant" />
 
-    <!-- NOWY PRZYCISK LOGOWANIA GOOGLE -->
     <com.google.android.gms.common.SignInButton
         android:id="@+id/btnGoogleSignIn"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_gravity="center" />
+        android:layout_gravity="center"
+        android:visibility="visible" />
 
+    <LinearLayout
+        android:id="@+id/twoFaLoginSection"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:gravity="center_horizontal"
+        android:visibility="gone"
+        tools:visibility="visible">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/login_2fa_title" android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
+            android:layout_marginBottom="8dp"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/login_2fa_subtitle" android:gravity="center"
+            android:layout_marginBottom="16dp"/>
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/textInputLayoutLogin2FA"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+            android:layout_marginBottom="8dp"
+            android:maxWidth="250dp"
+            android:hint="@string/login_2fa_code_hint"> <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/editTextLogin2FA"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="number"
+            android:maxLength="6"/>
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnVerifyLogin2FA"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/login_2fa_verify_button"/> </LinearLayout>
     <ProgressBar
         android:id="@+id/loginProgressBar"
         android:layout_width="wrap_content"
@@ -45,4 +93,3 @@
         android:visibility="gone" />
 
 </LinearLayout>
-

@@ -40,7 +40,7 @@ dependencies {
 
     // --- NOWA, POPRAWNA LINIA DLA GOOGLE AUTH ---
     implementation(libs.play.services.auth)
-
+    implementation(libs.zxing.embedded)
     // --- KOMUNIKACJA SIECIOWA (REST/HTTP) ---
     implementation(libs.okhttp.v4120)
     implementation(libs.nanohttpd)
