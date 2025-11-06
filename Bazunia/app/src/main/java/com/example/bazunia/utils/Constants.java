@@ -26,4 +26,12 @@ public class Constants {
     public static final String SETUP_2FA_ENDPOINT = VPS_SERVER_IP + "/api/auth/2fa/setup";
     public static final String VERIFY_2FA_ENDPOINT = VPS_SERVER_IP + "/api/auth/2fa/verify";
     public static final String DISABLE_2FA_ENDPOINT = VPS_SERVER_IP + "/api/auth/2fa/disable";
+
+    public static final String DELETE_GATEWAY_HISTORY_ENDPOINT = VPS_SERVER_IP + "/data/history/delete";
+
+    // Endpoint do pobierania statusu dostępnych aktualizacji
+    public static final String UPDATE_STATUS_ENDPOINT = VPS_SERVER_IP + "/api/admin/update/status";
+
+    // Endpoint do potwierdzenia aktualizacji/odroczenia przez użytkownika
+    public static final String UPDATE_DECISION_ENDPOINT = VPS_SERVER_IP + "/api/admin/update/decision";
 }

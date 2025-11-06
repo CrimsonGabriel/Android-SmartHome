@@ -118,4 +118,37 @@
     <string name="alert_msg_door_open">Sensor %1$s (Gateway %2$s) REPORTS OPEN STATE!</string>
     <string name="error_numeric_parse">Could not parse sensor value as a number: %1$s</string>
     <string name="sign_in_with_google">Sign in with Google</string>
+    <string name="clear_data_confirmation_title_choose">Select Deletion Scope</string>
+    <string name="clear_option_local">Delete Local History (on phone)</string>
+    <string name="clear_option_gateway">Delete History from Gateway (Server)</string>
+    <string name="clear_local_confirmation_title">Confirm Local Deletion</string>
+    <string name="clear_local_confirmation_message">Are you sure you want to delete ALL historical data from your phone\'s memory? This action is irreversible (locally).</string>
+    <string name="clear_gateway_confirmation_title">WARNING! Server Deletion</string>
+    <string name="clear_gateway_confirmation_message">This is a critical operation! You will delete ALL historical data from the server for your account and all gateways. Confirm to proceed.</string>
+    <string name="toast_success_gateway_history_deleted">Successfully sent request to delete history from server.</string>
+    <string name="toast_error_deletion_failed">Network Error: Failed to send deletion request.</string>
+    <string name="toast_error_deletion_failed_server">Server Error: Failed to delete history on VPS.</string>
+    <string name="log_info_data_cleaned">Deleted %d old entries (older than %d days).</string>
+    <string name="toast_error_not_logged_in">Authorization error. Please log in again.</string>
+    <string name="log_warn_deletion_failed">WARNING: Gateway history deletion failed on VPS (Code: %d). Body: %s</string>
+    <string name="settings_data_cleanup_title">Data and History Management</string>
+    <string name="cleanup_local_label">Automatic Local Cleanup</string>
+    <string name="cleanup_days_hint">Days to retain (0 = disable)</string>
+    <string name="cleanup_disabled_hint">Disabled</string>
+    <string name="cleanup_gateway_label">Automatic Gateway Cleanup (VPS)</string>
+    <string name="cleanup_gateway_note">Configuration for automatic cleanup of server history (by time or size) must be done via the Web/Admin Panel.</string>
+    <string name="cleanup_gateway_button">Configure on Server</string>
+    <string name="cleanup_gateway_dialog_title">Server Cleanup Configuration</string>
+    <string name="cleanup_gateway_dialog_message">To set up automatic data cleanup at the gateway or server level (e.g., by database size), you must use the Web/Admin Panel.</string>
+    <string name="cleanup_gateway_go_to_web">Go to Web Panel</string>
+    <string name="cleanup_gateway_web_toast">Please use your web browser to manage server settings.</string>
+    <string name="log_warn_update_status_failed">Failed to fetch update status, code: %d.</string>
+    <string name="notification_update_title">Update Available!</string>
+    <string name="notification_update_available">Update available for %s. Status: %s.</string>
+    <string name="action_accept_update">Install</string>
+    <string name="action_defer_update">Defer</string>
+    <string name="toast_update_deferred">Update %s has been deferred.</string>
+    <string name="toast_update_app_starting">Starting application update process!</string>
+    <string name="toast_update_gateway_starting">Sent update command to gateway %s.</string>
+
 </resources>

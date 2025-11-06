@@ -261,5 +261,32 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         }
         return gateways;
     }
+    /**
+     * WYMAGANIE 6.4: Włącza automatyczne czyszczenie historii w aplikacji mobilnej według czasu.
+     * Usuwa wpisy z bazy danych starsze niż podana liczba dni.
+     * @param days Liczba dni, po których dane mają być usunięte.
+     * @return Liczba usuniętych wierszy.
+     */
+    public int cleanOldSensorData(int days) {
+        if (days <= 0) {
+            Log.d("DB_CLEAN", "Niepoprawna lub zerowa liczba dni, czyszczenie anulowane.");
+            return 0;
+        }
+
+        SQLiteDatabase db = this.getWritableDatabase();
+        // Czas odcięcia w milisekundach (milisekundy * sekundy * minuty * godziny * dni)
+        long cutoffTime = System.currentTimeMillis() - (days * 24 * 60 * 60 * 1000L);
+        int deletedRows = 0;
+
+        try {
+            // Usunięcie wierszy, gdzie COLUMN_TIMESTAMP jest mniejszy (czyli starszy) niż cutoffTime
+            deletedRows = db.delete(TABLE_NAME, COLUMN_TIMESTAMP + " < ?", new String[]{String.valueOf(cutoffTime)});
+            Log.d("DB_CLEAN", String.format(Locale.getDefault(),
+                    context.getString(R.string.log_info_data_cleaned), deletedRows, days));
+        } catch (SQLException e) {
+            Log.e("DB_CLEAN", "Błąd automatycznego czyszczenia: " + e.getMessage());
+        }
+        return deletedRows;
+    }
 
 }

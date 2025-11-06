@@ -10,9 +10,10 @@ import android.os.Bundle;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
-import android.widget.Button; // Zostaje
+import android.widget.Button;
 import android.widget.EditText;
-import android.content.Context;
+
+import com.example.bazunia.data.VpsClientService;
 import com.example.bazunia.utils.AppearanceManager;
 import com.example.bazunia.utils.Constants;
 import com.example.bazunia.data.DatabaseHelper;
@@ -113,19 +114,26 @@ public class DataActivity extends AppCompatActivity {
             Toast.makeText(this, getString(R.string.data_refreshed_manually), Toast.LENGTH_SHORT).show();
         });
 
-        btnClearRefresh.setOnClickListener(v -> new AlertDialog.Builder(DataActivity.this)
-                .setTitle(DataActivity.this.getString(R.string.clear_data_confirmation_title))
-                .setMessage(DataActivity.this.getString(R.string.clear_data_confirmation_message))
-                .setIcon(R.drawable.ic_delete)
-                .setPositiveButton(DataActivity.this.getString(R.string.clear_data_positive_button), (dialog, which) -> {
-                    dbHelper.clearAllSensorData();
-                    currentFilterQuery = "";
-                    currentFilterMode = DataActivity.this.getString(R.string.filter_mode_search);
-                    DataActivity.this.loadSensorData(currentFilterQuery, currentFilterMode);
-                    Toast.makeText(DataActivity.this, DataActivity.this.getString(R.string.database_cleared), Toast.LENGTH_SHORT).show();
-                })
-                .setNegativeButton(DataActivity.this.getString(R.string.dialog_cancel_button), null)
-                .show());
+        btnClearRefresh.setOnClickListener(v -> {
+            final String[] options = {
+                    getString(R.string.clear_option_local), // Opcja 1: Usuń lokalnie
+                    getString(R.string.clear_option_gateway) // Opcja 2: Usuń z bramki
+            };
+
+            new AlertDialog.Builder(DataActivity.this)
+                    .setTitle(getString(R.string.clear_data_confirmation_title_choose))
+                    .setItems(options, (dialog, which) -> {
+                        if (which == 0) {
+                            // Opcja 1: Usuń lokalnie (Wymaganie 6.2)
+                            confirmLocalClear();
+                        } else if (which == 1) {
+                            // Opcja 2: Usuń z bramki (Wymaganie 6.3)
+                            confirmGatewayClear();
+                        }
+                    })
+                    .setNegativeButton(getString(R.string.dialog_cancel_button), null)
+                    .show();
+        });
 
         btnFilter.setOnClickListener(v -> showFilterBottomSheet());
 
@@ -269,5 +277,36 @@ public class DataActivity extends AppCompatActivity {
                 Toast.makeText(this, getString(R.string.notification_permission_denied), Toast.LENGTH_LONG).show();
             }
         }
+    }
+
+    // Obsługa lokalnego czyszczenia (Wymaganie 6.2)
+    private void confirmLocalClear() {
+        new AlertDialog.Builder(DataActivity.this)
+                .setTitle(DataActivity.this.getString(R.string.clear_local_confirmation_title))
+                .setMessage(DataActivity.this.getString(R.string.clear_local_confirmation_message))
+                .setIcon(R.drawable.ic_delete)
+                .setPositiveButton(DataActivity.this.getString(R.string.clear_data_positive_button), (dialog, which) -> {
+                    dbHelper.clearAllSensorData();
+                    currentFilterQuery = "";
+                    currentFilterMode = DataActivity.this.getString(R.string.filter_mode_search);
+                    DataActivity.this.loadSensorData(currentFilterQuery, currentFilterMode);
+                    Toast.makeText(DataActivity.this, DataActivity.this.getString(R.string.database_cleared), Toast.LENGTH_SHORT).show();
+                })
+                .setNegativeButton(DataActivity.this.getString(R.string.dialog_cancel_button), null)
+                .show();
+    }
+
+    // Obsługa czyszczenia z bramki (Wymaganie 6.3)
+    private void confirmGatewayClear() {
+        new AlertDialog.Builder(DataActivity.this)
+                .setTitle(DataActivity.this.getString(R.string.clear_gateway_confirmation_title))
+                .setMessage(DataActivity.this.getString(R.string.clear_gateway_confirmation_message))
+                .setIcon(R.drawable.ic_warning)
+                .setPositiveButton(DataActivity.this.getString(R.string.clear_data_positive_button), (dialog, which) -> {
+                    // Wywołanie żądania do VPS
+                    VpsClientService.requestGatewayHistoryDeletion(DataActivity.this);
+                })
+                .setNegativeButton(DataActivity.this.getString(R.string.dialog_cancel_button), null)
+                .show();
     }
 }

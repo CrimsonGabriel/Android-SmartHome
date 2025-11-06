@@ -118,5 +118,36 @@
     <string name="error_numeric_parse">Nie można sparsować wartości sensora jako liczby: %1$s</string>
     <string name="disable_2fa_confirm">Potwierdź wyłączenie</string>
     <string name="sign_in_with_google">Zaloguj się przez Google</string>
-
+    <string name="clear_data_confirmation_title_choose">Wybierz zakres czyszczenia</string>
+    <string name="clear_option_local">Usuń lokalną historię (w telefonie)</string>
+    <string name="clear_option_gateway">Usuń historię z bramki (serwera)</string>
+    <string name="clear_local_confirmation_title">Potwierdź usunięcie lokalne</string>
+    <string name="clear_local_confirmation_message">Czy na pewno chcesz usunąć WSZYSTKIE dane historyczne z pamięci telefonu? Działanie jest nieodwracalne (lokalnie).</string>
+    <string name="clear_gateway_confirmation_title">OSTRZEŻENIE! Usuwanie z serwera</string>
+    <string name="clear_gateway_confirmation_message">To jest operacja krytyczna! Usuniesz WSZYSTKIE dane historyczne z serwera dla Twojego konta i wszystkich bramek. Potwierdź, aby kontynuować.</string>
+    <string name="toast_success_gateway_history_deleted">Pomyślnie wysłano żądanie usunięcia historii z serwera.</string>
+    <string name="toast_error_deletion_failed">Błąd sieci: Nie udało się wysłać żądania usunięcia historii.</string>
+    <string name="toast_error_deletion_failed_server">Błąd serwera: Nie udało się usunąć historii na VPS.</string>
+    <string name="log_info_data_cleaned">Usunięto %d starych wpisów (starszych niż %d dni).</string>
+    <string name="toast_error_not_logged_in">Błąd autoryzacji. Zaloguj się ponownie.</string>
+    <string name="log_warn_deletion_failed">OSTRZEŻENIE: Usunięcie historii z VPS nieudane (Kod: %d). Body: %s</string>
+    <string name="settings_data_cleanup_title">Zarządzanie Danymi i Historią</string>
+    <string name="cleanup_local_label">Automatyczne czyszczenie lokalne</string>
+    <string name="cleanup_days_hint">Dni do zachowania (0 = wyłącz)</string>
+    <string name="cleanup_disabled_hint">Wyłączone</string>
+    <string name="cleanup_gateway_label">Automatyczne czyszczenie bramki (VPS)</string>
+    <string name="cleanup_gateway_note">Konfiguracja automatycznego czyszczenia historii na serwerze (według czasu lub rozmiaru) musi być wykonana z poziomu Panelu Administracyjnego/Webowego.</string>
+    <string name="cleanup_gateway_button">Konfiguruj na serwerze</string>
+    <string name="cleanup_gateway_dialog_title">Konfiguracja Czyszczenia Serwera</string>
+    <string name="cleanup_gateway_dialog_message">Aby ustawić automatyczne czyszczenie danych na poziomie bramki lub serwera (np. według rozmiaru bazy danych), musisz użyć Panelu Administracyjnego/Webowego.</string>
+    <string name="cleanup_gateway_go_to_web">Przejdź do panelu Web</string>
+    <string name="cleanup_gateway_web_toast">Proszę użyć przeglądarki do zarządzania ustawieniami serwera.</string>
+    <string name="log_warn_update_status_failed">Pobieranie statusu aktualizacji nieudane, kod: %d.</string>
+    <string name="notification_update_title">Dostępna Aktualizacja!</string>
+    <string name="notification_update_available">Dostępna aktualizacja dla %s. Status: %s.</string>
+    <string name="action_accept_update">Zainstaluj</string>
+    <string name="action_defer_update">Odłóż</string>
+    <string name="toast_update_deferred">Aktualizacja %s została odroczona.</string>
+    <string name="toast_update_app_starting">Rozpoczynam proces aktualizacji aplikacji!</string>
+    <string name="toast_update_gateway_starting">Wysłano polecenie aktualizacji bramki %s.</string>
 </resources>
