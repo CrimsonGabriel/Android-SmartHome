@@ -17,12 +17,13 @@ public class Constants {
     // Endpoint do pobierania danych (Polling)
     public static final String SENSOR_DATA_ENDPOINT = VPS_SERVER_IP + "/data/android";
 
-    // --- NOWY ENDPOINT DLA GOOGLE AUTH ---
-    public static final String GOOGLE_AUTH_ENDPOINT = VPS_SERVER_IP + "/auth/google";
+    // --- NOWY ENDPOINT DLA GOOGLE AUTH (POPRAWIONO ŚCIEŻKĘ) ---
+    public static final String GOOGLE_AUTH_ENDPOINT = VPS_SERVER_IP + "/api/auth/google";
 
-    // --- NOWY ENDPOINT DLA WERYFIKACJI 2FA PRZY LOGOWANIU ---
-    public static final String LOGIN_2FA_VERIFY_ENDPOINT = VPS_SERVER_IP + "/auth/2fa/login-verify";
-
-    public static final String CHECK_2FA_STATUS_ENDPOINT = VPS_SERVER_IP + "/auth/2fa/status";
+    // --- NOWE ENDPOINTY 2FA (POPRAWIONO ŚCIEŻKI) ---
+    public static final String LOGIN_2FA_VERIFY_ENDPOINT = VPS_SERVER_IP + "/api/auth/2fa/login-verify";
+    public static final String CHECK_2FA_STATUS_ENDPOINT = VPS_SERVER_IP + "/api/auth/2fa/status";
+    public static final String SETUP_2FA_ENDPOINT = VPS_SERVER_IP + "/api/auth/2fa/setup";
+    public static final String VERIFY_2FA_ENDPOINT = VPS_SERVER_IP + "/api/auth/2fa/verify";
+    public static final String DISABLE_2FA_ENDPOINT = VPS_SERVER_IP + "/api/auth/2fa/disable";
 }
-

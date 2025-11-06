@@ -5,7 +5,7 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.Service;
 import android.content.Intent;
-import android.content.SharedPreferences; // Potrzebny import
+import android.content.SharedPreferences;
 import android.os.IBinder;
 import android.util.Log;
 import android.content.Context;
@@ -96,21 +96,21 @@ public class VpsClientService extends Service {
 
     /**
      * [POPRAWIONA METODA]
-     * Cyklicznie pobiera dane czujników z VPS, używając Tokena Google.
+     * Cyklicznie pobiera dane czujników z VPS, używając JWT z backendu.
      */
     private void fetchSensorData() {
-        // [NOWA LOGIKA] Pobierz zapisany token Google
-        String idToken = authPrefs.getString(LoginActivity.KEY_ID_TOKEN, null);
+        // [NOWA LOGIKA] Pobierz zapisany token JWT
+        String jwtToken = authPrefs.getString(LoginActivity.KEY_JWT_TOKEN, null);
 
-        if (idToken == null) {
+        if (jwtToken == null) {
             Log.e(TAG, getString(R.string.log_error_no_token));
             return;
         }
 
-        // [POPRAWKA] Zamiast "Password", wysyłamy "Authorization"
+        // [POPRAWKA] Używamy JWT z backendu do autoryzacji chronionego endpointu
         Request request = new Request.Builder()
                 .url(Constants.SENSOR_DATA_ENDPOINT) // GET do /data/android
-                .addHeader("Authorization", "Bearer " + idToken) // <-- POPRAWNY NAGŁÓWEK
+                .addHeader("Authorization", "Bearer " + jwtToken) // <-- POPRAWNY NAGŁÓWEK z JWT
                 .get()
                 .build();
 
@@ -133,7 +133,7 @@ public class VpsClientService extends Service {
                         if (resp.code() == 401 || resp.code() == 403) {
                             Log.e(TAG, String.format(Locale.getDefault(),
                                     getString(R.string.log_warn_token_rejected), resp.code()));
-                            authPrefs.edit().remove(LoginActivity.KEY_ID_TOKEN).apply();
+                            authPrefs.edit().remove(LoginActivity.KEY_JWT_TOKEN).apply(); // Usuń JWT
                         } else {
                             Log.w(TAG, String.format(Locale.getDefault(),
                                     getString(R.string.log_warn_data_failed), resp.code()));
@@ -158,13 +158,17 @@ public class VpsClientService extends Service {
 
             for (int i = 0; i < jsonArray.length(); i++) {
                 JSONObject sensorJson = jsonArray.getJSONObject(i);
-                String gatewayId = sensorJson.getString("gateway_id");
-                String sensorId = sensorJson.getString("sensor_id");
+
+                // ZMIANA: optString pozwala na wartości null (z domyślnym tekstem)
+                String gatewayId = sensorJson.optString("gatewayId", "Brak GW");
+                String sensorId = sensorJson.optString("sensorId", "Brak ID");
+
                 String type = sensorJson.getString("type");
                 String value = sensorJson.getString("value");
                 long timestamp = sensorJson.getLong("timestamp");
 
                 SensorModel sensor = new SensorModel(gatewayId, sensorId, type, value, timestamp);
+
                 dbHelper.addSensorData(sensor);
                 checkThresholds(sensor);
             }

@@ -93,6 +93,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
         try (Cursor cursor = db.rawQuery(query, new String[]{gateId, sensorId})) {
             if (cursor.moveToFirst()) {
+                // POPRAWKA: Użycie getColumnIndexOrThrow
                 String gatewayId = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_GATE_ID));
                 String sId = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_SENSOR_ID));
                 String type = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_TYPE));
@@ -120,6 +121,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         try (Cursor uniqueSensorsCursor = db.rawQuery(distinctQuery, null)) {
             if (uniqueSensorsCursor.moveToFirst()) {
                 do {
+                    // POPRAWKA: Użycie getColumnIndexOrThrow
                     String gateId = uniqueSensorsCursor.getString(uniqueSensorsCursor.getColumnIndexOrThrow(COLUMN_GATE_ID));
                     String sensorId = uniqueSensorsCursor.getString(uniqueSensorsCursor.getColumnIndexOrThrow(COLUMN_SENSOR_ID));
 

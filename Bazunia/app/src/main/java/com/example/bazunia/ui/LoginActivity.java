@@ -47,7 +47,7 @@ public class LoginActivity extends AppCompatActivity {
     private static final String TAG = "LoginActivity";
 
     public static final String AUTH_PREFS = "AuthPrefs";
-    public static final String KEY_ID_TOKEN = "idToken";
+    public static final String KEY_JWT_TOKEN = "jwtToken"; // ZMIENIONY KLUCZ
     public static final String KEY_USER_EMAIL = "userEmail";
 
     private GoogleSignInClient mGoogleSignInClient;
@@ -181,10 +181,15 @@ public class LoginActivity extends AppCompatActivity {
                             String welcomeMsg = respJson.optString("message", getString(R.string.login_welcome_default));
                             String userEmail = respJson.optString("email", "");
                             boolean requires2FA = respJson.optBoolean("requires2FA", false);
+                            String jwtToken = respJson.optString("jwt", null); // <--- ODCZYT JWT
 
-                            saveTokenToPrefs(idToken, userEmail);
+                            if (!requires2FA && jwtToken != null) { // ⭐️ TYLKO JEŚLI JEST JWT I NIE WYMAGA 2FA
+                                saveTokenToPrefs(jwtToken, userEmail); // <--- ZAPIS POPRAWNEGO JWT
+                            }
 
                             if (requires2FA) {
+                                // ⭐️ UWAGA: Jeśli wymaga 2FA, token ID Google JEST UŻYWANY JAKO SESJA TYMCZASOWA
+                                saveTokenToPrefs(idToken, userEmail); // Zapisujemy idToken TYMCZASOWO do weryfikacji 2FA
                                 Log.d(TAG, "Serwer wymaga 2FA. Pokazuję UI 2FA.");
                                 runOnUiThread(() -> {
                                     Toast.makeText(LoginActivity.this, "Wymagana weryfikacja 2FA", Toast.LENGTH_SHORT).show();
@@ -224,7 +229,8 @@ public class LoginActivity extends AppCompatActivity {
         }
 
         SharedPreferences prefs = getSharedPreferences(AUTH_PREFS, Context.MODE_PRIVATE);
-        String idToken = prefs.getString(KEY_ID_TOKEN, null);
+        // ⭐️ Używamy idToken do weryfikacji 2FA
+        String idToken = prefs.getString(KEY_JWT_TOKEN, null); // JWT_TOKEN jest tymczasowo idTokenem
 
         if (idToken == null) {
             showError("Błąd sesji (brak tokena). Zaloguj się ponownie.");
@@ -243,7 +249,7 @@ public class LoginActivity extends AppCompatActivity {
 
         Request request = new Request.Builder()
                 .url(Constants.LOGIN_2FA_VERIFY_ENDPOINT)
-                .header("Authorization", "Bearer " + idToken)
+                .header("Authorization", "Bearer " + idToken) // Wysyłamy Token ID Google
                 .post(body)
                 .build();
 
@@ -263,10 +269,23 @@ public class LoginActivity extends AppCompatActivity {
                     final String responseBody = resp.body() != null ? resp.body().string() : "";
                     if (resp.isSuccessful()) {
                         Log.i(TAG, "SUKCES: Kod 2FA poprawny. Loguję.");
-                        runOnUiThread(() -> {
-                            Toast.makeText(LoginActivity.this, "Zalogowano pomyślnie!", Toast.LENGTH_SHORT).show();
-                            startApp();
-                        });
+                        try {
+                            JSONObject respJson = new JSONObject(responseBody);
+                            String newJwt = respJson.optString("token", null); // Odbieramy NOWY JWT
+
+                            if (newJwt != null) {
+                                // ⭐️ ZAPISUJEMY WŁAŚCIWY JWT I USUŃ ID TOKEN (KTÓRY BYŁ TYMCZASOWY)
+                                saveTokenToPrefs(newJwt, prefs.getString(KEY_USER_EMAIL, ""));
+                            }
+                            runOnUiThread(() -> {
+                                Toast.makeText(LoginActivity.this, "Zalogowano pomyślnie!", Toast.LENGTH_SHORT).show();
+                                startApp();
+                            });
+                        } catch (JSONException e) {
+                            Log.e(TAG, "Błąd parsowania odpowiedzi 2FA", e);
+                            runOnUiThread(LoginActivity.this::startApp);
+                        }
+
                     } else {
                         Log.w(TAG, "Serwer VPS odrzucił kod 2FA, kod: " + resp.code() + ", body: " + responseBody);
                         runOnUiThread(() -> {
@@ -280,10 +299,10 @@ public class LoginActivity extends AppCompatActivity {
         });
     }
 
-    private void saveTokenToPrefs(String idToken, String email) {
+    private void saveTokenToPrefs(String jwtToken, String email) {
         SharedPreferences prefs = getSharedPreferences(AUTH_PREFS, Context.MODE_PRIVATE);
         prefs.edit()
-                .putString(KEY_ID_TOKEN, idToken)
+                .putString(KEY_JWT_TOKEN, jwtToken) // Zapisujemy JWT/idToken
                 .putString(KEY_USER_EMAIL, email)
                 .apply();
         Log.d(TAG, "Zapisano token i e-mail w SharedPreferences.");

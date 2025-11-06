@@ -41,14 +41,12 @@ import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
 
-// ⭐️ TO JEST NOWA KLASA ⭐️
 public class AccountSettingsActivity extends AppCompatActivity {
 
-    private static final String TAG = "AccountSettingsActivity"; // Zmieniony TAG
+    private static final String TAG = "AccountSettingsActivity";
     private static final String PREFS_2FA = "TwoFAPrefs";
     private static final String KEY_2FA_ENABLED = "is2FAEnabled";
 
-    // Zmienne 2FA (przeniesione)
     private OkHttpClient httpClient;
     private SharedPreferences sharedPreferences2FA;
     private TextView text2FAStatus;
@@ -75,19 +73,16 @@ public class AccountSettingsActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        // Zastosuj motyw (przeniesione z SettingsActivity)
         new AppearanceManager(this).applyAppearance(this);
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_account_settings); // Użyj nowego layoutu
+        setContentView(R.layout.activity_account_settings);
 
         httpClient = new OkHttpClient();
         sharedPreferences2FA = getSharedPreferences(PREFS_2FA, Context.MODE_PRIVATE);
 
-        // ⭐️ NOWA LOGIKA TOOLBARA ⭐️
         MaterialToolbar toolbar = findViewById(R.id.toolbarAccountSettings);
-        toolbar.setNavigationOnClickListener(v -> finish()); // Przycisk Wstecz
+        toolbar.setNavigationOnClickListener(v -> finish());
 
-        // Znajdź widoki (2FA) - (przeniesione)
         text2FAStatus = findViewById(R.id.text2FAStatus);
         btnToggle2FA = findViewById(R.id.btnToggle2FA);
         setupSection = findViewById(R.id.setupSection);
@@ -100,10 +95,8 @@ public class AccountSettingsActivity extends AppCompatActivity {
         btnConfirmDisable2FA = findViewById(R.id.btnConfirmDisable2FA);
         progressBar2FA = findViewById(R.id.progressBar2FA);
 
-        // Ustaw słuchaczy (przeniesione)
         setup2FAListeners();
 
-        // Załaduj ustawienia (przeniesione)
         retrieveIdToken();
         fetch2FAStatusFromServer();
     }
@@ -128,7 +121,7 @@ public class AccountSettingsActivity extends AppCompatActivity {
         }
     }
 
-    @SuppressWarnings("deprecation") // Używamy celowo, ponieważ nowa metoda wymaga dużego refactoringu
+    @SuppressWarnings("deprecation")
     private void retrieveIdToken() {
         GoogleSignInAccount account = GoogleSignIn.getLastSignedInAccount(this);
         if (account != null) {
@@ -162,7 +155,6 @@ public class AccountSettingsActivity extends AppCompatActivity {
         if (currentIdToken == null) { return; }
         boolean isEnabled = sharedPreferences2FA.getBoolean(KEY_2FA_ENABLED, false);
 
-        // Poprawka: Wspólna część wyciągnięta przed instrukcję if
         runOnUiThread(() -> {
             if (isEnabled) {
                 setupSection.setVisibility(View.GONE);
@@ -178,8 +170,10 @@ public class AccountSettingsActivity extends AppCompatActivity {
         showLoading(true);
         Log.d(TAG, "Rozpoczynanie konfiguracji 2FA...");
         if (currentIdToken == null) { return; }
+
+        // ⭐️ POPRAWKA URL: Użycie poprawionej stałej URL ⭐️
         Request request = new Request.Builder()
-                .url(Constants.VPS_SERVER_IP + "/2fa/setup")
+                .url(Constants.SETUP_2FA_ENDPOINT) // Używamy poprawionej stałej
                 .header("Authorization", "Bearer " + currentIdToken)
                 .post(RequestBody.create(new byte[0]))
                 .build();
@@ -195,6 +189,10 @@ public class AccountSettingsActivity extends AppCompatActivity {
 
     private void handleSetupResponse(Response response) throws IOException {
         final String responseBody = response.body() != null ? response.body().string() : "";
+
+        // ⭐️ POPRAWKA LOGA: Użycie poprawnej stałej w logu ⭐️
+        String endpoint = Constants.SETUP_2FA_ENDPOINT.substring(Constants.VPS_SERVER_IP.length());
+
         if (response.isSuccessful()) {
             try {
                 JSONObject json = new JSONObject(responseBody);
@@ -205,8 +203,8 @@ public class AccountSettingsActivity extends AppCompatActivity {
                     setupSection.setVisibility(View.VISIBLE);
                     showLoading(false);
                 });
-            } catch (JSONException e) { handleApiError("Błąd parsowania odpowiedzi /2fa/setup: " + e.getMessage()); }
-        } else { handleApiErrorFromServer(response.code(), responseBody, "/2fa/setup"); }
+            } catch (JSONException e) { handleApiError("Błąd parsowania odpowiedzi " + endpoint + ": " + e.getMessage()); }
+        } else { handleApiErrorFromServer(response.code(), responseBody, endpoint); }
     }
 
     private void generateAndShowQrCode(String text) {
@@ -223,14 +221,15 @@ public class AccountSettingsActivity extends AppCompatActivity {
 
     private void verify2FA() {
         String code = editText2FA.getText().toString().trim();
-        // Poprawka: Użycie odwróconej metody
         if (isCodeInvalid(code)) return;
         showLoading(true);
         Log.d(TAG, "Weryfikowanie kodu 2FA...");
         JSONObject jsonBody = createJsonPayload(code);
         RequestBody body = RequestBody.create(jsonBody.toString(), MediaType.get("application/json; charset=utf-8"));
+
+        // ⭐️ POPRAWKA URL: Użycie poprawionej stałej URL ⭐️
         Request request = new Request.Builder()
-                .url(Constants.VPS_SERVER_IP + "/2fa/verify")
+                .url(Constants.VERIFY_2FA_ENDPOINT) // Używamy poprawionej stałej
                 .header("Authorization", "Bearer " + currentIdToken)
                 .post(body)
                 .build();
@@ -246,6 +245,8 @@ public class AccountSettingsActivity extends AppCompatActivity {
 
     private void handleVerifyResponse(Response response) throws IOException {
         final String responseBody = response.body() != null ? response.body().string() : "";
+        String endpoint = Constants.VERIFY_2FA_ENDPOINT.substring(Constants.VPS_SERVER_IP.length());
+
         if (response.isSuccessful()) {
             Log.i(TAG, "Weryfikacja 2FA udana!");
             save2FAState(true);
@@ -255,19 +256,20 @@ public class AccountSettingsActivity extends AppCompatActivity {
                 update2FAUIState();
                 currentSecretKey = null;
             });
-        } else { handleApiErrorFromServer(response.code(), responseBody, "/2fa/verify"); }
+        } else { handleApiErrorFromServer(response.code(), responseBody, endpoint); }
     }
 
     private void disable2FA() {
         String code = editTextDisable2FA.getText().toString().trim();
-        // Poprawka: Użycie odwróconej metody
         if (isCodeInvalid(code)) return;
         showLoading(true);
         Log.d(TAG, "Wyłączanie 2FA...");
         JSONObject jsonBody = createJsonPayload(code);
         RequestBody body = RequestBody.create(jsonBody.toString(), MediaType.get("application/json; charset=utf-8"));
+
+        // ⭐️ POPRAWKA URL: Użycie poprawionej stałej URL ⭐️
         Request request = new Request.Builder()
-                .url(Constants.VPS_SERVER_IP + "/2fa/disable")
+                .url(Constants.DISABLE_2FA_ENDPOINT) // Używamy poprawionej stałej
                 .header("Authorization", "Bearer " + currentIdToken)
                 .post(body)
                 .build();
@@ -283,6 +285,8 @@ public class AccountSettingsActivity extends AppCompatActivity {
 
     private void handleDisableResponse(Response response) throws IOException {
         final String responseBody = response.body() != null ? response.body().string() : "";
+        String endpoint = Constants.DISABLE_2FA_ENDPOINT.substring(Constants.VPS_SERVER_IP.length());
+
         if (response.isSuccessful()) {
             Log.i(TAG, "Wyłączenie 2FA udane!");
             save2FAState(false);
@@ -291,10 +295,9 @@ public class AccountSettingsActivity extends AppCompatActivity {
                 Toast.makeText(AccountSettingsActivity.this, R.string.two_fa_disabled_success, Toast.LENGTH_SHORT).show();
                 update2FAUIState();
             });
-        } else { handleApiErrorFromServer(response.code(), responseBody, "/2fa/disable"); }
+        } else { handleApiErrorFromServer(response.code(), responseBody, endpoint); }
     }
 
-    // Poprawka: Odwrócona logika, nowa nazwa
     private boolean isCodeInvalid(String code) {
         if (code == null || code.length() != 6) {
             runOnUiThread(() -> showError("Kod 2FA musi mieć 6 cyfr."));
@@ -333,7 +336,7 @@ public class AccountSettingsActivity extends AppCompatActivity {
         runOnUiThread(() -> {
             showLoading(false);
             showError(finalErrorMsg);
-            if ("/2fa/setup".equals(endpoint) && code != 200) { setupSection.setVisibility(View.GONE); }
+            if (endpoint.contains("/2fa/setup") && code != 200) { setupSection.setVisibility(View.GONE); }
         });
     }
 
@@ -398,7 +401,9 @@ public class AccountSettingsActivity extends AppCompatActivity {
                             handleApiError("Błąd parsowania statusu 2FA: " + e.getMessage());
                         }
                     } else {
-                        handleApiErrorFromServer(resp.code(), responseBody, "/auth/2fa/status");
+                        // ⭐️ POPRAWKA LOGA: Użycie substring w endpoint
+                        String endpoint = Constants.CHECK_2FA_STATUS_ENDPOINT.substring(Constants.VPS_SERVER_IP.length());
+                        handleApiErrorFromServer(resp.code(), responseBody, endpoint);
                         runOnUiThread(AccountSettingsActivity.this::update2FAUIState);
                     }
                 }
