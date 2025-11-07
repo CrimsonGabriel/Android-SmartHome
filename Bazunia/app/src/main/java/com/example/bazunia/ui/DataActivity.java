@@ -13,7 +13,7 @@ import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
 
-import com.example.bazunia.data.VpsClientService;
+
 import com.example.bazunia.utils.AppearanceManager;
 import com.example.bazunia.utils.Constants;
 import com.example.bazunia.data.DatabaseHelper;
@@ -114,26 +114,13 @@ public class DataActivity extends AppCompatActivity {
             Toast.makeText(this, getString(R.string.data_refreshed_manually), Toast.LENGTH_SHORT).show();
         });
 
+        // ⭐️⭐️⭐️ POCZĄTEK POPRAWKI ⭐️⭐️⭐️
         btnClearRefresh.setOnClickListener(v -> {
-            final String[] options = {
-                    getString(R.string.clear_option_local), // Opcja 1: Usuń lokalnie
-                    getString(R.string.clear_option_gateway) // Opcja 2: Usuń z bramki
-            };
-
-            new AlertDialog.Builder(DataActivity.this)
-                    .setTitle(getString(R.string.clear_data_confirmation_title_choose))
-                    .setItems(options, (dialog, which) -> {
-                        if (which == 0) {
-                            // Opcja 1: Usuń lokalnie (Wymaganie 6.2)
-                            confirmLocalClear();
-                        } else if (which == 1) {
-                            // Opcja 2: Usuń z bramki (Wymaganie 6.3)
-                            confirmGatewayClear();
-                        }
-                    })
-                    .setNegativeButton(getString(R.string.dialog_cancel_button), null)
-                    .show();
+            // Usunięto dialog wyboru (setItems) z opcją 1 i 2.
+            // Przycisk teraz bezpośrednio wywołuje TYLKO potwierdzenie czyszczenia LOKALNEGO.
+            confirmLocalClear();
         });
+        // ⭐️⭐️⭐️ KONIEC POPRAWKI ⭐️⭐️⭐️
 
         btnFilter.setOnClickListener(v -> showFilterBottomSheet());
 
@@ -280,6 +267,7 @@ public class DataActivity extends AppCompatActivity {
     }
 
     // Obsługa lokalnego czyszczenia (Wymaganie 6.2)
+    // Ta funkcja jest teraz wywoływana bezpośrednio przez przycisk
     private void confirmLocalClear() {
         new AlertDialog.Builder(DataActivity.this)
                 .setTitle(DataActivity.this.getString(R.string.clear_local_confirmation_title))
@@ -296,17 +284,5 @@ public class DataActivity extends AppCompatActivity {
                 .show();
     }
 
-    // Obsługa czyszczenia z bramki (Wymaganie 6.3)
-    private void confirmGatewayClear() {
-        new AlertDialog.Builder(DataActivity.this)
-                .setTitle(DataActivity.this.getString(R.string.clear_gateway_confirmation_title))
-                .setMessage(DataActivity.this.getString(R.string.clear_gateway_confirmation_message))
-                .setIcon(R.drawable.ic_warning)
-                .setPositiveButton(DataActivity.this.getString(R.string.clear_data_positive_button), (dialog, which) -> {
-                    // Wywołanie żądania do VPS
-                    VpsClientService.requestGatewayHistoryDeletion(DataActivity.this);
-                })
-                .setNegativeButton(DataActivity.this.getString(R.string.dialog_cancel_button), null)
-                .show();
-    }
+
 }

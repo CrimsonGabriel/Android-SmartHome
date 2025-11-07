@@ -10,7 +10,7 @@ import android.content.SharedPreferences;
 import android.os.IBinder;
 import android.util.Log;
 import android.content.Context;
-import android.widget.Toast;
+
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -304,46 +304,7 @@ public class VpsClientService extends Service {
         });
     }
 
-    public static void requestGatewayHistoryDeletion(Context context) {
-        SharedPreferences authPrefs = context.getSharedPreferences(LoginActivity.AUTH_PREFS, Context.MODE_PRIVATE);
-        String jwtToken = authPrefs.getString(LoginActivity.KEY_JWT_TOKEN, null);
 
-        if (jwtToken == null) {
-            Toast.makeText(context, context.getString(R.string.toast_error_not_logged_in), Toast.LENGTH_LONG).show();
-            return;
-        }
-
-        OkHttpClient client = new OkHttpClient();
-        Request request = new Request.Builder()
-                .url(Constants.DELETE_GATEWAY_HISTORY_ENDPOINT)
-                .addHeader("Authorization", "Bearer " + jwtToken)
-                .post(RequestBody.create(new byte[0]))
-                .build();
-
-        client.newCall(request).enqueue(new Callback() {
-            @Override
-            public void onFailure(@NonNull Call call, @NonNull IOException e) {
-                Log.e(TAG, "BLAD ŻĄDANIA usunięcia historii z VPS: " + e.getMessage());
-                new android.os.Handler(context.getMainLooper()).post(() ->
-                        Toast.makeText(context, context.getString(R.string.toast_error_deletion_failed), Toast.LENGTH_SHORT).show());
-            }
-
-            @Override
-            public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
-                final String responseBody = response.body() != null ? response.body().string() : "";
-                if (response.isSuccessful()) {
-                    Log.i(TAG, "SUKCES: Historia danych na VPS usunięta. Body: " + responseBody);
-                    new android.os.Handler(context.getMainLooper()).post(() ->
-                            Toast.makeText(context, context.getString(R.string.toast_success_gateway_history_deleted), Toast.LENGTH_LONG).show());
-                } else {
-                    Log.w(TAG, String.format(Locale.getDefault(),
-                            context.getString(R.string.log_warn_deletion_failed), response.code(), responseBody));
-                    new android.os.Handler(context.getMainLooper()).post(() ->
-                            Toast.makeText(context, context.getString(R.string.toast_error_deletion_failed_server), Toast.LENGTH_LONG).show());
-                }
-            }
-        });
-    }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
