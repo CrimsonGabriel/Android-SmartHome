@@ -4,7 +4,7 @@ public class Constants {
     // Definiuje unikalną nazwę dla sygnału (broadcast)
     public static final String ACTION_DATA_UPDATED = "com.example.bazunia.DATA_UPDATED";
 
-    // ZMIENIONO: Używamy HTTPS i pełnej nazwy domenowej
+
     public static final String VPS_SERVER_IP = "https://testserwera.pl";
 
     public static final int ANDROID_LISTEN_PORT = 3000;
@@ -29,9 +29,11 @@ public class Constants {
 
 
 
-    // Endpoint do pobierania statusu dostępnych aktualizacji
+
     public static final String UPDATE_STATUS_ENDPOINT = VPS_SERVER_IP + "/api/update/status";
 
-    // Endpoint do potwierdzenia aktualizacji/odroczenia przez użytkownika
+
     public static final String UPDATE_DECISION_ENDPOINT = VPS_SERVER_IP + "/api/update/decision";
+    public static final String REGISTER_ANDROID_ENDPOINT = VPS_SERVER_IP + "/api/auth/android/register";
+    public static final String LOGIN_EMAIL_ENDPOINT = VPS_SERVER_IP + "/api/auth/login";
 }

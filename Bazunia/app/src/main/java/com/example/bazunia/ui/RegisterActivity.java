@@ -1,0 +1,179 @@
+package com.example.bazunia.ui;
+
+import android.content.Context;
+import android.os.Bundle;
+import android.util.Log;
+import android.util.Patterns;
+import android.view.View;
+import android.widget.EditText;
+import android.widget.ProgressBar;
+import android.widget.Toast;
+
+import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.AppCompatActivity;
+
+import com.example.bazunia.R;
+import com.example.bazunia.utils.AppearanceManager;
+import com.example.bazunia.utils.Constants;
+import com.example.bazunia.utils.LocaleManager;
+import com.google.android.material.button.MaterialButton;
+
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.io.IOException;
+
+import okhttp3.Call;
+import okhttp3.Callback;
+import okhttp3.MediaType;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
+
+public class RegisterActivity extends AppCompatActivity {
+
+    private static final String TAG = "RegisterActivity";
+
+    private EditText editTextEmail, editTextPassword, editTextConfirmPassword;
+    private MaterialButton btnRegister, btnLoginLink;
+    private ProgressBar registerProgressBar;
+
+    private final OkHttpClient httpClient = new OkHttpClient();
+
+    @Override
+    protected void attachBaseContext(Context newBase) {
+        LocaleManager localeManager = new LocaleManager(newBase);
+        super.attachBaseContext(localeManager.setLocale(newBase));
+    }
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        new AppearanceManager(this).applyAppearance(this);
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_register);
+
+        // Znajdź widoki
+        editTextEmail = findViewById(R.id.editTextEmail);
+        editTextPassword = findViewById(R.id.editTextPassword);
+        editTextConfirmPassword = findViewById(R.id.editTextConfirmPassword);
+        btnRegister = findViewById(R.id.btnRegister);
+        btnLoginLink = findViewById(R.id.btnLoginLink);
+        registerProgressBar = findViewById(R.id.registerProgressBar);
+
+        // Obsługa kliknięć
+        btnRegister.setOnClickListener(v -> attemptRegistration());
+        btnLoginLink.setOnClickListener(v -> finish()); // Wróć do LoginActivity
+    }
+
+    private void attemptRegistration() {
+        String email = editTextEmail.getText().toString().trim();
+        String password = editTextPassword.getText().toString().trim();
+        String confirmPassword = editTextConfirmPassword.getText().toString().trim();
+
+        // Walidacja
+        if (!Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
+            editTextEmail.setError(getString(R.string.register_error_email_invalid));
+            editTextEmail.requestFocus();
+            return;
+        }
+        if (password.length() < 8) {
+            editTextPassword.setError(getString(R.string.register_error_password_short));
+            editTextPassword.requestFocus();
+            return;
+        }
+        if (!password.equals(confirmPassword)) {
+            editTextConfirmPassword.setError(getString(R.string.register_error_password_mismatch));
+            editTextConfirmPassword.requestFocus();
+            return;
+        }
+
+        // Jeśli walidacja OK, wyślij żądanie
+        registerUser(email, password);
+    }
+
+    private void registerUser(String email, String password) {
+        showLoading(true);
+
+        JSONObject json = new JSONObject();
+        try {
+            json.put("email", email);
+            json.put("password", password);
+        } catch (JSONException e) {
+            Log.e(TAG, "Błąd tworzenia JSON", e);
+            showLoading(false);
+            return;
+        }
+
+        RequestBody body = RequestBody.create(json.toString(), MediaType.get("application/json; charset=utf-8"));
+
+        // Używamy nowego endpointu, który zdefiniujemy na VPS
+        Request request = new Request.Builder()
+                .url(Constants.REGISTER_ANDROID_ENDPOINT) // Musimy dodać to do Constants!
+                .post(body)
+                .build();
+
+        httpClient.newCall(request).enqueue(new Callback() {
+            @Override
+            public void onFailure(@NonNull Call call, @NonNull IOException e) {
+                Log.e(TAG, "Błąd rejestracji: " + e.getMessage());
+                runOnUiThread(() -> {
+                    showLoading(false);
+                    showError(getString(R.string.login_error_server));
+                });
+            }
+
+            @Override
+            public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
+                try (Response resp = response) {
+                    final String responseBody = resp.body() != null ? resp.body().string() : "";
+
+                    if (resp.isSuccessful()) {
+                        Log.i(TAG, "Rejestracja wysłana pomyślnie. Czekanie na aktywację.");
+                        runOnUiThread(() -> {
+                            showLoading(false);
+                            // Pokaż dialog o sukcesie i potrzebie weryfikacji
+                            showSuccessDialog();
+                        });
+                    } else if (resp.code() == 409) { // 409 Conflict (Email zajęty)
+                        Log.w(TAG, "Rejestracja nieudana: E-mail zajęty.");
+                        runOnUiThread(() -> {
+                            showLoading(false);
+                            editTextEmail.setError(getString(R.string.register_error_email_taken));
+                            editTextEmail.requestFocus();
+                        });
+                    } else {
+                        Log.w(TAG, "Błąd serwera rejestracji, kod: " + resp.code() + ", body: " + responseBody);
+                        runOnUiThread(() -> {
+                            showLoading(false);
+                            showError(getString(R.string.login_error_server));
+                        });
+                    }
+                }
+            }
+        });
+    }
+
+    private void showSuccessDialog() {
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.register_success_title)
+                .setMessage(R.string.register_success_message)
+                .setPositiveButton(R.string.register_button_ok, (dialog, which) -> {
+                    dialog.dismiss();
+                    finish(); // Zamknij RegisterActivity i wróć do LoginActivity
+                })
+                .setCancelable(false) // Nie można zamknąć dialogu back-pressem
+                .show();
+    }
+
+    private void showLoading(boolean isLoading) {
+        registerProgressBar.setVisibility(isLoading ? View.VISIBLE : View.GONE);
+        btnRegister.setEnabled(!isLoading);
+        btnLoginLink.setEnabled(!isLoading);
+    }
+
+    private void showError(String message) {
+        Toast.makeText(this, message, Toast.LENGTH_LONG).show();
+    }
+}

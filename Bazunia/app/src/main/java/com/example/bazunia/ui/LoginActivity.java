@@ -33,7 +33,10 @@ import org.json.JSONObject;
 
 import java.io.IOException;
 import java.util.Locale;
-
+import com.google.android.material.textfield.TextInputEditText; // ⭐️ DODAJ IMPORT
+import com.google.android.material.button.MaterialButton;
+import org.json.JSONException;
+import org.json.JSONObject;
 import okhttp3.Call;
 import okhttp3.Callback;
 import okhttp3.MediaType;
@@ -57,6 +60,14 @@ public class LoginActivity extends AppCompatActivity {
     private MaterialButton btnGoogleSignIn;
     private ProgressBar loginProgressBar;
     private LinearLayout logoSection;
+
+    // ⭐️ NOWE WIDOKI DLA EMAIL/HASŁO ⭐️
+    private LinearLayout emailLoginSection;
+    private LinearLayout registerLinkSection;
+    private TextInputEditText editTextEmail;
+    private TextInputEditText editTextPassword;
+    private MaterialButton btnLogin;
+    private MaterialButton btnRegisterLink;
 
     // Widoki dla sekcji 2FA
     private LinearLayout twoFaLoginSection;
@@ -83,7 +94,15 @@ public class LoginActivity extends AppCompatActivity {
         editTextLogin2FA = findViewById(R.id.editTextLogin2FA);
         MaterialButton btnVerifyLogin2FA = findViewById(R.id.btnVerifyLogin2FA);
 
-        // 1. Konfiguracja Google Sign-In
+        // ⭐️ NOWE WIDOKI (Email/Hasło) ⭐️
+        emailLoginSection = findViewById(R.id.emailLoginSection);
+        registerLinkSection = findViewById(R.id.registerLinkSection);
+        editTextEmail = findViewById(R.id.editTextEmail);
+        editTextPassword = findViewById(R.id.editTextPassword);
+        btnLogin = findViewById(R.id.btnLogin);
+        btnRegisterLink = findViewById(R.id.btnRegisterLink);
+
+        // 1. Konfiguracja Google Sign-In (bez zmian)
         String webClientId = "79063316759-iva8uesd0vlj3in6eaeralk2kdkgv5or.apps.googleusercontent.com"; // WEB ID
         GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
                 .requestIdToken(webClientId)
@@ -91,16 +110,7 @@ public class LoginActivity extends AppCompatActivity {
                 .build();
         mGoogleSignInClient = GoogleSignIn.getClient(this, gso);
 
-
-
-        // UWAGA: Mimo poprawnego attachBaseContext, widżet SignInButton z Google
-        // jest odporny na lokalizację aplikacji. Najlepszym rozwiązaniem jest zamiana
-        // w activity_login.xml na standardowy MaterialButton z własnym tekstem.
-        // Jeśli nie zmienisz XML, przycisk będzie działał, ale jego tekst
-        // może pozostać w domyślnym języku urządzenia lub w ogóle się nie zmieniać.
-
-
-        // 2. Rejestracja launchera
+        // 2. Rejestracja launchera (bez zmian)
         ActivityResultLauncher<Intent> signInLauncher = registerForActivityResult(
                 new ActivityResultContracts.StartActivityForResult(),
                 result -> {
@@ -115,7 +125,7 @@ public class LoginActivity extends AppCompatActivity {
                 }
         );
 
-        // 3. Obsługa kliknięcia Google
+        // 3. Obsługa kliknięcia Google (bez zmian)
         btnGoogleSignIn.setOnClickListener(v -> {
             Log.d(TAG, "Rozpoczynanie logowania Google...");
             showLoading(true);
@@ -123,8 +133,12 @@ public class LoginActivity extends AppCompatActivity {
             signInLauncher.launch(signInIntent);
         });
 
-        // 4. Obsługa kliknięcia "Weryfikuj 2FA"
+        // 4. Obsługa kliknięcia "Weryfikuj 2FA" (bez zmian)
         btnVerifyLogin2FA.setOnClickListener(v -> verifyLogin2FA());
+
+        // ⭐️ 5. NOWA OBSŁUGA KLIKNIĘĆ (Email/Hasło) ⭐️
+        btnLogin.setOnClickListener(v -> performEmailLogin());
+        btnRegisterLink.setOnClickListener(v -> navigateToRegister());
     }
 
     private void handleSignInResult(Task<GoogleSignInAccount> completedTask) {
@@ -327,10 +341,18 @@ public class LoginActivity extends AppCompatActivity {
         if (show) {
             logoSection.setVisibility(View.GONE);
             btnGoogleSignIn.setVisibility(View.GONE);
+            // ⭐️ UKRYJ NOWE ELEMENTY ⭐️
+            emailLoginSection.setVisibility(View.GONE);
+            registerLinkSection.setVisibility(View.GONE);
+
             twoFaLoginSection.setVisibility(View.VISIBLE);
         } else {
             logoSection.setVisibility(View.VISIBLE);
             btnGoogleSignIn.setVisibility(View.VISIBLE);
+            // ⭐️ POKAŻ NOWE ELEMENTY ⭐️
+            emailLoginSection.setVisibility(View.VISIBLE);
+            registerLinkSection.setVisibility(View.VISIBLE);
+
             twoFaLoginSection.setVisibility(View.GONE);
         }
     }
@@ -338,5 +360,107 @@ public class LoginActivity extends AppCompatActivity {
     // Poprawka: Dodana brakująca metoda do pokazywania błędów
     private void showError(String message) {
         Toast.makeText(this, message, Toast.LENGTH_LONG).show();
+    }
+    // ⭐️⭐️ NOWA METODA ⭐️⭐️
+    private void navigateToRegister() {
+        Intent intent = new Intent(this, RegisterActivity.class);
+        startActivity(intent);
+    }
+
+    // ⭐️⭐️ NOWA METODA ⭐️⭐️
+    private void performEmailLogin() {
+        String email = editTextEmail.getText().toString().trim();
+        String password = editTextPassword.getText().toString().trim();
+
+        // Walidacja
+        if (email.isEmpty()) {
+            editTextEmail.setError(getString(R.string.login_error_email_empty));
+            editTextEmail.requestFocus();
+            return;
+        }
+        if (password.isEmpty()) {
+            editTextPassword.setError(getString(R.string.login_error_password_empty));
+            editTextPassword.requestFocus();
+            return;
+        }
+
+        showLoading(true);
+        Log.d(TAG, "Próba logowania e-mailem: " + email);
+
+        JSONObject json = new JSONObject();
+        try {
+            json.put("email", email);
+            json.put("password", password);
+        } catch (JSONException e) { /* Błąd parsowania jest mało prawdopodobny */ }
+
+        RequestBody body = RequestBody.create(json.toString(), MediaType.get("application/json; charset=utf-8"));
+
+        // Używamy endpointu /api/auth/login, który już istnieje na VPS dla Reacta
+        Request request = new Request.Builder()
+                .url(Constants.LOGIN_EMAIL_ENDPOINT) // Musimy dodać to do Constants!
+                .post(body)
+                .build();
+
+        httpClient.newCall(request).enqueue(new Callback() {
+            @Override
+            public void onFailure(@NonNull Call call, @NonNull IOException e) {
+                Log.e(TAG, "Błąd logowania e-mailem: " + e.getMessage());
+                runOnUiThread(() -> {
+                    showError(getString(R.string.login_error_server));
+                    showLoading(false);
+                });
+            }
+
+            @Override
+            public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
+                try (Response resp = response) {
+                    final String responseBody = resp.body() != null ? resp.body().string() : "";
+
+                    if (resp.isSuccessful()) {
+                        Log.i(TAG, "SUKCES: Logowanie e-mail udane!");
+                        try {
+                            JSONObject respJson = new JSONObject(responseBody);
+                            String jwtToken = respJson.optString("token", null); // Odbieramy JWT
+
+                            if (jwtToken != null) {
+                                // Zapisujemy token i e-mail
+                                saveTokenToPrefs(jwtToken, email);
+
+                                // UWAGA: Obecna logika logowania e-mailem na VPS nie wspiera 2FA!
+                                // Zakładamy, że jeśli się udało, to logujemy od razu.
+                                runOnUiThread(() -> {
+                                    Toast.makeText(LoginActivity.this, getString(R.string.login_success), Toast.LENGTH_SHORT).show();
+                                    startApp();
+                                });
+                            } else {
+                                Log.e(TAG, "Logowanie udane, ale brak tokena w odpowiedzi.");
+                                runOnUiThread(() -> {
+                                    showError(getString(R.string.login_error_server));
+                                    showLoading(false);
+                                });
+                            }
+                        } catch (JSONException e) {
+                            Log.e(TAG, "Błąd parsowania odpowiedzi logowania e-mail", e);
+                            runOnUiThread(() -> {
+                                showError(getString(R.string.login_error_server));
+                                showLoading(false);
+                            });
+                        }
+                    } else if (resp.code() == 401 || resp.code() == 403) {
+                        Log.w(TAG, "Serwer VPS odrzucił logowanie e-mail, kod: " + resp.code());
+                        runOnUiThread(() -> {
+                            showError(getString(R.string.login_error_invalid_credentials));
+                            showLoading(false);
+                        });
+                    } else {
+                        Log.w(TAG, "Błąd serwera logowania e-mail, kod: " + resp.code() + ", body: " + responseBody);
+                        runOnUiThread(() -> {
+                            showError(getString(R.string.login_error_server));
+                            showLoading(false);
+                        });
+                    }
+                }
+            }
+        });
     }
 }

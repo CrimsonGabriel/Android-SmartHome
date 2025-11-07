@@ -150,4 +150,32 @@
     <string name="toast_update_deferred">Aktualizacja %s została odroczona.</string>
     <string name="toast_update_app_starting">Rozpoczynam proces aktualizacji aplikacji!</string>
     <string name="toast_update_gateway_starting">Wysłano polecenie aktualizacji bramki %s.</string>
+    <string name="login_email_hint">Adres e-mail</string>
+    <string name="login_password_hint">Hasło</string>
+
+    <string name="login_no_account">Nie masz konta?</string>
+    <string name="login_register_button_text">Zarejestruj się</string>
+
+    <string name="login_error_email_empty">Adres e-mail nie może być pusty.</string>
+    <string name="login_error_password_empty">Hasło nie może być puste.</string>
+    <string name="login_error_invalid_credentials">Nieprawidłowy e-mail lub hasło.</string>
+    <string name="login_success">Zalogowano pomyślnie!</string>
+    <string name="login_error_server">Błąd serwera. Spróbuj ponownie później.</string>
+
+    <string name="register_title">Utwórz nowe konto</string>
+    <string name="register_email_hint">Adres e-mail</string>
+    <string name="register_password_hint">Hasło (min. 8 znaków)</string>
+    <string name="register_confirm_password_hint">Potwierdź hasło</string>
+    <string name="register_button_text">Zarejestruj się</string>
+    <string name="register_has_account">Masz już konto?</string>
+    <string name="register_login_button_text">Zaloguj się</string>
+
+    <string name="register_error_email_invalid">Wprowadź poprawny adres e-mail.</string>
+    <string name="register_error_password_short">Hasło musi mieć co najmniej 8 znaków.</string>
+    <string name="register_error_password_mismatch">Hasła nie są zgodne.</string>
+    <string name="register_error_email_taken">Ten adres e-mail jest już zajęty.</string>
+    <string name="register_success_title">Weryfikacja konta</string>
+    <string name="register_success_message">Wysłaliśmy link aktywacyjny na Twój adres e-mail. Sprawdź skrzynkę (również folder SPAM), aby dokończyć rejestrację.</string>
+    <string name="register_button_ok">OK</string>
+    <string name="lub">LUB</string>
 </resources>
