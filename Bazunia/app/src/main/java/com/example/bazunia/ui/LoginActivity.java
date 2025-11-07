@@ -71,7 +71,9 @@ public class LoginActivity extends AppCompatActivity {
 
     // Widoki dla sekcji 2FA
     private LinearLayout twoFaLoginSection;
+
     private EditText editTextLogin2FA;
+    private boolean isEmail2FaFlow = false;
 
     @Override
     protected void attachBaseContext(Context newBase) {
@@ -162,6 +164,7 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     private void sendTokenToVps(String idToken) {
+        isEmail2FaFlow = false;
         Log.d(TAG, "Wysyłanie tokena do weryfikacji na VPS...");
         JSONObject json = new JSONObject();
         try {
@@ -235,6 +238,7 @@ public class LoginActivity extends AppCompatActivity {
         });
     }
 
+    // ⭐️⭐️ ZAKTUALIZOWANA METODA ⭐️⭐️
     private void verifyLogin2FA() {
         String code = editTextLogin2FA.getText().toString().trim();
         if (code.length() != 6) {
@@ -243,17 +247,17 @@ public class LoginActivity extends AppCompatActivity {
         }
 
         SharedPreferences prefs = getSharedPreferences(AUTH_PREFS, Context.MODE_PRIVATE);
-        // ⭐️ Używamy idToken do weryfikacji 2FA
-        String idToken = prefs.getString(KEY_JWT_TOKEN, null); // JWT_TOKEN jest tymczasowo idTokenem
+        // Pobieramy token (jest to idToken Google LUB tymczasowy JWT dla e-maila)
+        String tempToken = prefs.getString(KEY_JWT_TOKEN, null);
 
-        if (idToken == null) {
+        if (tempToken == null) {
             showError("Błąd sesji (brak tokena). Zaloguj się ponownie.");
             show2FAInputUI(false);
             return;
         }
 
         showLoading(true);
-        Log.d(TAG, "Wysyłanie kodu 2FA do weryfikacji logowania...");
+        Log.d(TAG, "Wysyłanie kodu 2FA do weryfikacji...");
 
         JSONObject jsonBody = new JSONObject();
         try {
@@ -261,9 +265,20 @@ public class LoginActivity extends AppCompatActivity {
         } catch (JSONException e) { /*...*/ }
         RequestBody body = RequestBody.create(jsonBody.toString(), MediaType.get("application/json; charset=utf-8"));
 
+        // ⭐️ NOWA LOGIKA: Wybierz endpoint na podstawie flagi ⭐️
+        String endpointUrl;
+        if (isEmail2FaFlow) {
+            Log.d(TAG, "Używam endpointu 2FA dla E-mail.");
+            // Musisz dodać LOGIN_EMAIL_2FA_VERIFY_ENDPOINT do Constants.java!
+            endpointUrl = Constants.LOGIN_EMAIL_2FA_VERIFY_ENDPOINT;
+        } else {
+            Log.d(TAG, "Używam endpointu 2FA dla Google.");
+            endpointUrl = Constants.LOGIN_2FA_VERIFY_ENDPOINT;
+        }
+
         Request request = new Request.Builder()
-                .url(Constants.LOGIN_2FA_VERIFY_ENDPOINT)
-                .header("Authorization", "Bearer " + idToken) // Wysyłamy Token ID Google
+                .url(endpointUrl)
+                .header("Authorization", "Bearer " + tempToken) // Wysyłamy odpowiedni token
                 .post(body)
                 .build();
 
@@ -288,7 +303,7 @@ public class LoginActivity extends AppCompatActivity {
                             String newJwt = respJson.optString("token", null); // Odbieramy NOWY JWT
 
                             if (newJwt != null) {
-                                // ⭐️ ZAPISUJEMY WŁAŚCIWY JWT I USUŃ ID TOKEN (KTÓRY BYŁ TYMCZASOWY)
+                                // ⭐️ ZAPISUJEMY WŁAŚCIWY JWT
                                 saveTokenToPrefs(newJwt, prefs.getString(KEY_USER_EMAIL, ""));
                             }
                             runOnUiThread(() -> {
@@ -367,12 +382,12 @@ public class LoginActivity extends AppCompatActivity {
         startActivity(intent);
     }
 
-    // ⭐️⭐️ NOWA METODA ⭐️⭐️
+    // ⭐️⭐️ ZAKTUALIZOWANA METODA ⭐️⭐️
     private void performEmailLogin() {
         String email = editTextEmail.getText().toString().trim();
         String password = editTextPassword.getText().toString().trim();
 
-        // Walidacja
+        // Walidacja (bez zmian)
         if (email.isEmpty()) {
             editTextEmail.setError(getString(R.string.login_error_email_empty));
             editTextEmail.requestFocus();
@@ -395,9 +410,8 @@ public class LoginActivity extends AppCompatActivity {
 
         RequestBody body = RequestBody.create(json.toString(), MediaType.get("application/json; charset=utf-8"));
 
-        // Używamy endpointu /api/auth/login, który już istnieje na VPS dla Reacta
         Request request = new Request.Builder()
-                .url(Constants.LOGIN_EMAIL_ENDPOINT) // Musimy dodać to do Constants!
+                .url(Constants.LOGIN_EMAIL_ENDPOINT)
                 .post(body)
                 .build();
 
@@ -417,26 +431,40 @@ public class LoginActivity extends AppCompatActivity {
                     final String responseBody = resp.body() != null ? resp.body().string() : "";
 
                     if (resp.isSuccessful()) {
-                        Log.i(TAG, "SUKCES: Logowanie e-mail udane!");
+                        Log.i(TAG, "SUKCES: Logowanie e-mail udane! Odpowiedź: " + responseBody);
                         try {
+                            // ⭐️ NOWA LOGIKA PARSOWANIA AuthResponse ⭐️
                             JSONObject respJson = new JSONObject(responseBody);
-                            String jwtToken = respJson.optString("token", null); // Odbieramy JWT
+                            String jwtToken = respJson.optString("jwt", null);
+                            boolean requires2FA = respJson.optBoolean("requires2FA", false);
 
-                            if (jwtToken != null) {
-                                // Zapisujemy token i e-mail
-                                saveTokenToPrefs(jwtToken, email);
-
-                                // UWAGA: Obecna logika logowania e-mailem na VPS nie wspiera 2FA!
-                                // Zakładamy, że jeśli się udało, to logujemy od razu.
-                                runOnUiThread(() -> {
-                                    Toast.makeText(LoginActivity.this, getString(R.string.login_success), Toast.LENGTH_SHORT).show();
-                                    startApp();
-                                });
-                            } else {
-                                Log.e(TAG, "Logowanie udane, ale brak tokena w odpowiedzi.");
+                            if (jwtToken == null) {
+                                Log.e(TAG, "Logowanie udane, ale brak tokena JWT w odpowiedzi.");
                                 runOnUiThread(() -> {
                                     showError(getString(R.string.login_error_server));
                                     showLoading(false);
+                                });
+                                return;
+                            }
+
+                            // Zapisujemy token (będzie tymczasowy lub stały) i email
+                            saveTokenToPrefs(jwtToken, email);
+
+                            if (requires2FA) {
+                                Log.d(TAG, "Serwer wymaga 2FA dla logowania e-mailem.");
+                                // Ustaw flagę, aby verifyLogin2FA wiedziało, co robić
+                                isEmail2FaFlow = true;
+                                runOnUiThread(() -> {
+                                    Toast.makeText(LoginActivity.this, "Wymagana weryfikacja 2FA", Toast.LENGTH_SHORT).show();
+                                    show2FAInputUI(true);
+                                    showLoading(false);
+                                });
+                            } else {
+                                Log.d(TAG, "Logowanie e-mail: 2FA nie jest wymagane. Loguję...");
+                                isEmail2FaFlow = false; // Na wszelki wypadek
+                                runOnUiThread(() -> {
+                                    Toast.makeText(LoginActivity.this, getString(R.string.login_success), Toast.LENGTH_SHORT).show();
+                                    startApp();
                                 });
                             }
                         } catch (JSONException e) {
@@ -463,4 +491,5 @@ public class LoginActivity extends AppCompatActivity {
             }
         });
     }
+
 }

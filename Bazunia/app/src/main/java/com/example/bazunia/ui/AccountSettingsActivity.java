@@ -21,8 +21,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.example.bazunia.utils.AppearanceManager;
 import com.example.bazunia.utils.Constants;
 import com.example.bazunia.R;
-import com.google.android.gms.auth.api.signin.GoogleSignIn;
-import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
+
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.button.MaterialButton;
 import com.google.zxing.BarcodeFormat;
@@ -61,7 +60,7 @@ public class AccountSettingsActivity extends AppCompatActivity {
     private MaterialButton btnConfirmDisable2FA;
     private ProgressBar progressBar2FA;
 
-    private String currentIdToken;
+    private String currentJwtToken;
     private String currentSecretKey;
 
 
@@ -97,7 +96,7 @@ public class AccountSettingsActivity extends AppCompatActivity {
 
         setup2FAListeners();
 
-        retrieveIdToken();
+        retrieveJwtToken();
         fetch2FAStatusFromServer();
     }
 
@@ -121,15 +120,18 @@ public class AccountSettingsActivity extends AppCompatActivity {
         }
     }
 
-    @SuppressWarnings("deprecation")
-    private void retrieveIdToken() {
-        GoogleSignInAccount account = GoogleSignIn.getLastSignedInAccount(this);
-        if (account != null) {
-            currentIdToken = account.getIdToken();
-            Log.d(TAG, "Pobrano ID token Google.");
+    private void retrieveJwtToken() {
+        // Używamy tych samych SharedPreferences, co LoginActivity
+        SharedPreferences authPrefs = getSharedPreferences(LoginActivity.AUTH_PREFS, Context.MODE_PRIVATE);
+        currentJwtToken = authPrefs.getString(LoginActivity.KEY_JWT_TOKEN, null);
+
+        if (currentJwtToken != null) {
+            Log.d(TAG, "Pobrano token JWT z SharedPreferences.");
         } else {
-            Log.e(TAG, "Nie znaleziono zalogowanego konta Google w Settings.");
-            Toast.makeText(this, "Błąd: Brak zalogowanego użytkownika.", Toast.LENGTH_LONG).show();
+            Log.e(TAG, "Nie znaleziono tokena JWT w SharedPreferences. Użytkownik nie jest zalogowany.");
+            Toast.makeText(this, "Błąd: Brak zalogowanego użytkownika (brak tokena).", Toast.LENGTH_LONG).show();
+            // Możemy też zamknąć aktywność, bo nic tu nie zadziała
+            finish();
         }
     }
 
@@ -152,7 +154,7 @@ public class AccountSettingsActivity extends AppCompatActivity {
     }
 
     private void toggle2FA() {
-        if (currentIdToken == null) { return; }
+        if (currentJwtToken == null) { return; }
         boolean isEnabled = sharedPreferences2FA.getBoolean(KEY_2FA_ENABLED, false);
 
         runOnUiThread(() -> {
@@ -169,12 +171,12 @@ public class AccountSettingsActivity extends AppCompatActivity {
     private void start2FASetup() {
         showLoading(true);
         Log.d(TAG, "Rozpoczynanie konfiguracji 2FA...");
-        if (currentIdToken == null) { return; }
+        if (currentJwtToken == null) { return; }
 
         // ⭐️ POPRAWKA URL: Użycie poprawionej stałej URL ⭐️
         Request request = new Request.Builder()
                 .url(Constants.SETUP_2FA_ENDPOINT) // Używamy poprawionej stałej
-                .header("Authorization", "Bearer " + currentIdToken)
+                .header("Authorization", "Bearer " + currentJwtToken)
                 .post(RequestBody.create(new byte[0]))
                 .build();
         httpClient.newCall(request).enqueue(new Callback() {
@@ -230,7 +232,7 @@ public class AccountSettingsActivity extends AppCompatActivity {
         // ⭐️ POPRAWKA URL: Użycie poprawionej stałej URL ⭐️
         Request request = new Request.Builder()
                 .url(Constants.VERIFY_2FA_ENDPOINT) // Używamy poprawionej stałej
-                .header("Authorization", "Bearer " + currentIdToken)
+                .header("Authorization", "Bearer " + currentJwtToken)
                 .post(body)
                 .build();
         httpClient.newCall(request).enqueue(new Callback() {
@@ -270,7 +272,7 @@ public class AccountSettingsActivity extends AppCompatActivity {
         // ⭐️ POPRAWKA URL: Użycie poprawionej stałej URL ⭐️
         Request request = new Request.Builder()
                 .url(Constants.DISABLE_2FA_ENDPOINT) // Używamy poprawionej stałej
-                .header("Authorization", "Bearer " + currentIdToken)
+                .header("Authorization", "Bearer " + currentJwtToken)
                 .post(body)
                 .build();
         httpClient.newCall(request).enqueue(new Callback() {
@@ -303,9 +305,9 @@ public class AccountSettingsActivity extends AppCompatActivity {
             runOnUiThread(() -> showError("Kod 2FA musi mieć 6 cyfr."));
             return true;
         }
-        if (currentIdToken == null) {
+        if (currentJwtToken == null) {
             runOnUiThread(() -> showError(getString(R.string.two_fa_error_generic) + " (Brak tokena)"));
-            retrieveIdToken();
+            retrieveJwtToken();
             return true;
         }
         return false;
@@ -361,7 +363,7 @@ public class AccountSettingsActivity extends AppCompatActivity {
     }
 
     private void fetch2FAStatusFromServer() {
-        if (currentIdToken == null) {
+        if (currentJwtToken == null) {
             Log.e(TAG, "Brak tokena, nie można pobrać statusu 2FA.");
             update2FAUIState();
             return;
@@ -370,7 +372,7 @@ public class AccountSettingsActivity extends AppCompatActivity {
         Log.d(TAG, "Pobieranie aktualnego statusu 2FA z serwera...");
         Request request = new Request.Builder()
                 .url(Constants.CHECK_2FA_STATUS_ENDPOINT)
-                .header("Authorization", "Bearer " + currentIdToken)
+                .header("Authorization", "Bearer " + currentJwtToken)
                 .get()
                 .build();
         httpClient.newCall(request).enqueue(new Callback() {
