@@ -203,4 +203,11 @@
     <string name="toast_error_new_password_mismatch">New passwords do not match.</string>
     <string name="toast_error_current_password_empty">Current password cannot be empty.</string>
     <string name="toast_error_new_password_short">New password must be at least 8 characters long.</string>
+    <string name="login_forgot_password">Forgot password?</string>
+    <string name="reset_password_title">Reset Password</string>
+    <string name="reset_password_subtitle">Enter the e-mail address associated with your account. We will send a password reset link.</string>
+    <string name="reset_password_button_text">Send Reset Link</string>
+    <string name="reset_password_email_hint">E-mail Address</string>
+    <string name="toast_reset_password_success">If the account exists, a password reset link has been sent to your e-mail.</string>
+    <string name="toast_reset_password_error">An error occurred. Please try again later.</string>
 </resources>

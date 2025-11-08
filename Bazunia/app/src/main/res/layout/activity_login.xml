@@ -131,6 +131,14 @@
             style="@style/Widget.Material3.Button.TextButton" />
     </LinearLayout>
 
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnForgotPassword"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="@string/login_forgot_password"
+        style="@style/Widget.Material3.Button.TextButton" />
+
 
     <LinearLayout
         android:id="@+id/twoFaLoginSection"

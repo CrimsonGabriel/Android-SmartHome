@@ -41,4 +41,5 @@ public class Constants {
     public static final String SET_PASSWORD_ENDPOINT = VPS_SERVER_IP + "/api/user/set-password";
 
     public static final String CHANGE_PASSWORD_ENDPOINT = VPS_SERVER_IP + "/api/user/change-password";
+    public static final String REQUEST_PASSWORD_RESET_ENDPOINT = VPS_SERVER_IP + "/api/auth/request-password-reset";
 }

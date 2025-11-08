@@ -62,8 +62,9 @@ public class LoginActivity extends AppCompatActivity {
     private TextInputEditText editTextPassword;
     private MaterialButton btnLogin;
     private MaterialButton btnRegisterLink;
+    private MaterialButton btnForgotPassword;
 
-    // Widoki dla sekcji 2FA
+
     private LinearLayout twoFaLoginSection;
 
     private EditText editTextLogin2FA;
@@ -97,6 +98,7 @@ public class LoginActivity extends AppCompatActivity {
         editTextPassword = findViewById(R.id.editTextPassword);
         btnLogin = findViewById(R.id.btnLogin);
         btnRegisterLink = findViewById(R.id.btnRegisterLink);
+        btnForgotPassword = findViewById(R.id.btnForgotPassword);
 
         // 1. Konfiguracja Google Sign-In (bez zmian)
         String webClientId = "79063316759-iva8uesd0vlj3in6eaeralk2kdkgv5or.apps.googleusercontent.com"; // WEB ID
@@ -135,6 +137,7 @@ public class LoginActivity extends AppCompatActivity {
         // ⭐️ 5. NOWA OBSŁUGA KLIKNIĘĆ (Email/Hasło) ⭐️
         btnLogin.setOnClickListener(v -> performEmailLogin());
         btnRegisterLink.setOnClickListener(v -> navigateToRegister());
+        btnForgotPassword.setOnClickListener(v -> navigateToPasswordReset());
     }
 
     private void handleSignInResult(Task<GoogleSignInAccount> completedTask) {
@@ -180,6 +183,8 @@ public class LoginActivity extends AppCompatActivity {
                     show2FAInputUI(false);
                 });
             }
+
+
 
             @Override
             public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
@@ -354,28 +359,29 @@ public class LoginActivity extends AppCompatActivity {
         finish();
     }
 
-    // Poprawka: Metoda odpowiedzialna tylko za ProgressBar
+
     private void showLoading(boolean isLoading) {
         loginProgressBar.setVisibility(isLoading ? View.VISIBLE : View.GONE);
     }
 
-    // Poprawka: Dodana brakująca metoda do przełączania widoków
+
     private void show2FAInputUI(boolean show) {
         if (show) {
             logoSection.setVisibility(View.GONE);
             btnGoogleSignIn.setVisibility(View.GONE);
-            // ⭐️ UKRYJ NOWE ELEMENTY ⭐️
+
             emailLoginSection.setVisibility(View.GONE);
             registerLinkSection.setVisibility(View.GONE);
+            btnForgotPassword.setVisibility(View.GONE);
 
             twoFaLoginSection.setVisibility(View.VISIBLE);
         } else {
             logoSection.setVisibility(View.VISIBLE);
             btnGoogleSignIn.setVisibility(View.VISIBLE);
-            // ⭐️ POKAŻ NOWE ELEMENTY ⭐️
+
             emailLoginSection.setVisibility(View.VISIBLE);
             registerLinkSection.setVisibility(View.VISIBLE);
-
+            btnForgotPassword.setVisibility(View.VISIBLE);
             twoFaLoginSection.setVisibility(View.GONE);
         }
     }
@@ -383,11 +389,6 @@ public class LoginActivity extends AppCompatActivity {
     // Poprawka: Dodana brakująca metoda do pokazywania błędów
     private void showError(String message) {
         Toast.makeText(this, message, Toast.LENGTH_LONG).show();
-    }
-    // ⭐️⭐️ NOWA METODA ⭐️⭐️
-    private void navigateToRegister() {
-        Intent intent = new Intent(this, RegisterActivity.class);
-        startActivity(intent);
     }
 
     // ⭐️⭐️ ZAKTUALIZOWANA METODA ⭐️⭐️
@@ -459,7 +460,7 @@ public class LoginActivity extends AppCompatActivity {
                             saveTokenToPrefs(jwtToken, email);
 
                             if (requires2FA) {
-                                Log.d(TAG, "Serwer wymaga 2FA dla logowania e-mailem.");
+                                int d = Log.d(TAG, "Serwer wymaga 2FA dla logowania e-mailem.");
                                 // Ustaw flagę, aby verifyLogin2FA wiedziało, co robić
                                 isEmail2FaFlow = true;
                                 runOnUiThread(() -> {
@@ -482,6 +483,7 @@ public class LoginActivity extends AppCompatActivity {
                                         Toast.makeText(LoginActivity.this, getString(R.string.login_success), Toast.LENGTH_SHORT).show();
                                         startApp();
                                     });
+
                                 }
                             }
                         } catch (JSONException e) {
@@ -508,12 +510,32 @@ public class LoginActivity extends AppCompatActivity {
             }
         });
     }
+
     private void startCreatePasswordActivity() {
         Log.d(TAG, "Wymagane ustawienie hasła. Uruchamiam CreatePasswordActivity.");
         Intent intent = new Intent(this, CreatePasswordActivity.class);
         startActivity(intent);
         // NIE kończymy LoginActivity, aby użytkownik mógł wrócić, jeśli np. naciśnie 'wstecz'
         // finish();
+    }
+
+    // ⭐️⭐️ METODY PRZENIESIONE WE WŁAŚCIWE MIEJSCE (NA POZIOM KLASY) ⭐️⭐️
+
+    private void navigateToRegister() {
+        // Teraz 'this' poprawnie odnosi się do LoginActivity
+        Intent intent = new Intent(this, RegisterActivity.class);
+        startActivity(intent);
+    }
+
+    private void navigateToPasswordReset() {
+        // Teraz 'this' poprawnie odnosi się do LoginActivity
+        Intent intent = new Intent(this, RequestPasswordResetActivity.class);
+        // Przekaż e-mail, jeśli użytkownik już go wpisał
+        String email = editTextEmail.getText().toString().trim();
+        if (!email.isEmpty()) {
+            intent.putExtra("USER_EMAIL", email);
+        }
+        startActivity(intent);
     }
 
 }

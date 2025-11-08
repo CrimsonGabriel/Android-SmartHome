@@ -202,4 +202,11 @@
     <string name="toast_error_new_password_mismatch">Nowe hasła nie są zgodne.</string>
     <string name="toast_error_current_password_empty">Obecne hasło nie może być puste.</string>
     <string name="toast_error_new_password_short">Nowe hasło musi mieć co najmniej 8 znaków.</string>
+    <string name="login_forgot_password">Zapomniałeś hasła?</string>
+    <string name="reset_password_title">Zresetuj hasło</string>
+    <string name="reset_password_subtitle">Podaj adres e-mail powiązany z kontem. Wyślemy na niego link do zresetowania hasła.</string>
+    <string name="reset_password_button_text">Wyślij link resetujący</string>
+    <string name="reset_password_email_hint">Adres e-mail</string>
+    <string name="toast_reset_password_success">Jeśli konto istnieje, link do resetowania hasła został wysłany na Twój e-mail.</string>
+    <string name="toast_reset_password_error">Wystąpił błąd. Spróbuj ponownie później.</string>
 </resources>
