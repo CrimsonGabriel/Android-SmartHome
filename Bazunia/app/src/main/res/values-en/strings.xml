@@ -179,4 +179,15 @@
     <string name="register_success_message">We have sent an activation link to your email address. Please check your inbox (and SPAM folder) to complete registration.</string>
     <string name="register_button_ok">OK</string>
     <string name="lub">OR</string>
+    <string name="create_password_title">Create Password</string>
+    <string name="create_password_subtitle">Your Google account does not have a password set in our system yet. Set one now to enable logging in with your email and password.</string>
+    <string name="create_password_new_pass_hint">New password (min. 8 characters)</string>
+    <string name="create_password_confirm_pass_hint">Confirm new password</string>
+    <string name="create_password_button_text">Set Password and Continue</string>
+
+    <string name="error_password_mismatch">Passwords do not match.</string>
+    <string name="error_password_short">Password must be at least 8 characters long.</string>
+
+    <string name="toast_password_set_success">Password set successfully!</string>
+    <string name="toast_password_set_error">Error setting password.</string>
 </resources>

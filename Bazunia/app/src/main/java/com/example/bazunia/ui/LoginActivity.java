@@ -24,19 +24,13 @@ import com.google.android.gms.auth.api.signin.GoogleSignIn;
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
 import com.google.android.gms.auth.api.signin.GoogleSignInClient;
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
-import com.google.android.gms.common.SignInButton;
 import com.google.android.gms.common.api.ApiException;
 import com.google.android.gms.tasks.Task;
 import com.google.android.material.button.MaterialButton;
 import org.json.JSONException;
 import org.json.JSONObject;
-
 import java.io.IOException;
-import java.util.Locale;
-import com.google.android.material.textfield.TextInputEditText; // ⭐️ DODAJ IMPORT
-import com.google.android.material.button.MaterialButton;
-import org.json.JSONException;
-import org.json.JSONObject;
+import com.google.android.material.textfield.TextInputEditText;
 import okhttp3.Call;
 import okhttp3.Callback;
 import okhttp3.MediaType;
@@ -214,11 +208,18 @@ public class LoginActivity extends AppCompatActivity {
                                     showLoading(false);
                                 });
                             } else {
-                                Log.d(TAG, "2FA nie jest wymagane. Loguję...");
-                                runOnUiThread(() -> {
-                                    Toast.makeText(LoginActivity.this, welcomeMsg, Toast.LENGTH_SHORT).show();
-                                    startApp();
-                                });
+                                Log.d(TAG, "2FA nie jest wymagane.");
+                                // ⭐️ NOWA LOGIKA SPRAWDZANIA HASŁA ⭐️
+                                boolean requiresPasswordSetup = respJson.optBoolean("requiresPasswordSetup", false);
+
+                                if (requiresPasswordSetup) {
+                                    runOnUiThread(LoginActivity.this::startCreatePasswordActivity);
+                                } else {
+                                    runOnUiThread(() -> {
+                                        Toast.makeText(LoginActivity.this, welcomeMsg, Toast.LENGTH_SHORT).show();
+                                        startApp();
+                                    });
+                                }
                             }
                         } catch (JSONException e) {
                             Log.e(TAG, "Błąd parsowania odpowiedzi VPS", e);
@@ -300,16 +301,23 @@ public class LoginActivity extends AppCompatActivity {
                         Log.i(TAG, "SUKCES: Kod 2FA poprawny. Loguję.");
                         try {
                             JSONObject respJson = new JSONObject(responseBody);
-                            String newJwt = respJson.optString("token", null); // Odbieramy NOWY JWT
+                            String newJwt = respJson.optString("token", null);
+
+                            // ⭐️ NOWA LOGIKA SPRAWDZANIA HASŁA ⭐️
+                            boolean requiresPasswordSetup = respJson.optBoolean("requiresPasswordSetup", false);
 
                             if (newJwt != null) {
-                                // ⭐️ ZAPISUJEMY WŁAŚCIWY JWT
                                 saveTokenToPrefs(newJwt, prefs.getString(KEY_USER_EMAIL, ""));
                             }
-                            runOnUiThread(() -> {
-                                Toast.makeText(LoginActivity.this, "Zalogowano pomyślnie!", Toast.LENGTH_SHORT).show();
-                                startApp();
-                            });
+
+                            if (requiresPasswordSetup) {
+                                runOnUiThread(LoginActivity.this::startCreatePasswordActivity);
+                            } else {
+                                runOnUiThread(() -> {
+                                    Toast.makeText(LoginActivity.this, "Zalogowano pomyślnie!", Toast.LENGTH_SHORT).show();
+                                    startApp();
+                                });
+                            }
                         } catch (JSONException e) {
                             Log.e(TAG, "Błąd parsowania odpowiedzi 2FA", e);
                             runOnUiThread(LoginActivity.this::startApp);
@@ -460,12 +468,21 @@ public class LoginActivity extends AppCompatActivity {
                                     showLoading(false);
                                 });
                             } else {
-                                Log.d(TAG, "Logowanie e-mail: 2FA nie jest wymagane. Loguję...");
-                                isEmail2FaFlow = false; // Na wszelki wypadek
-                                runOnUiThread(() -> {
-                                    Toast.makeText(LoginActivity.this, getString(R.string.login_success), Toast.LENGTH_SHORT).show();
-                                    startApp();
-                                });
+                                Log.d(TAG, "Logowanie e-mail: 2FA nie jest wymagane.");
+                                isEmail2FaFlow = false;
+
+                                // ⭐️ NOWA LOGIKA SPRAWDZANIA HASŁA ⭐️
+                                // (Dla logowania e-mail to zawsze będzie 'false', ale dla spójności)
+                                boolean requiresPasswordSetup = respJson.optBoolean("requiresPasswordSetup", false);
+
+                                if (requiresPasswordSetup) {
+                                    runOnUiThread(LoginActivity.this::startCreatePasswordActivity);
+                                } else {
+                                    runOnUiThread(() -> {
+                                        Toast.makeText(LoginActivity.this, getString(R.string.login_success), Toast.LENGTH_SHORT).show();
+                                        startApp();
+                                    });
+                                }
                             }
                         } catch (JSONException e) {
                             Log.e(TAG, "Błąd parsowania odpowiedzi logowania e-mail", e);
@@ -490,6 +507,13 @@ public class LoginActivity extends AppCompatActivity {
                 }
             }
         });
+    }
+    private void startCreatePasswordActivity() {
+        Log.d(TAG, "Wymagane ustawienie hasła. Uruchamiam CreatePasswordActivity.");
+        Intent intent = new Intent(this, CreatePasswordActivity.class);
+        startActivity(intent);
+        // NIE kończymy LoginActivity, aby użytkownik mógł wrócić, jeśli np. naciśnie 'wstecz'
+        // finish();
     }
 
 }

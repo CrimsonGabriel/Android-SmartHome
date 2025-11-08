@@ -178,4 +178,15 @@
     <string name="register_success_message">Wysłaliśmy link aktywacyjny na Twój adres e-mail. Sprawdź skrzynkę (również folder SPAM), aby dokończyć rejestrację.</string>
     <string name="register_button_ok">OK</string>
     <string name="lub">LUB</string>
+    <string name="create_password_title">Utwórz hasło</string>
+    <string name="create_password_subtitle">Twoje konto Google nie ma jeszcze ustawionego hasła w systemie. Ustaw je teraz, aby móc logować się za pomocą e-maila i hasła.</string>
+    <string name="create_password_new_pass_hint">Nowe hasło (min. 8 znaków)</string>
+    <string name="create_password_confirm_pass_hint">Potwierdź nowe hasło</string>
+    <string name="create_password_button_text">Ustaw hasło i kontynuuj</string>
+
+    <string name="error_password_mismatch">Hasła nie są zgodne.</string>
+    <string name="error_password_short">Hasło musi mieć co najmniej 8 znaków.</string>
+
+    <string name="toast_password_set_success">Hasło zostało pomyślnie ustawione!</string>
+    <string name="toast_password_set_error">Wystąpił błąd podczas ustawiania hasła.</string>
 </resources>
