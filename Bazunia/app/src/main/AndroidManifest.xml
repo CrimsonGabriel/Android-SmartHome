@@ -53,6 +53,9 @@
         <activity
             android:name=".ui.CreatePasswordActivity"
             android:exported="false" />
+        <activity
+            android:name=".ui.ChangePasswordActivity"
+            android:exported="false" />
         <activity android:name=".ui.MainActivity" />
         <activity android:name=".ui.DataActivity" />
         <activity android:name=".ui.SensorDetailActivity"

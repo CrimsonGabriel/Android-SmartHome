@@ -189,4 +189,17 @@
 
     <string name="toast_password_set_success">Hasło zostało pomyślnie ustawione!</string>
     <string name="toast_password_set_error">Wystąpił błąd podczas ustawiania hasła.</string>
+    <string name="settings_account_change_password">Zmień hasło</string>
+    <string name="change_password_title">Zmień swoje hasło</string>
+    <string name="change_password_subtitle">Wprowadź swoje obecne hasło oraz nowe, aby zaktualizować konto.</string>
+    <string name="hint_current_password">Obecne hasło</string>
+    <string name="hint_new_password">Nowe hasło (min. 8 znaków)</string>
+    <string name="hint_confirm_new_password">Potwierdź nowe hasło</string>
+    <string name="button_update_password">Zaktualizuj hasło</string>
+    <string name="toast_password_changed_success">Hasło zostało pomyślnie zmienione!</string>
+    <string name="toast_password_change_error">Wystąpił błąd podczas zmiany hasła.</string>
+    <string name="toast_error_current_password_wrong">Podane obecne hasło jest nieprawidłowe.</string>
+    <string name="toast_error_new_password_mismatch">Nowe hasła nie są zgodne.</string>
+    <string name="toast_error_current_password_empty">Obecne hasło nie może być puste.</string>
+    <string name="toast_error_new_password_short">Nowe hasło musi mieć co najmniej 8 znaków.</string>
 </resources>

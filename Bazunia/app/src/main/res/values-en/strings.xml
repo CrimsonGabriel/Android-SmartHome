@@ -190,4 +190,17 @@
 
     <string name="toast_password_set_success">Password set successfully!</string>
     <string name="toast_password_set_error">Error setting password.</string>
+    <string name="settings_account_change_password">Change Password</string>
+    <string name="change_password_title">Change Your Password</string>
+    <string name="change_password_subtitle">Enter your current password and a new one to update your account.</string>
+    <string name="hint_current_password">Current Password</string>
+    <string name="hint_new_password">New Password (min. 8 chars)</string>
+    <string name="hint_confirm_new_password">Confirm New Password</string>
+    <string name="button_update_password">Update Password</string>
+    <string name="toast_password_changed_success">Password changed successfully!</string>
+    <string name="toast_password_change_error">An error occurred while changing password.</string>
+    <string name="toast_error_current_password_wrong">The current password provided is incorrect.</string>
+    <string name="toast_error_new_password_mismatch">New passwords do not match.</string>
+    <string name="toast_error_current_password_empty">Current password cannot be empty.</string>
+    <string name="toast_error_new_password_short">New password must be at least 8 characters long.</string>
 </resources>

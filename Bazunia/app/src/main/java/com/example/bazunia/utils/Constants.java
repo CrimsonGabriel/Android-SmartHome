@@ -39,4 +39,6 @@ public class Constants {
 
     public static final String LOGIN_EMAIL_2FA_VERIFY_ENDPOINT = VPS_SERVER_IP + "/api/auth/2fa/email-verify";
     public static final String SET_PASSWORD_ENDPOINT = VPS_SERVER_IP + "/api/user/set-password";
+
+    public static final String CHANGE_PASSWORD_ENDPOINT = VPS_SERVER_IP + "/api/user/change-password";
 }

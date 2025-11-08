@@ -40,6 +40,15 @@
             android:layout_marginBottom="16dp"
             tools:text="@string/enable_2fa" />
 
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnChangePassword"
+            style="?attr/materialButtonOutlinedStyle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginBottom="16dp"
+            android:text="@string/settings_account_change_password" />
+
         <LinearLayout
             android:id="@+id/setupSection"
             android:layout_width="match_parent"

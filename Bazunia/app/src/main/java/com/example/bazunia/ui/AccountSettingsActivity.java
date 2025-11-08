@@ -14,6 +14,7 @@ import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.content.Intent;
 import com.example.bazunia.utils.LocaleManager;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
@@ -60,6 +61,7 @@ public class AccountSettingsActivity extends AppCompatActivity {
     private MaterialButton btnConfirmDisable2FA;
     private ProgressBar progressBar2FA;
 
+    private MaterialButton btnChangePassword;
     private String currentJwtToken;
     private String currentSecretKey;
 
@@ -93,8 +95,14 @@ public class AccountSettingsActivity extends AppCompatActivity {
         editTextDisable2FA = findViewById(R.id.editTextDisable2FA);
         btnConfirmDisable2FA = findViewById(R.id.btnConfirmDisable2FA);
         progressBar2FA = findViewById(R.id.progressBar2FA);
+        btnChangePassword = findViewById(R.id.btnChangePassword);
 
         setup2FAListeners();
+
+        btnChangePassword.setOnClickListener(v -> {
+            Intent intent = new Intent(AccountSettingsActivity.this, ChangePasswordActivity.class);
+            startActivity(intent);
+        });
 
         retrieveJwtToken();
         fetch2FAStatusFromServer();
