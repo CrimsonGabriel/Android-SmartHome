@@ -27,7 +27,6 @@ public class NotificationHelper {
     private final Context context;
     private final NotificationManager notificationManager;
 
-    // <<< NOWY: Enum dla typów alertów >>>
     public enum ThresholdType {
         LOW, HIGH, DOOR
     }
@@ -39,7 +38,6 @@ public class NotificationHelper {
     }
 
     private void createNotificationChannels() {
-        // Kanał dla alertów (np. temperatura, drzwi)
         NotificationChannel alertChannel = new NotificationChannel(
                 CHANNEL_ID_ALERTS,
                 CHANNEL_NAME_ALERTS,
@@ -47,7 +45,6 @@ public class NotificationHelper {
         );
         alertChannel.setDescription("Powiadomienia o przekroczeniu progów czujników.");
 
-        // Kanał dla aktualizacji (mniej pilny)
         NotificationChannel updateChannel = new NotificationChannel(
                 CHANNEL_ID_UPDATES,
                 CHANNEL_NAME_UPDATES,
@@ -61,9 +58,6 @@ public class NotificationHelper {
         }
     }
 
-    /**
-     * Ogólna funkcja powiadomienia (nadal tu jest, choć nieużywana)
-     */
     public void showNotification(String title, String message, int notificationId) {
         NotificationCompat.Builder builder = new NotificationCompat.Builder(context, CHANNEL_ID_ALERTS)
                 .setSmallIcon(R.drawable.ic_notification_alert)
@@ -79,29 +73,26 @@ public class NotificationHelper {
         }
     }
 
-    /**
-     * <<< NOWA METODA (Naprawia błąd): Powiadomienie o aktualizacji >>>
-     * Używane przez VpsClientService (Req 5.2)
-     */
     public void showUpdateNotification(String updateKey, String status) {
+        // Używamy replace() zamiast String.format()
         String title = context.getString(R.string.notification_update_title);
-        String message = String.format(Locale.getDefault(),
-                context.getString(R.string.notification_update_available), updateKey, status);
-        int notificationId = updateKey.hashCode(); // Unikalne ID na podstawie klucza
+        String message = context.getString(R.string.notification_update_available)
+                .replace("[KLUCZ]", updateKey)
+                .replace("[STATUS]", status);
 
-        // Intent dla akcji AKCEPTACJI
+        int notificationId = updateKey.hashCode();
+
         Intent acceptIntent = new Intent(context, AcceptUpdateActivity.class);
         acceptIntent.putExtra("UPDATE_KEY", updateKey);
         acceptIntent.putExtra("NOTIFICATION_ID", notificationId);
         PendingIntent acceptPendingIntent = PendingIntent.getActivity(context, notificationId * 2, acceptIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
 
-        // Intent dla akcji ODROCZENIA
         Intent deferIntent = new Intent(context, DeferUpdateActivity.class);
         deferIntent.putExtra("UPDATE_KEY", updateKey);
         deferIntent.putExtra("NOTIFICATION_ID", notificationId);
         PendingIntent deferPendingIntent = PendingIntent.getActivity(context, notificationId * 2 + 1, deferIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
 
-        NotificationCompat.Builder builder = new NotificationCompat.Builder(context, CHANNEL_ID_UPDATES) // Używa kanału aktualizacji
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(context, CHANNEL_ID_UPDATES)
                 .setSmallIcon(R.drawable.ic_notification_update)
                 .setContentTitle(title)
                 .setContentText(message)
@@ -118,32 +109,49 @@ public class NotificationHelper {
     }
 
     /**
-     * <<< NOWA METODA (Naprawia błąd): Powiadomienie o alertach progów >>>
-     * Używane przez VpsClientService
+     * <<< NOWA WERSJA UŻYWAJĄCA .replace() >>>
      */
     public void showThresholdAlert(SensorModel sensor, float currentValue, float threshold, ThresholdType type) {
         String title, message;
-        // Używamy ID sensora jako unikalnego ID powiadomienia
+
         int notificationId = (sensor.gatewayId + "_" + sensor.sensorId).hashCode();
+
+        // Konwertuj float na String (bezpiecznie, z kropką)
+        String valStr = String.format(Locale.US, "%.1f", currentValue);
+        String thrStr = String.format(Locale.US, "%.1f", threshold);
+
 
         switch (type) {
             case DOOR:
                 title = context.getString(R.string.alert_title_door_window);
-                message = String.format(Locale.getDefault(),
-                        context.getString(R.string.alert_msg_door_open), sensor.sensorId, sensor.gatewayId);
+                message = context.getString(R.string.alert_msg_door_open)
+                        .replace("[ID]", sensor.sensorId)
+                        .replace("[GATEWAY]", sensor.gatewayId);
                 break;
+
+
             case LOW:
-                title = String.format(Locale.getDefault(),
-                        context.getString(R.string.alert_title_temp_humidity), sensor.type, sensor.sensorId);
-                message = String.format(Locale.getDefault(),
-                        context.getString(R.string.alert_msg_too_low), sensor.type, currentValue, threshold);
+                title = context.getString(R.string.alert_title_temp_humidity)
+                        .replace("[TYP]", sensor.type)
+                        .replace("[ID]", sensor.sensorId);
+
+                message = context.getString(R.string.alert_msg_too_low)
+                        .replace("[TYP]", sensor.type)
+                        .replace("[WARTOŚĆ]", valStr)
+                        .replace("[PROG]", thrStr);
                 break;
+
+
             case HIGH:
             default:
-                title = String.format(Locale.getDefault(),
-                        context.getString(R.string.alert_title_temp_humidity), sensor.type, sensor.sensorId);
-                message = String.format(Locale.getDefault(),
-                        context.getString(R.string.alert_msg_too_high), sensor.type, currentValue, threshold);
+                title = context.getString(R.string.alert_title_temp_humidity)
+                        .replace("[TYP]", sensor.type)
+                        .replace("[ID]", sensor.sensorId);
+
+                message = context.getString(R.string.alert_msg_too_high)
+                        .replace("[TYP]", sensor.type)
+                        .replace("[WARTOŚĆ]", valStr)
+                        .replace("[PROG]", thrStr);
                 break;
         }
 

@@ -111,11 +111,11 @@
     <string name="log_error_db_filter">Error filtering data: %1$s</string>
     <string name="log_error_db_types">Error fetching types: %1$s</string>
     <string name="log_error_db_gateways">Error fetching gateways: %1$s</string>
-    <string name="alert_title_temp_humidity">Alert: %1$s %2$s</string>
-    <string name="alert_msg_too_low">Value %1$s is too low: %.1f. Min threshold: %.1f.</string>
-    <string name="alert_msg_too_high">Value %1$s is too high: %.1f. Max threshold: %.1f.</string>
+    <string name="alert_title_temp_humidity">Alert: [TYPE] [ID]</string>
+    <string name="alert_msg_too_low">Value [TYPE] is too low: [VALUE]. Min threshold: [THRESHOLD].</string>
+    <string name="alert_msg_too_high">Value [TYPE] is too high: [VALUE]. Max threshold: [THRESHOLD].</string>
     <string name="alert_title_door_window">Alert: Door/Window</string>
-    <string name="alert_msg_door_open">Sensor %1$s (Gateway %2$s) REPORTS OPEN STATE!</string>
+    <string name="alert_msg_door_open">Sensor [ID] (Gateway [GATEWAY]) REPORTS OPEN STATE!</string>
     <string name="error_numeric_parse">Could not parse sensor value as a number: %1$s</string>
     <string name="sign_in_with_google">Sign in with Google</string>
     <string name="clear_data_confirmation_title_choose">Select Deletion Scope</string>
@@ -144,7 +144,7 @@
     <string name="cleanup_gateway_web_toast">Please use your web browser to manage server settings.</string>
     <string name="log_warn_update_status_failed">Failed to fetch update status, code: %d.</string>
     <string name="notification_update_title">Update Available!</string>
-    <string name="notification_update_available">Update available for %s. Status: %s.</string>
+    <string name="notification_update_available">Update available for [KEY]. Status: [STATUS].</string>
     <string name="action_accept_update">Install</string>
     <string name="action_defer_update">Defer</string>
     <string name="toast_update_deferred">Update %s has been deferred.</string>

@@ -283,12 +283,16 @@ public class VpsClientService extends Service {
         // --- ŚCIEŻKA 1: Sprawdzanie czujników typu 'contact' ---
         if (type.equals(doorContactType) || type.equals("contact")) {
             if (getString(R.string.door_contact_open_value).equals(sensor.value)) { // "1"
+                // Przekazujemy typ DOOR, który nie używa liczb
                 notificationHelper.showThresholdAlert(sensor, 0, 0, NotificationHelper.ThresholdType.DOOR);
             }
         }
         // --- ŚCIEŻKA 2: Sprawdzanie czujników TYLKO numerycznych ---
         else if (type.equals("temperature") || type.equals(humidityType)) {
+
+
             try {
+                // 1. Jawna konwersja String -> float (zgodnie z Twoją sugestią)
                 float currentValue = Float.parseFloat(sensor.value);
                 boolean isHumidity = type.equals(humidityType);
 
@@ -298,21 +302,18 @@ public class VpsClientService extends Service {
                 float min = thresholdManager.getMinThreshold(sensor.gatewayId, sensor.sensorId, defaultMin);
                 float max = thresholdManager.getMaxThreshold(sensor.gatewayId, sensor.sensorId, defaultMax);
 
+                // 2. Przekazanie bezpiecznych float-ów, a nie String-ów
                 if (currentValue < min) {
-                    // <<< POPRAWKA: Wywołanie formatowania JEST BEZPIECZNE tutaj >>>
                     notificationHelper.showThresholdAlert(sensor, currentValue, min, NotificationHelper.ThresholdType.LOW);
                 } else if (currentValue > max) {
-                    // <<< POPRAWKA: Wywołanie formatowania JEST BEZPIECZNE tutaj >>>
                     notificationHelper.showThresholdAlert(sensor, currentValue, max, NotificationHelper.ThresholdType.HIGH);
                 }
             } catch (NumberFormatException e) {
-                // Wartość nie była liczbą (np. "Błąd"), ignoruj
+                // 3. Jeśli konwersja się nie uda (np. "Błąd"), jest łapana i nie ma crasha
                 Log.w(TAG, String.format(Locale.getDefault(),
                         getString(R.string.log_error_not_numeric), sensor.value));
             }
         }
-        // --- ŚCIEŻKA 3: Ignorowanie reszty ---
-        // Wszystkie inne typy (np. 'smoke', 'power', 'motion') są ignorowane.
     }
 
     private void sendDataUpdateBroadcast() {
