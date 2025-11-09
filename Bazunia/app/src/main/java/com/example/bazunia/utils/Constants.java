@@ -17,6 +17,7 @@ public class Constants {
     // Endpoint do pobierania danych (Polling)
     public static final String SENSOR_DATA_ENDPOINT = VPS_SERVER_IP + "/data/android";
 
+    public static final String GATEWAYS_ENDPOINT = VPS_SERVER_IP + "/api/gateways";
     // --- NOWY ENDPOINT DLA GOOGLE AUTH (POPRAWIONO ŚCIEŻKĘ) ---
     public static final String GOOGLE_AUTH_ENDPOINT = VPS_SERVER_IP + "/api/auth/google";
 

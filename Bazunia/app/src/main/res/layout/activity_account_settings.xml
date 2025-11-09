@@ -13,149 +13,151 @@
         android:layout_height="wrap_content"
         android:minHeight="?attr/actionBarSize"
         app:title="@string/settings_account_section_title"
-        app:navigationIcon="@drawable/ic_arrow_back" /> <ScrollView
-    android:layout_width="match_parent"
-    android:layout_height="match_parent">
+        app:navigationIcon="@drawable/ic_arrow_back" />
 
-    <LinearLayout
+    <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="16dp">
-
-        <TextView
-            android:id="@+id/text2FAStatus"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center_horizontal"
-            android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
-            android:layout_marginBottom="8dp"
-            tools:text="@string/status_2fa_disabled" />
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnToggle2FA"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center_horizontal"
-            android:layout_marginBottom="16dp"
-            tools:text="@string/enable_2fa" />
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnChangePassword"
-            style="?attr/materialButtonOutlinedStyle"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center_horizontal"
-            android:layout_marginBottom="16dp"
-            android:text="@string/settings_account_change_password" />
+        android:layout_height="match_parent">
 
         <LinearLayout
-            android:id="@+id/setupSection"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:gravity="center_horizontal"
-            android:visibility="gone"
-            tools:visibility="visible">
+            android:padding="16dp">
 
             <TextView
+                android:id="@+id/text2FAStatus"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="@string/scan_qr_code"
-                android:gravity="center"
-                android:layout_marginBottom="16dp"/>
-
-            <ImageView
-                android:id="@+id/qrCodeImageView"
-                android:layout_width="250dp"
-                android:layout_height="250dp"
-                android:contentDescription="@string/qr_code_content_desc" />
+                android:layout_gravity="center_horizontal"
+                android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
+                android:layout_marginBottom="8dp"
+                tools:text="@string/status_2fa_disabled" />
 
             <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnCopySecret"
+                android:id="@+id/btnToggle2FA"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Kopiuj klucz"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginBottom="16dp"
+                tools:text="@string/enable_2fa" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnChangePassword"
                 style="?attr/materialButtonOutlinedStyle"
-                android:layout_marginTop="8dp"/>
-
-            <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="@string/enter_2fa_code"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginBottom="16dp"
+                android:text="@string/settings_account_change_password" />
+
+            <LinearLayout
+                android:id="@+id/setupSection"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:gravity="center_horizontal"
+                android:visibility="gone"
+                tools:visibility="visible">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/scan_qr_code"
+                    android:gravity="center"
+                    android:layout_marginBottom="16dp"/>
+
+                <ImageView
+                    android:id="@+id/qrCodeImageView"
+                    android:layout_width="250dp"
+                    android:layout_height="250dp"
+                    android:contentDescription="@string/qr_code_content_desc" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnCopySecret"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/account_copy_secret_key"
+                    style="?attr/materialButtonOutlinedStyle"
+                    android:layout_marginTop="8dp"/>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/enter_2fa_code"
+                    android:layout_marginTop="16dp"
+                    android:layout_marginBottom="8dp"/>
+
+                <com.google.android.material.textfield.TextInputLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:maxWidth="200dp"
+                    android:hint="@string/login_2fa_code_hint">
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/editText2FA"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="number"
+                        android:maxLength="6"
+                        android:textAlignment="center"/>
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnVerify2FA"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="@string/verify_2fa_code"/>
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/disableSection"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:gravity="center_horizontal"
+                android:visibility="gone"
+                tools:visibility="visible">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/enter_2fa_code"
+                    android:gravity="center"
+                    android:layout_marginBottom="8dp"/>
+
+                <com.google.android.material.textfield.TextInputLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:maxWidth="200dp"
+                    android:hint="@string/login_2fa_code_hint">
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/editTextDisable2FA"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="number"
+                        android:maxLength="6"
+                        android:textAlignment="center"/>
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnConfirmDisable2FA"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="@string/disable_2fa"
+                    app:backgroundTint="?attr/colorError"/>
+            </LinearLayout>
+
+            <ProgressBar
+                android:id="@+id/progressBar2FA"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
                 android:layout_marginTop="16dp"
-                android:layout_marginBottom="8dp"/>
+                android:visibility="gone" />
 
-            <com.google.android.material.textfield.TextInputLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:maxWidth="200dp"
-                android:hint="@string/login_2fa_code_hint">
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/editText2FA"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:inputType="number"
-                    android:maxLength="6"
-                    android:textAlignment="center"/>
-            </com.google.android.material.textfield.TextInputLayout>
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnVerify2FA"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:text="@string/verify_2fa_code"/>
         </LinearLayout>
-
-        <LinearLayout
-            android:id="@+id/disableSection"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:gravity="center_horizontal"
-            android:visibility="gone"
-            tools:visibility="visible">
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/enter_2fa_code"
-                android:gravity="center"
-                android:layout_marginBottom="8dp"/>
-
-            <com.google.android.material.textfield.TextInputLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:maxWidth="200dp"
-                android:hint="@string/login_2fa_code_hint">
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/editTextDisable2FA"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:inputType="number"
-                    android:maxLength="6"
-                    android:textAlignment="center"/>
-            </com.google.android.material.textfield.TextInputLayout>
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnConfirmDisable2FA"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:text="@string/disable_2fa"
-                app:backgroundTint="?attr/colorError"/>
-        </LinearLayout>
-
-        <ProgressBar
-            android:id="@+id/progressBar2FA"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center_horizontal"
-            android:layout_marginTop="16dp"
-            android:visibility="gone" />
-
-    </LinearLayout>
-</ScrollView>
+    </ScrollView>
 
 </LinearLayout>

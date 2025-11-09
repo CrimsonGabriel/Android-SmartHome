@@ -1,4 +1,3 @@
-// 💾 VpsClientService.java (PEŁNA, POPRAWIONA WERSJA)
 package com.example.bazunia.data;
 
 import android.app.Notification;
@@ -11,7 +10,6 @@ import android.os.IBinder;
 import android.util.Log;
 import android.content.Context;
 
-
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
@@ -22,13 +20,17 @@ import com.example.bazunia.utils.Constants;
 import com.example.bazunia.utils.NotificationHelper;
 import com.example.bazunia.R;
 import com.example.bazunia.ui.LoginActivity;
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.IOException;
-import java.util.Iterator; // <-- DODANY IMPORT
+import java.lang.reflect.Type;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -47,7 +49,9 @@ public class VpsClientService extends Service {
     private static final String TAG = "VpsClientService";
     private static final String CHANNEL_ID = "VpsClientServiceChannel";
     private static final int NOTIFICATION_ID = 101;
-    private static final int POLLING_INTERVAL_SECONDS = 5;
+
+    private static final int POLLING_INTERVAL_READINGS_SECONDS = 5;
+    private static final int POLLING_INTERVAL_GATEWAYS_SECONDS = 60;
 
     private OkHttpClient httpClient;
     private ScheduledExecutorService executorService;
@@ -56,10 +60,7 @@ public class VpsClientService extends Service {
     private NotificationHelper notificationHelper;
     private CleanupManager cleanupManager;
     private SharedPreferences authPrefs;
-
-    // ⭐️ POPRAWKA: Dodanie deklaracji pollingCounter ⭐️
-    private int pollingCounter = 0;
-
+    private Gson gson;
 
     @Override
     public void onCreate() {
@@ -68,6 +69,7 @@ public class VpsClientService extends Service {
         startForeground(NOTIFICATION_ID, createNotification());
 
         httpClient = new OkHttpClient();
+        gson = new Gson();
         dbHelper = new DatabaseHelper(this);
         thresholdManager = new ThresholdManager(this);
         notificationHelper = new NotificationHelper(this);
@@ -77,7 +79,10 @@ public class VpsClientService extends Service {
         executorService = Executors.newSingleThreadScheduledExecutor();
 
         registerAndroidIp();
-        executorService.scheduleWithFixedDelay(this::fetchSensorData, 0, POLLING_INTERVAL_SECONDS, TimeUnit.SECONDS);
+
+        executorService.scheduleWithFixedDelay(this::fetchSensorData, 0, POLLING_INTERVAL_READINGS_SECONDS, TimeUnit.SECONDS);
+        executorService.scheduleWithFixedDelay(this::syncGatewayDefinitions, 1, POLLING_INTERVAL_GATEWAYS_SECONDS, TimeUnit.SECONDS);
+        executorService.scheduleWithFixedDelay(this::fetchUpdateStatus, 5, POLLING_INTERVAL_GATEWAYS_SECONDS, TimeUnit.SECONDS);
     }
 
     private Notification createNotification() {
@@ -95,11 +100,27 @@ public class VpsClientService extends Service {
                 .build();
     }
 
-    private void fetchSensorData() {
-        String jwtToken = authPrefs.getString(LoginActivity.KEY_JWT_TOKEN, null);
-
-        if (jwtToken == null) {
+    /**
+     * <<< NOWA METODA POMOCNICZA >>>
+     * Bezpiecznie pobiera aktualny token JWT z SharedPreferences.
+     * @return Token JWT lub null, jeśli nie istnieje.
+     */
+    private String getJwtToken() {
+        // authPrefs jest już zainicjowane w onCreate
+        String token = authPrefs.getString(LoginActivity.KEY_JWT_TOKEN, null);
+        if (token == null) {
             Log.e(TAG, getString(R.string.log_error_no_token));
+        }
+        return token;
+    }
+
+    /**
+     * Zadanie 1: Pobiera surowe ODCZYTY (stara logika, /data/android)
+     */
+    private void fetchSensorData() {
+        // <<< POPRAWKA: Pobieraj token za każdym razem >>>
+        String jwtToken = getJwtToken();
+        if (jwtToken == null) {
             return;
         }
 
@@ -112,7 +133,7 @@ public class VpsClientService extends Service {
         httpClient.newCall(request).enqueue(new Callback() {
             @Override
             public void onFailure(@NonNull Call call, @NonNull IOException e) {
-                Log.e(TAG, "BLAD POBIERANIA danych z VPS: " + e.getMessage());
+                Log.e(TAG, "BLAD POBIERANIA (Odczyty): " + e.getMessage());
             }
 
             @Override
@@ -120,39 +141,66 @@ public class VpsClientService extends Service {
                 try (Response resp = response) {
                     if (resp.isSuccessful() && resp.body() != null) {
                         String jsonResponse = resp.body().string();
-                        Log.d(TAG, "Odebrano dane: " + jsonResponse);
-                        processSensorData(jsonResponse);
+                        processSensorData(jsonResponse); // Zapisuje do TABLE_READINGS
                     } else {
-                        if (resp.code() == 401 || resp.code() == 403) {
-                            Log.e(TAG, String.format(Locale.getDefault(),
-                                    getString(R.string.log_warn_token_rejected), resp.code()));
-                            authPrefs.edit().remove(LoginActivity.KEY_JWT_TOKEN).apply();
-                        } else {
-                            Log.w(TAG, String.format(Locale.getDefault(),
-                                    getString(R.string.log_warn_data_failed), resp.code()));
-                        }
+                        Log.w(TAG, String.format(Locale.getDefault(),
+                                getString(R.string.log_warn_data_failed), resp.code()));
                     }
                 } catch (Exception e) {
-                    Log.e(TAG, "KRYTYCZNY BLAD w onResponse: " + e.getMessage());
+                    Log.e(TAG, "KRYTYCZNY BLAD w onResponse (Odczyty): " + e.getMessage());
                 }
             }
         });
-
-        // ⭐️ POPRAWKA LOGIKI POLLINGU I AKTUALIZACJI W GŁÓWNYM WĄTKU EXECUTION ⭐️
-        pollingCounter++;
-        if (pollingCounter % 5 == 0) {
-            fetchUpdateStatus();
-            pollingCounter = 0;
-        }
     }
 
-    private void fetchUpdateStatus() {
-        String jwtToken = authPrefs.getString(LoginActivity.KEY_JWT_TOKEN, null);
-
+    /**
+     * Zadanie 2: Synchronizuje BRAMKI I CZUJNIKI (NOWA LOGIKA, /api/gateways)
+     */
+    private void syncGatewayDefinitions() {
+        // <<< POPRAWKA: Pobieraj token za każdym razem >>>
+        String jwtToken = getJwtToken();
         if (jwtToken == null) {
-            Log.e(TAG, getString(R.string.log_error_no_token));
             return;
         }
+
+        Request request = new Request.Builder()
+                .url(Constants.GATEWAYS_ENDPOINT) // Używa nowego endpointu
+                .addHeader("Authorization", "Bearer " + jwtToken)
+                .get()
+                .build();
+
+        httpClient.newCall(request).enqueue(new Callback() {
+            @Override
+            public void onFailure(@NonNull Call call, @NonNull IOException e) {
+                Log.e(TAG, "BLAD POBIERANIA (Bramki): " + e.getMessage());
+            }
+            @Override
+            public void onResponse(@NonNull Call call, @NonNull Response response) {
+                try (Response resp = response) {
+                    if (resp.isSuccessful() && resp.body() != null) {
+                        String jsonResponse = resp.body().string();
+                        Type listType = new TypeToken<List<Gateway>>() {}.getType();
+                        List<Gateway> gateways = gson.fromJson(jsonResponse, listType);
+                        dbHelper.syncGatewaysAndSensors(gateways);
+                        sendDataUpdateBroadcast();
+                    } else {
+                        Log.w(TAG, String.format(Locale.getDefault(),
+                                "Pobieranie bramek nieudane, kod: %d", resp.code()));
+                    }
+                } catch (Exception e) {
+                    Log.e(TAG, "KRYTYCZNY BLAD w onResponse (Bramki): " + e.getMessage());
+                }
+            }
+        });
+    }
+
+    /**
+     * Zadanie 3: Pobiera status aktualizacji (stara logika)
+     */
+    private void fetchUpdateStatus() {
+        // <<< POPRAWKA: Pobieraj token za każdym razem >>>
+        String jwtToken = getJwtToken();
+        if (jwtToken == null) return;
 
         Request request = new Request.Builder()
                 .url(Constants.UPDATE_STATUS_ENDPOINT)
@@ -163,50 +211,38 @@ public class VpsClientService extends Service {
         httpClient.newCall(request).enqueue(new Callback() {
             @Override
             public void onFailure(@NonNull Call call, @NonNull IOException e) {
-                Log.e(TAG, "BLAD POBIERANIA statusu aktualizacji: " + e.getMessage());
+                Log.e(TAG, "BLAD POBIERANIA (Update Status): " + e.getMessage());
             }
-
             @Override
             public void onResponse(@NonNull Call call, @NonNull Response response) {
                 try (Response resp = response) {
                     if (resp.isSuccessful() && resp.body() != null) {
-                        String jsonResponse = resp.body().string();
-                        processUpdateStatus(jsonResponse);
+                        processUpdateStatus(resp.body().string());
                     } else {
                         Log.w(TAG, String.format(Locale.getDefault(),
                                 getString(R.string.log_warn_update_status_failed), resp.code()));
                     }
                 } catch (Exception e) {
-                    Log.e(TAG, "KRYTYCZNY BLAD w onResponse (Aktualizacje): " + e.getMessage());
+                    Log.e(TAG, "KRYTYCZNY BLAD w onResponse (Update Status): " + e.getMessage());
                 }
             }
         });
     }
 
+    // ... (metody processUpdateStatus, processSensorData, checkThresholds, sendDataUpdateBroadcast, registerAndroidIp... bez zmian) ...
     private void processUpdateStatus(String json) {
         try {
-            JSONObject jsonObject = new JSONObject(json);
-
-            // ⭐️ POPRAWKA: Użycie Iteratora do poprawnej iteracji po kluczach JSON ⭐️
-            Iterator<String> keys = jsonObject.keys();
-
+            JSONObject root = new JSONObject(json);
+            Iterator<String> keys = root.keys();
             while (keys.hasNext()) {
                 String key = keys.next();
-                String status = jsonObject.getString(key);
-
-                if ("REQUIRED".equals(status) || "OPTIONAL".equals(status)) {
-
-                    String title = getString(R.string.notification_update_title);
-                    String message = String.format(Locale.getDefault(),
-                            getString(R.string.notification_update_available), key, status);
-
-                    int notificationId = (key + "UPDATE").hashCode();
-
-                    notificationHelper.showNotificationWithAction(title, message, notificationId, key);
+                String status = root.getString(key);
+                if ("available".equalsIgnoreCase(status)) {
+                    notificationHelper.showUpdateNotification(key, status);
                 }
             }
         } catch (JSONException e) {
-            Log.e(TAG, "Blad parsowania JSON statusu aktualizacji: " + e.getMessage());
+            Log.e(TAG, "Blad parsowania JSON z /api/update/status: " + e.getMessage());
         }
     }
 
@@ -215,19 +251,15 @@ public class VpsClientService extends Service {
             JSONObject root = new JSONObject(json);
             JSONArray jsonArray = root.getJSONArray("sensors");
             if (jsonArray.length() == 0) return;
-
             for (int i = 0; i < jsonArray.length(); i++) {
                 JSONObject sensorJson = jsonArray.getJSONObject(i);
-
-                String gatewayId = sensorJson.optString("gatewayId", "Brak GW");
-                String sensorId = sensorJson.optString("sensorId", "Brak ID");
-
+                // <<< POPRAWKA: Użyj kluczy z nowego DTO >>>
+                String gatewayId = sensorJson.getString("gatewayId");
+                String sensorId = sensorJson.getString("sensorId");
                 String type = sensorJson.getString("type");
                 String value = sensorJson.getString("value");
                 long timestamp = sensorJson.getLong("timestamp");
-
                 SensorModel sensor = new SensorModel(gatewayId, sensorId, type, value, timestamp);
-
                 dbHelper.addSensorData(sensor);
                 checkThresholds(sensor);
             }
@@ -236,51 +268,51 @@ public class VpsClientService extends Service {
                 dbHelper.cleanOldSensorData(cleanupDays);
             }
             sendDataUpdateBroadcast();
-        } catch (JSONException e) {
-            Log.e(TAG, "Blad parsowania JSON z VPS: " + e.getMessage());
         } catch (Exception e) {
-            Log.e(TAG, "Nieoczekiwany blad przetwarzania danych: " + e.getMessage());
+            Log.e(TAG, "Nieoczekiwany blad przetwarzania odczytów: " + e.getMessage(), e); // <<< Lepsze logowanie
         }
     }
 
     private void checkThresholds(SensorModel sensor) {
-        if ("temperature".equalsIgnoreCase(sensor.type) || "humidity".equalsIgnoreCase(sensor.type)) {
+        if (sensor == null || sensor.type == null) return;
+
+        String type = sensor.type.toLowerCase();
+        String doorContactType = getString(R.string.sensor_type_door_contact); // "door_contact"
+        String humidityType = getString(R.string.sensor_type_humidity); // "humidity"
+
+        // --- ŚCIEŻKA 1: Sprawdzanie czujników typu 'contact' ---
+        if (type.equals(doorContactType) || type.equals("contact")) {
+            if (getString(R.string.door_contact_open_value).equals(sensor.value)) { // "1"
+                notificationHelper.showThresholdAlert(sensor, 0, 0, NotificationHelper.ThresholdType.DOOR);
+            }
+        }
+        // --- ŚCIEŻKA 2: Sprawdzanie czujników TYLKO numerycznych ---
+        else if (type.equals("temperature") || type.equals(humidityType)) {
             try {
                 float currentValue = Float.parseFloat(sensor.value);
-                boolean isHumidity = "humidity".equalsIgnoreCase(sensor.type);
+                boolean isHumidity = type.equals(humidityType);
+
                 float defaultMin = isHumidity ? 5.0f : 18.0f;
                 float defaultMax = isHumidity ? 30.0f : 22.0f;
+
                 float min = thresholdManager.getMinThreshold(sensor.gatewayId, sensor.sensorId, defaultMin);
                 float max = thresholdManager.getMaxThreshold(sensor.gatewayId, sensor.sensorId, defaultMax);
-                String alertTitle = String.format(Locale.getDefault(),
-                        getString(R.string.alert_title_temp_humidity), sensor.type, sensor.sensorId);
-                String alertMessage = null;
+
                 if (currentValue < min) {
-                    alertMessage = String.format(Locale.getDefault(),
-                            getString(R.string.alert_msg_too_low), sensor.type, currentValue, min);
+                    // <<< POPRAWKA: Wywołanie formatowania JEST BEZPIECZNE tutaj >>>
+                    notificationHelper.showThresholdAlert(sensor, currentValue, min, NotificationHelper.ThresholdType.LOW);
                 } else if (currentValue > max) {
-                    alertMessage = String.format(Locale.getDefault(),
-                            getString(R.string.alert_msg_too_high), sensor.type, currentValue, max);
-                }
-                if (alertMessage != null) {
-                    int notificationId = (sensor.gatewayId + sensor.sensorId).hashCode();
-                    notificationHelper.showNotification(alertTitle, alertMessage, notificationId);
-                    Log.w(TAG, alertMessage);
+                    // <<< POPRAWKA: Wywołanie formatowania JEST BEZPIECZNE tutaj >>>
+                    notificationHelper.showThresholdAlert(sensor, currentValue, max, NotificationHelper.ThresholdType.HIGH);
                 }
             } catch (NumberFormatException e) {
+                // Wartość nie była liczbą (np. "Błąd"), ignoruj
                 Log.w(TAG, String.format(Locale.getDefault(),
                         getString(R.string.log_error_not_numeric), sensor.value));
             }
-        } else if ("door_contact".equalsIgnoreCase(sensor.type)) {
-            if ("1".equals(sensor.value)) {
-                String alertTitle = getString(R.string.alert_title_door_window);
-                String alertMessage = String.format(Locale.getDefault(),
-                        getString(R.string.alert_msg_door_open), sensor.sensorId, sensor.gatewayId);
-                int notificationId = (sensor.gatewayId + sensor.sensorId).hashCode();
-                notificationHelper.showNotification(alertTitle, alertMessage, notificationId);
-                Log.w(TAG, alertMessage);
-            }
         }
+        // --- ŚCIEŻKA 3: Ignorowanie reszty ---
+        // Wszystkie inne typy (np. 'smoke', 'power', 'motion') są ignorowane.
     }
 
     private void sendDataUpdateBroadcast() {
@@ -289,37 +321,55 @@ public class VpsClientService extends Service {
     }
 
     private void registerAndroidIp() {
-        String json = String.format(Locale.getDefault(), "{\"password\":\"%s\",\"port\":%d}", Constants.SECRET_PASSWORD, Constants.ANDROID_LISTEN_PORT);
-        RequestBody body = RequestBody.create(json, MediaType.get("application/json; charset=utf-8"));
+        JSONObject jsonBody = new JSONObject();
+        try {
+            jsonBody.put("password", Constants.SECRET_PASSWORD);
+            jsonBody.put("port", Constants.ANDROID_LISTEN_PORT);
+        } catch (JSONException e) {
+            Log.e(TAG, "Blad tworzenia JSON dla /register/android", e);
+            return;
+        }
+        RequestBody body = RequestBody.create(jsonBody.toString(), MediaType.get("application/json; charset=utf-8"));
         Request request = new Request.Builder()
                 .url(Constants.REGISTRATION_ENDPOINT)
                 .post(body)
                 .build();
+
         httpClient.newCall(request).enqueue(new Callback() {
-            @Override public void onFailure(@NonNull Call call, @NonNull IOException e) { Log.e(TAG, "BLAD POST rejestracji do VPS: " + e.getMessage()); }
-            @Override public void onResponse(@NonNull Call call, @NonNull Response response) {
-                if (response.isSuccessful()) { Log.i(TAG, "SUKCES: IP Androida zarejestrowane: " + Constants.ANDROID_LISTEN_PORT);
-                } else { Log.w(TAG, "OSTRZEZENIE: Rejestracja nieudana, kod: " + response.code()); }
+            @Override
+            public void onFailure(@NonNull Call call, @NonNull IOException e) {
+                Log.e(TAG, "Blad rejestracji Android IP: " + e.getMessage());
+            }
+            @Override
+            public void onResponse(@NonNull Call call, @NonNull Response response) {
+                if(response.isSuccessful()) {
+                    Log.d(TAG, "Pomyslnie zarejestrowano IP Androida na serwerze.");
+                } else {
+                    Log.w(TAG, "Rejestracja IP Androida nieudana, kod: " + response.code());
+                }
+                response.close();
             }
         });
     }
 
-
-
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        Log.d(TAG, "Serwis klienta VPS: onStartCommand");
         return START_STICKY;
     }
 
     @Override
     public void onDestroy() {
-        super.onDestroy();
-        if (executorService != null) {
+        Log.d(TAG, "Serwis klienta VPS: onDestroy");
+        if (executorService != null && !executorService.isShutdown()) {
             executorService.shutdownNow();
         }
-        Log.d(TAG, "Serwis klienta VPS: onDestroy (zatrzymano Polling)...");
+        super.onDestroy();
     }
 
-    @Nullable @Override
-    public IBinder onBind(Intent intent) { return null; }
+    @Nullable
+    @Override
+    public IBinder onBind(Intent intent) {
+        return null;
+    }
 }

@@ -71,9 +71,13 @@ public class MainActivity extends AppCompatActivity {
         // [NOWY KOD] Inicjalizuj klienta Google (tak samo jak w LoginActivity)
         // WAŻNE: Użyj tego samego WEB Client ID, co w LoginActivity i na serwerze!
         String webClientId = "79063316759-iva8uesd0vlj3in6eaeralk2kdkgv5or.apps.googleusercontent.com"; // Upewnij się, że to WEB ID!
+
+        // <<< POPRAWKA: Użyj .requestIdToken() i webClientId >>>
         GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                .requestIdToken(webClientId)
                 .requestEmail()
                 .build();
+
         mGoogleSignInClient = GoogleSignIn.getClient(this, gso);
 
         btnSettings.setOnClickListener(v -> startActivity(new Intent(this, SettingsActivity.class)));

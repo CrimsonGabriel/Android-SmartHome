@@ -45,7 +45,7 @@ dependencies {
     implementation(libs.okhttp.v4120)
     implementation(libs.nanohttpd)
     implementation(libs.json.v20240303)
-
+    implementation(libs.gson)
     // --- ZALEŻNOŚCI TESTOWE ---
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)

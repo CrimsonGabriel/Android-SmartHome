@@ -4,6 +4,7 @@ agp = "8.9.1" # Zakładam, że 8.9.1 jest poprawną wersją, zostawiam
 
 # Wersje bibliotek
 appcompat = "1.7.0"
+gson = "2.10.1"
 material = "1.12.0"
 activity = "1.10.1" # Zaktualizowałem do twojej wersji
 constraintlayout = "2.2.1" # Zaktualizowałem do twojej wersji
@@ -23,6 +24,7 @@ espressoCore = "3.6.1" # Zmieniam nazwę na espresso-core dla spójności
 [libraries]
 # Aliasy, których używasz w build.gradle
 appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
+gson = { module = "com.google.code.gson:gson", version.ref = "gson" }
 material = { group = "com.google.android.material", name = "material", version.ref = "material" }
 activity = { group = "androidx.activity", name = "activity", version.ref = "activity" }
 constraintlayout = { group = "androidx.constraintlayout", name = "constraintlayout", version.ref = "constraintlayout" }

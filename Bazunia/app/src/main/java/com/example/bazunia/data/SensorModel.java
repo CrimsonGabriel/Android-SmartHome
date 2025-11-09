@@ -1,6 +1,5 @@
 package com.example.bazunia.data;
 
-import com.example.bazunia.R;
 
 import java.io.Serializable;
 import java.text.SimpleDateFormat;
@@ -8,15 +7,15 @@ import java.util.Date;
 import java.util.Locale;
 
 /**
- * Model danych przechowujący komplet informacji o czujniku,
- * co zwiększa czytelność kodu w DataActivity i Adapterze.
+ * Model danych przechowujący komplet informacji o ODCZYCIE czujnika.
+ * Używany przez MainActivity i SensorDetailActivity.
  */
 public class SensorModel implements Serializable {
     public final String gatewayId;
     public final String sensorId;
     public final String type;
     public final String value;
-    public final long timestamp; // Zmieniono na long (milisekundy) dla lepszej precyzji
+    public final long timestamp;
 
     public SensorModel(String gatewayId, String sensorId, String type, String value, long timestamp) {
         this.gatewayId = gatewayId;
@@ -34,23 +33,5 @@ public class SensorModel implements Serializable {
         return sdf.format(new Date(timestamp));
     }
 
-
-    public int getIconResourceId() {
-        if ("temperature".equalsIgnoreCase(type)) {
-            return R.drawable.ic_temp;
-        } else if ("humidity".equalsIgnoreCase(type)) {
-            return R.drawable.ic_humidity;
-        } else if ("door_contact".equalsIgnoreCase(type)) {
-            // Wartość "1" to OTWARTY/ALERT - ikona otwarta
-            if ("1".equals(value)) {
-                return R.drawable.ic_door_open;
-            }
-            // Wartość "0" to ZAMKNIĘTY/OK - ikona zamknięta
-            else {
-                return R.drawable.ic_door_closed;
-            }
-        }
-        // Domyślna ikona
-        return R.drawable.ic_sensor;
-    }
+    // <<< USUNIĘTO: Metoda getIconResourceId() została przeniesiona do GatewaySensorCursorAdapter >>>
 }

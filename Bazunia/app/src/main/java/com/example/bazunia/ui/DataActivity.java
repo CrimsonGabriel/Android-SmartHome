@@ -4,64 +4,67 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.content.pm.PackageManager;
-import android.os.Build;
+import android.content.SharedPreferences;
+import android.database.Cursor;
 import android.os.Bundle;
+import android.util.Log;
+import android.view.LayoutInflater;
 import android.view.View;
-import android.view.ViewGroup;
-import android.widget.ArrayAdapter;
-import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ExpandableListView;
+import android.widget.Toast;
 
+import androidx.annotation.NonNull; // <<< OTO POPRAWKA (DODANY IMPORT)
+import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
+import com.example.bazunia.R;
+import com.example.bazunia.data.DatabaseHelper;
+import com.example.bazunia.data.VpsClientService;
 import com.example.bazunia.utils.AppearanceManager;
 import com.example.bazunia.utils.Constants;
-import com.example.bazunia.data.DatabaseHelper;
-import com.example.bazunia.R;
-import com.example.bazunia.data.SensorModel;
-import com.google.android.material.button.MaterialButton; // DODAJ TEN IMPORT
-import android.widget.ExpandableListView;
-import android.widget.Spinner;
-import android.widget.Toast;
-import androidx.appcompat.app.AlertDialog;
-import androidx.annotation.NonNull;
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.app.ActivityCompat;
-import androidx.core.content.ContextCompat;
-import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import com.example.bazunia.utils.LocaleManager;
-import com.google.android.material.bottomsheet.BottomSheetDialog;
+import com.google.android.material.button.MaterialButton;
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.io.IOException;
+import java.util.Objects;
+
+import okhttp3.Call;
+import okhttp3.Callback;
+import okhttp3.MediaType;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
 
 public class DataActivity extends AppCompatActivity {
 
-    private static final int PERMISSION_REQUEST_CODE = 100;
+    private static final String TAG = "DataActivity"; // <<< Dodano TAG do logowania
     private ExpandableListView expandableListView;
-    private List<String> listBramek;
-    private HashMap<String, List<SensorModel>> czujnikiMap;
     private DatabaseHelper dbHelper;
-    private ExpandableListAdapter adapter;
+    private GatewaySensorCursorAdapter adapter;
     private BroadcastReceiver dataUpdateReceiver;
 
     private AppearanceManager appearanceManager;
     private String currentTextScale;
     private String currentButtonScale;
-    private String currentFilterQuery = "";
-    private String currentFilterMode = "SEARCH";
+
+    private OkHttpClient httpClient;
+    private SharedPreferences authPrefs;
 
     @Override
     protected void attachBaseContext(Context newBase) {
         LocaleManager localeManager = new LocaleManager(newBase);
-        super.attachBaseContext(localeManager.setLocale(newBase));
+        super.attachBaseContext(localeManager.setLocale(newBase)); // <<< POPRAWKA LITERÓWKI
     }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-
         appearanceManager = new AppearanceManager(this);
         currentTextScale = appearanceManager.getTextScale();
         currentButtonScale = appearanceManager.getButtonScale();
@@ -70,219 +73,232 @@ public class DataActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_data);
 
-        expandableListView = findViewById(R.id.expandableListView);
         dbHelper = new DatabaseHelper(this);
-        listBramek = new ArrayList<>();
-        czujnikiMap = new HashMap<>();
+        httpClient = new OkHttpClient();
+        authPrefs = getSharedPreferences(LoginActivity.AUTH_PREFS, Context.MODE_PRIVATE);
 
-        MaterialButton btnClearRefresh = findViewById(R.id.btnClearRefresh);
-        MaterialButton btnRefresh = findViewById(R.id.btnRefresh);
+        expandableListView = findViewById(R.id.expandableListView);
         MaterialButton btnBack = findViewById(R.id.btnBack);
-        MaterialButton btnFilter = findViewById(R.id.btnFilter);
         MaterialButton btnSettings = findViewById(R.id.btnSettings);
+        MaterialButton btnRefresh = findViewById(R.id.btnRefresh);
+        FloatingActionButton fabAddGateway = findViewById(R.id.fab_add_gateway);
 
-        appearanceManager.applyIconScale(btnClearRefresh);
-        appearanceManager.applyIconScale(btnRefresh);
-        appearanceManager.applyIconScale(btnBack);
-        appearanceManager.applyIconScale(btnFilter);
-        appearanceManager.applyIconScale(btnSettings);
-
-        btnSettings.setOnClickListener(v -> startActivity(new Intent(this, SettingsActivity.class)));
-
-        adapter = new ExpandableListAdapter(this, listBramek, czujnikiMap);
+        adapter = new GatewaySensorCursorAdapter(null, this);
         expandableListView.setAdapter(adapter);
 
-        expandableListView.setOnChildClickListener((parent, v, groupPosition, childPosition, id) -> {
-            String gatewayId = listBramek.get(groupPosition);
-            List<SensorModel> sensors = czujnikiMap.get(gatewayId);
-            if (sensors != null) {
-                SensorModel sensor = sensors.get(childPosition);
 
-                Intent intent = new Intent(DataActivity.this, SensorDetailActivity.class);
-                intent.putExtra(getString(R.string.intent_extra_gateway_id), sensor.gatewayId);
-                intent.putExtra(getString(R.string.intent_extra_sensor_id), sensor.sensorId);
-                intent.putExtra(getString(R.string.intent_extra_sensor_type), sensor.type);
-                startActivity(intent);
-            }
+        expandableListView.setOnChildClickListener((parent, v, groupPosition, childPosition, id) -> {
+            Log.d(TAG, "Kliknięto czujnik o ID: " + id);
+
+            Intent intent = new Intent(DataActivity.this, SensorDetailActivity.class);
+
+            // Musimy pobrać ID bramki z rodzica
+            Cursor groupCursor = (Cursor) adapter.getGroup(groupPosition);
+
+            // <<< POPRAWKA: Użyj "_id" zamiast G_COLUMN_ID >>>
+            long gatewayId = groupCursor.getLong(groupCursor.getColumnIndexOrThrow("_id"));
+
+            intent.putExtra("SENSOR_ID_LONG", id); // ID Czujnika (np. 111)
+            intent.putExtra("GATEWAY_ID_LONG", gatewayId); // ID Bramki (np. 100)
+            startActivity(intent);
             return true;
         });
 
+        // Długie przytrzymanie grupy (bramki) - Req 2.2, 2.3, 2.5
+        expandableListView.setOnItemLongClickListener((parent, view, position, id) -> {
+            if (ExpandableListView.getPackedPositionType(id) == ExpandableListView.PACKED_POSITION_TYPE_GROUP) {
+                // 'id' w tym przypadku to ID bramki z bazy (np. 100)
+                showGatewayContextMenu(id);
+                return true;
+            }
+            return false;
+        });
+
         btnBack.setOnClickListener(v -> finish());
+        btnSettings.setOnClickListener(v -> startActivity(new Intent(this, SettingsActivity.class)));
 
         btnRefresh.setOnClickListener(v -> {
-            loadSensorData(currentFilterQuery, currentFilterMode);
             Toast.makeText(this, getString(R.string.data_refreshed_manually), Toast.LENGTH_SHORT).show();
+            Intent serviceIntent = new Intent(this, VpsClientService.class);
+            startService(serviceIntent);
         });
 
-        // ⭐️⭐️⭐️ POCZĄTEK POPRAWKI ⭐️⭐️⭐️
-        btnClearRefresh.setOnClickListener(v -> {
-            // Usunięto dialog wyboru (setItems) z opcją 1 i 2.
-            // Przycisk teraz bezpośrednio wywołuje TYLKO potwierdzenie czyszczenia LOKALNEGO.
-            confirmLocalClear();
+        fabAddGateway.setOnClickListener(v -> {
+            Toast.makeText(this, "Proces dodawania bramki (parowanie) - niezaimplementowane.", Toast.LENGTH_LONG).show();
         });
-        // ⭐️⭐️⭐️ KONIEC POPRAWKI ⭐️⭐️⭐️
-
-        btnFilter.setOnClickListener(v -> showFilterBottomSheet());
 
         setupBroadcastReceiver();
-
-        loadSensorData(currentFilterQuery, currentFilterMode);
-
-        requestNotificationPermission();
+        loadGatewaysFromDb();
     }
 
     private void setupBroadcastReceiver() {
         dataUpdateReceiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
-                loadSensorData(currentFilterQuery, currentFilterMode);
+                loadGatewaysFromDb();
             }
         };
+    }
+
+    private void loadGatewaysFromDb() {
+        Cursor newCursor = dbHelper.getAllGateways();
+        adapter.changeCursor(newCursor);
+    }
+
+    private void showGatewayContextMenu(long gatewayId) {
+        // ... (bez zmian)
+        final CharSequence[] items = {
+                getString(R.string.menu_rename), // Req 2.2
+                getString(R.string.menu_move_folder), // Req 2.3
+                getString(R.string.menu_delete) // Req 2.5
+        };
+
+        new AlertDialog.Builder(this)
+                .setTitle("Opcje Bramki")
+                .setItems(items, (dialog, which) -> {
+                    switch (which) {
+                        case 0:
+                            showRenameGatewayDialog(gatewayId);
+                            break;
+                        case 1:
+                            // TODO: Implementacja dialogu zmiany folderu
+                            break;
+                        case 2:
+                            showDeleteGatewayDialog(gatewayId);
+                            break;
+                    }
+                })
+                .show();
+    }
+
+    private void showRenameGatewayDialog(long gatewayId) {
+        LayoutInflater inflater = getLayoutInflater();
+        View dialogView = inflater.inflate(R.layout.dialog_edit_gateway, null);
+        final EditText editName = dialogView.findViewById(R.id.edit_gateway_name);
+        final EditText editDesc = dialogView.findViewById(R.id.edit_gateway_description);
+
+        // TODO: Wypełnij pola aktualnymi danymi z dbHelper.getGatewayDetails(gatewayId)
+
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.dialog_rename_gateway_title)
+                .setView(dialogView)
+                .setPositiveButton(R.string.dialog_save, (dialog, which) -> {
+                    String newName = editName.getText().toString();
+                    String newDesc = editDesc.getText().toString();
+                    updateGatewayOnServer(gatewayId, newName, newDesc, null);
+                })
+                .setNegativeButton(R.string.dialog_cancel_button, null)
+                .show();
+    }
+
+    private void showDeleteGatewayDialog(long gatewayId) {
+        // TODO: Pobierz nazwę bramki z bazy
+        String gatewayName = "Bramka " + gatewayId;
+
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.dialog_delete_gateway_title)
+                .setMessage(String.format(getString(R.string.dialog_delete_gateway_message), gatewayName))
+                .setIcon(R.drawable.ic_warning)
+                .setPositiveButton(R.string.dialog_delete_confirm, (dialog, which) -> {
+                    deleteGatewayOnServer(gatewayId);
+                })
+                .setNegativeButton(R.string.dialog_cancel_button, null)
+                .show();
+    }
+
+    private void updateGatewayOnServer(long gatewayId, String name, String description, String folder) {
+        String jwtToken = authPrefs.getString(LoginActivity.KEY_JWT_TOKEN, null);
+        if (jwtToken == null) return;
+
+        JSONObject json = new JSONObject();
+        try {
+            json.put("name", name);
+            json.put("description", description);
+            json.put("folder", folder);
+        } catch (JSONException e) {
+            // <<< POPRAWKA: Lepsze logowanie niż printStackTrace >>>
+            Log.e(TAG, "Błąd tworzenia JSON dla aktualizacji bramki", e);
+            return;
+        }
+
+        RequestBody body = RequestBody.create(json.toString(), MediaType.get("application/json; charset=utf-8"));
+        Request request = new Request.Builder()
+                .url(Constants.GATEWAYS_ENDPOINT + "/" + gatewayId)
+                .addHeader("Authorization", "Bearer " + jwtToken)
+                .put(body)
+                .build();
+
+        httpClient.newCall(request).enqueue(new Callback() {
+            // <<< POPRAWKA: Dodano adnotacje @NonNull >>>
+            @Override public void onFailure(@NonNull Call call, @NonNull IOException e) {
+                runOnUiThread(() -> Toast.makeText(DataActivity.this, R.string.toast_update_failed, Toast.LENGTH_SHORT).show());
+            }
+            // <<< POPRAWKA: Dodano adnotacje @NonNull >>>
+            @Override public void onResponse(@NonNull Call call, @NonNull Response response) {
+                runOnUiThread(() -> {
+                    if (response.isSuccessful()) {
+                        Toast.makeText(DataActivity.this, R.string.toast_gateway_updated, Toast.LENGTH_SHORT).show();
+                        startService(new Intent(DataActivity.this, VpsClientService.class));
+                    } else {
+                        Toast.makeText(DataActivity.this, R.string.toast_update_failed, Toast.LENGTH_SHORT).show();
+                    }
+                });
+            }
+        });
+    }
+
+    private void deleteGatewayOnServer(long gatewayId) {
+        String jwtToken = authPrefs.getString(LoginActivity.KEY_JWT_TOKEN, null);
+        if (jwtToken == null) return;
+
+        Request request = new Request.Builder()
+                .url(Constants.GATEWAYS_ENDPOINT + "/" + gatewayId)
+                .addHeader("Authorization", "Bearer " + jwtToken)
+                .delete()
+                .build();
+
+        httpClient.newCall(request).enqueue(new Callback() {
+            // <<< POPRAWKA: Dodano adnotacje @NonNull >>>
+            @Override public void onFailure(@NonNull Call call, @NonNull IOException e) {
+                runOnUiThread(() -> Toast.makeText(DataActivity.this, R.string.toast_delete_failed, Toast.LENGTH_SHORT).show());
+            }
+            // <<< POPRAWKA: Dodano adnotacje @NonNull >>>
+            @Override public void onResponse(@NonNull Call call, @NonNull Response response) {
+                runOnUiThread(() -> {
+                    if (response.isSuccessful()) {
+                        Toast.makeText(DataActivity.this, R.string.toast_gateway_deleted, Toast.LENGTH_SHORT).show();
+                        startService(new Intent(DataActivity.this, VpsClientService.class));
+                    } else {
+                        Toast.makeText(DataActivity.this, R.string.toast_delete_failed, Toast.LENGTH_SHORT).show();
+                    }
+                });
+            }
+        });
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-
         if (LocaleManager.languageChanged) {
-            LocaleManager.languageChanged = false; // Resetowanie flagi
-            recreate(); // Wymuszenie ponownego stworzenia Aktywności
-            return; // Ważne, aby zakończyć, jeśli wymuszono recreate
+            LocaleManager.languageChanged = false;
+            recreate();
+            return;
         }
-
         if (appearanceManager != null && (!currentTextScale.equals(appearanceManager.getTextScale()) ||
                 !currentButtonScale.equals(appearanceManager.getButtonScale()))) {
             recreate();
             return;
         }
-
         LocalBroadcastManager.getInstance(this).registerReceiver(dataUpdateReceiver, new IntentFilter(Constants.ACTION_DATA_UPDATED));
-        loadSensorData(currentFilterQuery, currentFilterMode);
+        loadGatewaysFromDb();
     }
 
     @Override
     protected void onPause() {
         LocalBroadcastManager.getInstance(this).unregisterReceiver(dataUpdateReceiver);
+        if (adapter != null) {
+            adapter.changeCursor(null);
+        }
         super.onPause();
     }
-
-    private void loadSensorData(String filterQuery, String filterMode) {
-        List<SensorModel> latestData = dbHelper.getLatestSensorDataByFilter(filterQuery, filterMode);
-
-        listBramek.clear();
-        czujnikiMap.clear();
-
-        for (SensorModel sensor : latestData) {
-            String gateway = sensor.gatewayId;
-            if (!czujnikiMap.containsKey(gateway)) {
-                listBramek.add(gateway);
-                czujnikiMap.put(gateway, new ArrayList<>());
-            }
-            List<SensorModel> sensors = czujnikiMap.get(gateway);
-            if (sensors != null) {
-                sensors.add(sensor);
-            }
-        }
-
-        Collections.sort(listBramek);
-
-        adapter.notifyDataSetChanged();
-    }
-
-    private void showFilterBottomSheet() {
-        final BottomSheetDialog bottomSheetDialog = new BottomSheetDialog(this);
-        View bottomSheetView = getLayoutInflater().inflate(R.layout.bottom_sheet_filter, (ViewGroup) expandableListView.getParent(), false);
-        bottomSheetDialog.setContentView(bottomSheetView);
-
-        EditText editSearch = bottomSheetView.findViewById(R.id.editSearchFilter);
-        Spinner spinnerType = bottomSheetView.findViewById(R.id.spinnerTypeFilter);
-        Spinner spinnerGateway = bottomSheetView.findViewById(R.id.spinnerGatewayFilter);
-        Button btnApply = bottomSheetView.findViewById(R.id.btnApplyFilter);
-        Button btnClear = bottomSheetView.findViewById(R.id.btnClearFilter);
-
-        List<String> sensorTypes = dbHelper.getUniqueSensorTypes();
-        sensorTypes.add(0, getString(R.string.all_types));
-        ArrayAdapter<String> typeAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, sensorTypes);
-        spinnerType.setAdapter(typeAdapter);
-
-        List<String> gatewayIds = dbHelper.getUniqueGatewayIds();
-        gatewayIds.add(0, getString(R.string.all_gateways));
-        ArrayAdapter<String> gatewayAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, gatewayIds);
-        spinnerGateway.setAdapter(gatewayAdapter);
-
-        btnClear.setOnClickListener(v -> {
-            currentFilterQuery = "";
-            currentFilterMode = getString(R.string.filter_mode_search);
-            loadSensorData(currentFilterQuery, currentFilterMode);
-            bottomSheetDialog.dismiss();
-        });
-
-        btnApply.setOnClickListener(v -> {
-            String searchQuery = editSearch.getText().toString();
-            String typeQuery = (spinnerType.getSelectedItemPosition() > 0) ? spinnerType.getSelectedItem().toString() : "";
-            String gatewayQuery = (spinnerGateway.getSelectedItemPosition() > 0) ? spinnerGateway.getSelectedItem().toString() : "";
-
-            if (!searchQuery.isEmpty()) {
-                currentFilterQuery = searchQuery;
-                currentFilterMode = getString(R.string.filter_mode_search);
-            } else if (!typeQuery.isEmpty()) {
-                currentFilterQuery = typeQuery;
-                currentFilterMode = getString(R.string.filter_mode_type);
-            } else if (!gatewayQuery.isEmpty()) {
-                currentFilterQuery = gatewayQuery;
-                currentFilterMode = getString(R.string.filter_mode_gateway);
-            } else {
-                currentFilterQuery = "";
-                currentFilterMode = getString(R.string.filter_mode_search);
-            }
-
-            loadSensorData(currentFilterQuery, currentFilterMode);
-            bottomSheetDialog.dismiss();
-        });
-
-        bottomSheetDialog.show();
-    }
-
-    private void requestNotificationPermission() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.POST_NOTIFICATIONS)
-                    != PackageManager.PERMISSION_GRANTED) {
-                ActivityCompat.requestPermissions(this,
-                        new String[]{android.Manifest.permission.POST_NOTIFICATIONS},
-                        PERMISSION_REQUEST_CODE);
-            }
-        }
-    }
-
-    @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == PERMISSION_REQUEST_CODE) {
-            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                Toast.makeText(this, getString(R.string.notification_permission_granted), Toast.LENGTH_SHORT).show();
-            } else {
-                Toast.makeText(this, getString(R.string.notification_permission_denied), Toast.LENGTH_LONG).show();
-            }
-        }
-    }
-
-    // Obsługa lokalnego czyszczenia (Wymaganie 6.2)
-    // Ta funkcja jest teraz wywoływana bezpośrednio przez przycisk
-    private void confirmLocalClear() {
-        new AlertDialog.Builder(DataActivity.this)
-                .setTitle(DataActivity.this.getString(R.string.clear_local_confirmation_title))
-                .setMessage(DataActivity.this.getString(R.string.clear_local_confirmation_message))
-                .setIcon(R.drawable.ic_delete)
-                .setPositiveButton(DataActivity.this.getString(R.string.clear_data_positive_button), (dialog, which) -> {
-                    dbHelper.clearAllSensorData();
-                    currentFilterQuery = "";
-                    currentFilterMode = DataActivity.this.getString(R.string.filter_mode_search);
-                    DataActivity.this.loadSensorData(currentFilterQuery, currentFilterMode);
-                    Toast.makeText(DataActivity.this, DataActivity.this.getString(R.string.database_cleared), Toast.LENGTH_SHORT).show();
-                })
-                .setNegativeButton(DataActivity.this.getString(R.string.dialog_cancel_button), null)
-                .show();
-    }
-
-
 }

@@ -1,99 +1,80 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout
+<androidx.coordinatorlayout.widget.CoordinatorLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:fitsSystemWindows="true"
-    android:padding="16dp"
     tools:context=".ui.DataActivity">
 
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/btnSettings"
-        style="?attr/myIconButtonTextStyle"
-        android:layout_width="wrap_content"
+    <com.google.android.material.appbar.AppBarLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        app:icon="@drawable/ic_settings"
-        app:iconPadding="0dp"
-        android:contentDescription="@string/settings_content_description"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        android:layout_margin="16dp"
-        app:tint="?attr/colorOnSurface" />
+        android:fitsSystemWindows="true">
 
-    <LinearLayout
-        android:id="@+id/bottomButtonContainer"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="end"
-        android:paddingTop="8dp"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent">
+        <com.google.android.material.appbar.MaterialToolbar
+            android:id="@+id/toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize">
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnFilter"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            app:icon="@drawable/ic_filter"
-            app:iconPadding="0dp"
-            android:contentDescription="@string/filter_content_description"
-            style="?attr/myIconButtonOutlinedStyle"
-            android:layout_marginEnd="8dp"/>
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnBack"
+                style="?attr/myIconButtonTextStyle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                app:icon="@drawable/ic_arrow_back"
+                android:contentDescription="@string/back_content_description"
+                android:layout_gravity="start"
+                app:tint="?attr/colorOnSurface" />
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnRefresh"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            app:icon="@drawable/ic_refresh"
-            app:iconPadding="0dp"
-            android:contentDescription="@string/refresh_content_description"
-            style="?attr/myIconButtonOutlinedStyle"
-            android:layout_marginEnd="8dp"/>
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/data_activity_title"
+                android:textAppearance="?attr/textAppearanceTitleLarge"
+                android:layout_gravity="center_horizontal" />
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnClearRefresh"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            app:icon="@drawable/ic_delete"
-            app:iconPadding="0dp"
-            app:iconTint="@android:color/white"
-            app:backgroundTint="@android:color/holo_red_dark"
-            android:contentDescription="@string/clear_database_content_description"
-            style="?attr/myIconButtonStyle"
-            android:layout_marginEnd="8dp"/>
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnSettings"
+                style="?attr/myIconButtonTextStyle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                app:icon="@drawable/ic_settings"
+                android:contentDescription="@string/settings_content_description"
+                android:layout_gravity="end"
+                android:layout_marginEnd="16dp"
+                app:tint="?attr/colorOnSurface" />
 
-        <Space
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1" />
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnRefresh"
+                style="?attr/myIconButtonTextStyle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                app:icon="@drawable/ic_refresh"
+                android:contentDescription="@string/refresh_content_description"
+                android:layout_gravity="end"
+                android:layout_marginEnd="16dp"
+                app:tint="?attr/colorOnSurface" />
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnBack"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            app:icon="@drawable/ic_arrow_back"
-            app:iconPadding="0dp"
-            android:contentDescription="@string/back_content_description"
-            style="?attr/myIconButtonOutlinedStyle"
-            />
-
-    </LinearLayout>
+        </com.google.android.material.appbar.MaterialToolbar>
+    </com.google.android.material.appbar.AppBarLayout>
 
     <ExpandableListView
         android:id="@+id/expandableListView"
-        android:layout_width="0dp"
-        android:layout_height="0dp"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
         android:divider="@android:color/darker_gray"
-        android:dividerHeight="1dp"
+        android:dividerHeight="0.5dp"
         android:groupIndicator="@null"
-        android:layout_marginTop="80dp"
-        android:layout_marginBottom="10dp"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintBottom_toTopOf="@id/bottomButtonContainer"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
+        android:padding="8dp"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior" />
 
-</androidx.constraintlayout.widget.ConstraintLayout>
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/fab_add_gateway"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:layout_margin="16dp"
+        android:contentDescription="@string/fab_add_gateway_desc"
+        app:srcCompat="@drawable/ic_check" /> </androidx.coordinatorlayout.widget.CoordinatorLayout>
