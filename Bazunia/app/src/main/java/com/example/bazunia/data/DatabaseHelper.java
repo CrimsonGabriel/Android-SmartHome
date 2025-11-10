@@ -43,6 +43,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     public static final String S_COLUMN_TYPE = "type";
     public static final String S_COLUMN_DESCRIPTION = "description";
     public static final String S_COLUMN_BATTERY = "battery_level";
+    public static final String S_COLUMN_KEYWORD = "keyword";
 
     private final Context context;
 
@@ -82,6 +83,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 S_COLUMN_TYPE + " TEXT, " +
                 S_COLUMN_DESCRIPTION + " TEXT, " +
                 S_COLUMN_BATTERY + " INTEGER, " +
+                S_COLUMN_KEYWORD + " TEXT, " +
                 "FOREIGN KEY(" + S_COLUMN_GATEWAY_ID + ") REFERENCES " + TABLE_GATEWAYS + "(" + G_COLUMN_ID + ") ON DELETE CASCADE)";
         db.execSQL(CREATE_TABLE_SENSORS);
     }
@@ -229,6 +231,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                         sValues.put(S_COLUMN_TYPE, sensor.getType());
                         sValues.put(S_COLUMN_DESCRIPTION, sensor.getDescription());
                         sValues.put(S_COLUMN_BATTERY, sensor.getBatteryLevel());
+                        sValues.put(S_COLUMN_KEYWORD, sensor.getKeyword());
                         db.insert(TABLE_SENSORS, null, sValues);
                     }
                 }
@@ -268,17 +271,17 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         SQLiteDatabase db = this.getReadableDatabase();
 
         String query = "SELECT " +
-                S_COLUMN_ID + " AS _id, " + // Kluczowy alias
+                S_COLUMN_ID + " AS _id, " +
                 S_COLUMN_GATEWAY_ID + ", " +
                 S_COLUMN_NAME + ", " +
                 S_COLUMN_TYPE + ", " +
                 S_COLUMN_DESCRIPTION + ", " +
-                S_COLUMN_BATTERY +
+                S_COLUMN_BATTERY + ", " +
+                S_COLUMN_KEYWORD + // <<< TA LINIA ZOSTAŁA DODANA
                 " FROM " + TABLE_SENSORS +
                 " WHERE " + S_COLUMN_GATEWAY_ID + " = ? " +
                 " ORDER BY " + S_COLUMN_NAME + " ASC";
 
-        // NIE ZAMYKAJ DB TUTAJ!
         return db.rawQuery(query, new String[]{String.valueOf(gatewayId)});
     }
 

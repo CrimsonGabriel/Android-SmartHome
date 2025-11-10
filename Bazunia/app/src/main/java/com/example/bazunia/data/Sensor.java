@@ -11,6 +11,7 @@ public class Sensor {
     String type;
     String description;
     Integer batteryLevel;
+    String keyword;
 
     // Gettery
     public long getId() { return id; }
@@ -18,4 +19,5 @@ public class Sensor {
     public String getType() { return type; }
     public String getDescription() { return description; }
     public Integer getBatteryLevel() { return batteryLevel; }
+    public String getKeyword() { return keyword; }
 }

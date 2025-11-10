@@ -74,7 +74,8 @@ public class GatewaySensorCursorAdapter extends CursorTreeAdapter {
         String name = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.S_COLUMN_NAME));
         String type = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.S_COLUMN_TYPE));
         int batteryLevel = cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseHelper.S_COLUMN_BATTERY));
-        textView.setCompoundDrawablesWithIntrinsicBounds(getIconForType(type), 0, 0, 0);
+        String keyword = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.S_COLUMN_KEYWORD));
+        textView.setCompoundDrawablesWithIntrinsicBounds(getIcon(type, keyword, null), 0, 0, 0);
         textView.setText(name);
 
         int defaultTextColor;
@@ -93,18 +94,40 @@ public class GatewaySensorCursorAdapter extends CursorTreeAdapter {
         }
     }
 
-    private int getIconForType(String type) {
-        // Ta logika jest w porządku, zostawiamy bez zmian
+    private int getIcon(String type, String keyword, String value) {
+
+        // 1. Sprawdzanie po KEYWORD (najwyższy priorytet)
+        if (keyword != null) {
+            switch (keyword.toLowerCase()) {
+                case "tv":
+                    return R.drawable.ic_tv;
+                case "washer":
+                    return R.drawable.ic_washer;
+                case "fridge":
+                    return R.drawable.ic_fridge;
+                case "oven":
+                    return R.drawable.ic_oven;
+                case "socket":
+                    return R.drawable.ic_socket;
+                case "dishwasher":
+                    return R.drawable.ic_dishwasher;
+                case "hood":
+                    return R.drawable.ic_hood;
+                // Możesz tu dodać więcej
+            }
+        }
+
+        // 2. Sprawdzanie po TYPE (jeśli nie ma keywordu)
         if (type == null) return R.drawable.ic_sensor;
         switch (type.toLowerCase()) {
+            case "button_press":
+                return R.drawable.ic_button;
             case "temperature":
                 return R.drawable.ic_temp;
             case "humidity":
                 return R.drawable.ic_humidity;
             case "power":
-                return R.drawable.ic_power;
-            case "contact":
-                return R.drawable.ic_closed;
+                return R.drawable.ic_power; // Ogólna ikona dla 'power', jeśli nie 'tv' itd.
             case "motion":
                 return R.drawable.ic_motion;
             case "light":
@@ -117,6 +140,17 @@ public class GatewaySensorCursorAdapter extends CursorTreeAdapter {
                 return R.drawable.ic_sunlight;
             case "level":
                 return R.drawable.ic_level;
+            case "valve":
+                return R.drawable.ic_valve;
+
+            // 3. Logika dla stanu OTWARTE/ZAMKNIĘTE
+            case "contact":
+                if ("1".equals(value)) {
+                    return R.drawable.ic_open;
+                } else {
+                    return R.drawable.ic_closed;
+                }
+
             default:
                 return R.drawable.ic_sensor;
         }
