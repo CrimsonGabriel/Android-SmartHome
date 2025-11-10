@@ -73,4 +73,4 @@
     android:layout_gravity="bottom|end"
     android:layout_margin="16dp"
     android:contentDescription="@string/fab_add_folder_desc"
-    app:srcCompat="@drawable/ic_filter" /> </androidx.coordinatorlayout.widget.CoordinatorLayout>
+    app:srcCompat="@drawable/ic_folder" /> </androidx.coordinatorlayout.widget.CoordinatorLayout>

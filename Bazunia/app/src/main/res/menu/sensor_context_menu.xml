@@ -4,6 +4,14 @@
         android:id="@+id/menu_rename_sensor"
         android:title="@string/menu_rename" />
     <item
+        android:id="@+id/menu_add_sensor_to_folder"
+        android:title="@string/menu_add_to_folder" />
+
+    <item
+        android:id="@+id/menu_remove_sensor_from_folder"
+        android:title="@string/menu_remove_from_folder" />
+
+    <item
         android:id="@+id/menu_add_sensor_to_favorites"
         android:title="@string/menu_add_to_favorites" />
     <item

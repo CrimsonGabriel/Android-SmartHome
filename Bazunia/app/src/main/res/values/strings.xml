@@ -265,7 +265,7 @@
     <string name="toast_api_error">Błąd operacji Api</string>
 
     <string name="section_favorites">Ulubione</string>
-    <string name="section_uncategorized">Bez folderu</string>
+    <string name="section_uncategorized">Niezgrupowane</string>
 
     <string name="favorite_button_desc">Dodaj do ulubionych</string>
 

@@ -15,7 +15,8 @@ import java.util.Locale;
 public class DatabaseHelper extends SQLiteOpenHelper {
 
     private static final String DATABASE_NAME = "sensor_data.db";
-    // ⭐️ ZMIANA: Podniesiona wersja bazy danych
+    // ⭐️ UWAGA: Jeśli miałeś crash "Can't downgrade", odinstaluj aplikację
+    // lub podnieś tę wersję (np. do 4), jeśli wcześniej ją podniosłeś.
     private static final int DATABASE_VERSION = 3;
 
     // Tabela 1: Odczyty
@@ -46,9 +47,9 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     public static final String S_COLUMN_BATTERY = "battery_level";
     public static final String S_COLUMN_KEYWORD = "keyword";
 
-    // ⭐️ NOWE TABELE (v3) ⭐️
+    // Tabele v3
     public static final String TABLE_FOLDERS = "folders";
-    public static final String F_COLUMN_ID = "id"; // Klucz główny (z serwera)
+    public static final String F_COLUMN_ID = "id";
     public static final String F_COLUMN_NAME = "name";
     public static final String F_COLUMN_COLOR = "color";
 
@@ -57,10 +58,14 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     public static final String FG_COLUMN_GATEWAY_ID = "gateway_id";
 
     public static final String TABLE_FAVORITE_GATEWAYS = "favorite_gateways";
-    public static final String FAV_G_GATEWAY_ID = "gateway_id"; // Klucz główny (z serwera)
+    public static final String FAV_G_GATEWAY_ID = "gateway_id";
 
     public static final String TABLE_FAVORITE_SENSORS = "favorite_sensors";
-    public static final String FAV_S_SENSOR_ID = "sensor_id"; // Klucz główny (z serwera)
+    public static final String FAV_S_SENSOR_ID = "sensor_id";
+
+    public static final String TABLE_FOLDER_SENSORS = "folder_sensors";
+    public static final String FS_COLUMN_FOLDER_ID = "folder_id";
+    public static final String FS_COLUMN_SENSOR_ID = "sensor_id";
 
 
     private final Context context;
@@ -82,8 +87,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 ")";
         db.execSQL(CREATE_TABLE_READINGS);
         createGatewayAndSensorTables(db);
-
-        // ⭐️ NOWE: Tworzenie tabel v3
         createFolderAndFavoriteTables(db);
     }
 
@@ -109,7 +112,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         db.execSQL(CREATE_TABLE_SENSORS);
     }
 
-    // ⭐️ NOWA METODA POMOCNICZA ⭐️
     private void createFolderAndFavoriteTables(SQLiteDatabase db) {
         String CREATE_TABLE_FOLDERS = "CREATE TABLE " + TABLE_FOLDERS + " (" +
                 F_COLUMN_ID + " INTEGER PRIMARY KEY, " +
@@ -130,6 +132,12 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         String CREATE_TABLE_FAVORITE_SENSORS = "CREATE TABLE " + TABLE_FAVORITE_SENSORS + " (" +
                 FAV_S_SENSOR_ID + " INTEGER PRIMARY KEY)";
         db.execSQL(CREATE_TABLE_FAVORITE_SENSORS);
+
+        String CREATE_TABLE_FOLDER_SENSORS = "CREATE TABLE " + TABLE_FOLDER_SENSORS + " (" +
+                FS_COLUMN_FOLDER_ID + " INTEGER, " +
+                FS_COLUMN_SENSOR_ID + " INTEGER, " +
+                "PRIMARY KEY(" + FS_COLUMN_FOLDER_ID + ", " + FS_COLUMN_SENSOR_ID + "))";
+        db.execSQL(CREATE_TABLE_FOLDER_SENSORS);
     }
 
     @Override
@@ -143,14 +151,12 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             }
             createGatewayAndSensorTables(db);
         }
-
-        // ⭐️ NOWA LOGIKA MIGRACJI DO v3 ⭐️
         if (oldVersion < 3) {
             createFolderAndFavoriteTables(db);
         }
     }
 
-    // --- METODY DLA ODCZYTÓW (READINGS) ---
+    // --- METODY ODCZYTÓW ---
     public void addSensorData(SensorModel sensor) {
         SQLiteDatabase db = this.getWritableDatabase();
         ContentValues values = new ContentValues();
@@ -190,6 +196,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         return latestModel;
     }
 
+    // ⭐️ PRZYWRÓCONA METODA (dla MainActivity) ⭐️
     public List<SensorModel> getLatestUniqueSensorData() {
         List<SensorModel> latestDataList = new ArrayList<>();
         SQLiteDatabase db = this.getReadableDatabase();
@@ -237,7 +244,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         return deletedRows;
     }
 
-    // --- METODY ZARZĄDZANIA BRAMKAMI (METADANE) ---
+    // --- METODY ZARZĄDZANIA METADANYMI ---
 
     public void syncGatewaysAndSensors(List<Gateway> gateways) {
         SQLiteDatabase db = this.getWritableDatabase();
@@ -281,78 +288,17 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         }
     }
 
-    public Cursor getAllGateways() {
-        SQLiteDatabase db = this.getReadableDatabase();
-        String query = "SELECT " +
-                G_COLUMN_ID + " AS _id, " + // Kluczowy alias
-                G_COLUMN_NAME + ", " +
-                G_COLUMN_STATUS + ", " +
-                G_COLUMN_FOLDER + ", " +
-                G_COLUMN_DESCRIPTION + ", " +
-                G_COLUMN_LAST_SEEN +
-                " FROM " + TABLE_GATEWAYS +
-                " ORDER BY " + G_COLUMN_NAME + " ASC";
-        return db.rawQuery(query, null);
-    }
+    // ⭐️ --- METODY FOLDERÓW I ULUBIONYCH (v3) --- ⭐️
 
-    public Cursor getSensorsForGateway(long gatewayId) {
-        SQLiteDatabase db = this.getReadableDatabase();
-        String query = "SELECT " +
-                S_COLUMN_ID + " AS _id, " +
-                S_COLUMN_GATEWAY_ID + ", " +
-                S_COLUMN_NAME + ", " +
-                S_COLUMN_TYPE + ", " +
-                S_COLUMN_DESCRIPTION + ", " +
-                S_COLUMN_BATTERY + ", " +
-                S_COLUMN_KEYWORD +
-                " FROM " + TABLE_SENSORS +
-                " WHERE " + S_COLUMN_GATEWAY_ID + " = ? " +
-                " ORDER BY " + S_COLUMN_NAME + " ASC";
-        return db.rawQuery(query, new String[]{String.valueOf(gatewayId)});
-    }
-
-    public void updateGatewayDetails(long gatewayId, String newName, String newDescription) {
-        SQLiteDatabase db = this.getWritableDatabase();
-        ContentValues values = new ContentValues();
-        values.put(G_COLUMN_NAME, newName);
-        values.put(G_COLUMN_DESCRIPTION, newDescription);
-        try {
-            db.update(TABLE_GATEWAYS, values, G_COLUMN_ID + " = ?",
-                    new String[]{String.valueOf(gatewayId)});
-        } catch (Exception e) {
-            Log.e("DB_UPDATE", "Błąd aktualizacji bramki: " + e.getMessage());
-        }
-    }
-
-    public void updateSensorDetails(long sensorId, String newName, String newDescription) {
-        SQLiteDatabase db = this.getWritableDatabase();
-        ContentValues values = new ContentValues();
-        values.put(S_COLUMN_NAME, newName);
-        values.put(S_COLUMN_DESCRIPTION, newDescription);
-        try {
-            db.update(TABLE_SENSORS, values, S_COLUMN_ID + " = ?",
-                    new String[]{String.valueOf(sensorId)});
-        } catch (Exception e) {
-            Log.e("DB_UPDATE", "Błąd aktualizacji czujnika: " + e.getMessage());
-        }
-    }
-
-    // ⭐️ --- NOWE METODY DLA FOLDERÓW I ULUBIONYCH (v3) --- ⭐️
-
-    /**
-     * Zapisuje pobrane foldery i ulubione do bazy w jednej transakcji.
-     * Wywoływane przez VpsClientService.
-     */
     public void syncFoldersAndFavorites(List<Folder> folders, List<Gateway> favoriteGateways, List<Sensor> favoriteSensors) {
         SQLiteDatabase db = this.getWritableDatabase();
         try {
             db.beginTransaction();
 
-            // 1. Wyczyść stare dane folderów
             db.delete(TABLE_FOLDERS, null, null);
             db.delete(TABLE_FOLDER_GATEWAYS, null, null);
+            db.delete(TABLE_FOLDER_SENSORS, null, null);
 
-            // 2. Wpisz nowe dane folderów
             if (folders != null) {
                 for (Folder folder : folders) {
                     ContentValues fValues = new ContentValues();
@@ -361,7 +307,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                     fValues.put(F_COLUMN_COLOR, folder.getColor());
                     db.insert(TABLE_FOLDERS, null, fValues);
 
-                    // 3. Wpisz powiązania M2M
                     if (folder.getGatewayIds() != null) {
                         for (Long gatewayId : folder.getGatewayIds()) {
                             ContentValues fgValues = new ContentValues();
@@ -370,16 +315,21 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                             db.insert(TABLE_FOLDER_GATEWAYS, null, fgValues);
                         }
                     }
-                    // TODO: Gdy backend będzie gotowy, tutaj trzeba będzie dodać
-                    // logikę zapisywania sensorIds do nowej tabeli TABLE_FOLDER_SENSORS
+
+                    if (folder.getSensorIds() != null) {
+                        for (Long sensorId : folder.getSensorIds()) {
+                            ContentValues fsValues = new ContentValues();
+                            fsValues.put(FS_COLUMN_FOLDER_ID, folder.getId());
+                            fsValues.put(FS_COLUMN_SENSOR_ID, sensorId);
+                            db.insert(TABLE_FOLDER_SENSORS, null, fsValues);
+                        }
+                    }
                 }
             }
 
-            // 4. Wyczyść stare ulubione
             db.delete(TABLE_FAVORITE_GATEWAYS, null, null);
             db.delete(TABLE_FAVORITE_SENSORS, null, null);
 
-            // 5. Wpisz nowe ulubione bramki
             if (favoriteGateways != null) {
                 for (Gateway gateway : favoriteGateways) {
                     ContentValues favGValues = new ContentValues();
@@ -388,7 +338,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 }
             }
 
-            // 6. Wpisz nowe ulubione czujniki
             if (favoriteSensors != null) {
                 for (Sensor sensor : favoriteSensors) {
                     ContentValues favSValues = new ContentValues();
@@ -408,20 +357,12 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         }
     }
 
-    // ⭐️⭐️⭐️ NOWA, POPRAWIONA METODA DLA M2M ⭐️⭐️⭐️
-    /**
-     * Ręcznie dodaje bramkę do folderu (relacja Wiele-do-wielu).
-     * Wywoływane z DataActivity po pomyślnej odpowiedzi z serwera.
-     * Jeśli powiązanie już istnieje, nic się nie stanie.
-     */
     public void addGatewayToFolder(long gatewayId, long folderId) {
         SQLiteDatabase db = this.getWritableDatabase();
         ContentValues values = new ContentValues();
         values.put(FG_COLUMN_FOLDER_ID, folderId);
         values.put(FG_COLUMN_GATEWAY_ID, gatewayId);
-
         try {
-            // Użyj CONFLICT_IGNORE, aby cicho zignorować próbę dodania duplikatu (PK na obu kolumnach)
             db.insertWithOnConflict(TABLE_FOLDER_GATEWAYS, null, values, SQLiteDatabase.CONFLICT_IGNORE);
             Log.d("DB_UPDATE", "Lokalnie dodano bramkę " + gatewayId + " do folderu " + folderId);
         } catch (Exception e) {
@@ -429,11 +370,46 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         }
     }
 
-    // --- Nowe metody pobierania kursorów dla DataActivity ---
+    
+    public void removeGatewayFromFolder(long gatewayId, long folderId) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        try {
+            db.delete(TABLE_FOLDER_GATEWAYS,
+                    FG_COLUMN_GATEWAY_ID + " = ? AND " + FG_COLUMN_FOLDER_ID + " = ?",
+                    new String[]{String.valueOf(gatewayId), String.valueOf(folderId)});
+        } catch (Exception e) {
+            Log.e("DB_UPDATE", "Błąd usuwania bramki z folderu lokalnie: " + e.getMessage());
+        }
+    }
+
+
+    public void addSensorToFolder(long sensorId, long folderId) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        ContentValues values = new ContentValues();
+        values.put(FS_COLUMN_FOLDER_ID, folderId);
+        values.put(FS_COLUMN_SENSOR_ID, sensorId);
+        try {
+            db.insertWithOnConflict(TABLE_FOLDER_SENSORS, null, values, SQLiteDatabase.CONFLICT_IGNORE);
+        } catch (Exception e) {
+            Log.e("DB_UPDATE", "Błąd dodawania czujnika do folderu lokalnie: " + e.getMessage());
+        }
+    }
+
+    public void removeSensorFromFolder(long sensorId, long folderId) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        try {
+            db.delete(TABLE_FOLDER_SENSORS,
+                    FS_COLUMN_SENSOR_ID + " = ? AND " + FS_COLUMN_FOLDER_ID + " = ?",
+                    new String[]{String.valueOf(sensorId), String.valueOf(folderId)});
+        } catch (Exception e) {
+            Log.e("DB_UPDATE", "Błąd usuwania czujnika z folderu lokalnie: " + e.getMessage());
+        }
+    }
+
+    // --- Metody pobierania kursorów dla DataActivity ---
 
     public Cursor getFoldersCursor() {
         SQLiteDatabase db = this.getReadableDatabase();
-        // Dodajemy alias _id, aby adaptery działały łatwiej
         String query = "SELECT " + F_COLUMN_ID + " AS _id, " +
                 F_COLUMN_NAME + ", " + F_COLUMN_COLOR +
                 " FROM " + TABLE_FOLDERS +
@@ -450,6 +426,22 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         return db.rawQuery(query, new String[]{String.valueOf(folderId)});
     }
 
+    public Cursor getSensorsForGateway(long gatewayId) {
+        SQLiteDatabase db = this.getReadableDatabase();
+        String query = "SELECT " +
+                S_COLUMN_ID + " AS _id, " +
+                S_COLUMN_GATEWAY_ID + ", " +
+                S_COLUMN_NAME + ", " +
+                S_COLUMN_TYPE + ", " +
+                S_COLUMN_DESCRIPTION + ", " +
+                S_COLUMN_BATTERY + ", " +
+                S_COLUMN_KEYWORD +
+                " FROM " + TABLE_SENSORS +
+                " WHERE " + S_COLUMN_GATEWAY_ID + " = ? " +
+                " ORDER BY " + S_COLUMN_NAME + " ASC";
+        return db.rawQuery(query, new String[]{String.valueOf(gatewayId)});
+    }
+
     public Cursor getFavoriteGatewaysCursor() {
         SQLiteDatabase db = this.getReadableDatabase();
         String query = "SELECT g." + G_COLUMN_ID + " AS _id, g.* FROM " + TABLE_GATEWAYS + " g " +
@@ -460,7 +452,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
     public Cursor getFavoriteSensorsCursor() {
         SQLiteDatabase db = this.getReadableDatabase();
-        // Musimy dołączyć bramkę, aby znać jej nazwę
         String query = "SELECT s." + S_COLUMN_ID + " AS _id, s.*, " +
                 "g." + G_COLUMN_NAME + " AS gateway_name " +
                 "FROM " + TABLE_SENSORS + " s " +
@@ -470,11 +461,23 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         return db.rawQuery(query, null);
     }
 
+    public Cursor getSensorsForFolderCursor(long folderId) {
+        SQLiteDatabase db = this.getReadableDatabase();
+        String query = "SELECT s." + S_COLUMN_ID + " AS _id, s.*, " +
+                "g." + G_COLUMN_NAME + " AS gateway_name " +
+                "FROM " + TABLE_SENSORS + " s " +
+                "JOIN " + TABLE_FOLDER_SENSORS + " fs ON s." + S_COLUMN_ID + " = fs." + FS_COLUMN_SENSOR_ID + " " +
+                "LEFT JOIN " + TABLE_GATEWAYS + " g ON s." + S_COLUMN_GATEWAY_ID + " = g." + G_COLUMN_ID + " " +
+                "WHERE fs." + FS_COLUMN_FOLDER_ID + " = ? " +
+                "ORDER BY s." + S_COLUMN_NAME + " ASC";
+        return db.rawQuery(query, new String[]{String.valueOf(folderId)});
+    }
+
     public Cursor getUncategorizedGatewaysCursor() {
         SQLiteDatabase db = this.getReadableDatabase();
         String query = "SELECT g." + G_COLUMN_ID + " AS _id, g.* FROM " + TABLE_GATEWAYS + " g " +
                 "WHERE g." + G_COLUMN_ID + " NOT IN (SELECT " + FG_COLUMN_GATEWAY_ID + " FROM " + TABLE_FOLDER_GATEWAYS + ")" +
-                "ORDER BY g." + G_COLUMN_NAME + " ASC";
+                " ORDER BY g." + G_COLUMN_NAME + " ASC";
         return db.rawQuery(query, null);
     }
 

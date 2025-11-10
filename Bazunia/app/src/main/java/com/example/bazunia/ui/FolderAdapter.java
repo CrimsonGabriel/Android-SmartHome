@@ -3,6 +3,7 @@ package com.example.bazunia.ui;
 import android.content.Context;
 import android.database.Cursor;
 import android.graphics.Color;
+import android.os.Build;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -20,46 +21,51 @@ import java.util.List;
 
 public class FolderAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
-    // Typy widoków
     private static final int VIEW_TYPE_SECTION_HEADER = 0;
     private static final int VIEW_TYPE_FOLDER = 1;
     private static final int VIEW_TYPE_GATEWAY = 2;
     private static final int VIEW_TYPE_SENSOR = 3;
 
     private final Context context;
-    private final List<Object> displayItems; // Lista przechowująca nagłówki, foldery, bramki, czujniki
+    private final List<Object> displayItems;
     private final FolderCallback callback;
 
-    /**
-     * Interfejs do komunikacji z DataActivity
-     */
     public interface FolderCallback {
         void onFolderClicked(FolderItem folder);
         void onGatewayClicked(GatewayItem gateway);
         void onSensorClicked(SensorItem sensor);
-
         void onFolderLongClicked(FolderItem folder, View view);
         void onGatewayLongClicked(GatewayItem gateway, View view);
         void onSensorLongClicked(SensorItem sensor, View view);
     }
 
-    // --- Modele Widoków (wewnętrzne klasy) ---
-    // Przechowują dane potrzebne do wyświetlenia wiersza
+    // --- Modele Widoków ---
 
     public static class SectionHeader {
         final String title;
         public SectionHeader(String title) { this.title = title; }
     }
 
+    // ⭐️ ZMIANA: Dodano drugi konstruktor dla "Niezgrupowane" ⭐️
     public static class FolderItem {
         final long id;
         final String name;
-        final String color;
-        boolean isExpanded; // DataActivity będzie zarządzać tym stanem
+        final String color; // Będzie null dla "Niezgrupowane"
+        boolean isExpanded;
+
+        // Istniejący konstruktor
         public FolderItem(Cursor cursor, boolean isExpanded) {
             this.id = cursor.getLong(cursor.getColumnIndexOrThrow("_id"));
             this.name = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.F_COLUMN_NAME));
             this.color = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.F_COLUMN_COLOR));
+            this.isExpanded = isExpanded;
+        }
+
+        // ⭐️ NOWY KONSTRUKTOR (dla "Niezgrupowane") ⭐️
+        public FolderItem(long id, String name, boolean isExpanded) {
+            this.id = id;
+            this.name = name;
+            this.color = null; // Specjalny folder nie ma koloru
             this.isExpanded = isExpanded;
         }
     }
@@ -69,16 +75,16 @@ public class FolderAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
         final String name;
         final String status;
         final String description;
-        final boolean isSensorParent; // Czy ten wiersz bramki może się rozwijać (false dla ulubionych)
+        final boolean isSensorParent;
         boolean isExpanded;
-        final long parentFolderId; // ⭐️ NOWE POLE (np. ID folderu lub -1 dla "bez kategorii")
+        final long parentFolderId;
 
         public GatewayItem(Cursor cursor, long parentFolderId, boolean isSensorParent, boolean isExpanded) {
             this.id = cursor.getLong(cursor.getColumnIndexOrThrow(DatabaseHelper.G_COLUMN_ID));
             this.name = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.G_COLUMN_NAME));
             this.status = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.G_COLUMN_STATUS));
             this.description = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.G_COLUMN_DESCRIPTION));
-            this.parentFolderId = parentFolderId; // ⭐️ PRZYPISANIE
+            this.parentFolderId = parentFolderId;
             this.isSensorParent = isSensorParent;
             this.isExpanded = isExpanded;
         }
@@ -91,8 +97,10 @@ public class FolderAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
         final String type;
         final int batteryLevel;
         final String keyword;
-        final String gatewayName; // Potrzebne dla listy ulubionych
-        public SensorItem(Cursor cursor, String gatewayName) {
+        final String gatewayName;
+        final long parentFolderId;
+
+        public SensorItem(Cursor cursor, String gatewayName, long parentFolderId) {
             this.id = cursor.getLong(cursor.getColumnIndexOrThrow("_id"));
             this.gatewayId = cursor.getLong(cursor.getColumnIndexOrThrow(DatabaseHelper.S_COLUMN_GATEWAY_ID));
             this.name = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.S_COLUMN_NAME));
@@ -100,6 +108,7 @@ public class FolderAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
             this.batteryLevel = cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseHelper.S_COLUMN_BATTERY));
             this.keyword = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.S_COLUMN_KEYWORD));
             this.gatewayName = gatewayName;
+            this.parentFolderId = parentFolderId;
         }
     }
 
@@ -182,6 +191,7 @@ public class FolderAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
         }
     }
 
+    // ⭐️ ZMIANA: Logika w `bind` do ukrywania koloru ⭐️
     class FolderViewHolder extends RecyclerView.ViewHolder {
         View colorIndicator;
         ImageView iconFolder, iconExpansion;
@@ -195,17 +205,30 @@ public class FolderAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
         }
         void bind(FolderItem item) {
             textName.setText(item.name);
-            try {
-                colorIndicator.setBackgroundColor(Color.parseColor(item.color));
-            } catch (Exception e) {
-                colorIndicator.setBackgroundColor(Color.GRAY);
+
+            // ⭐️ ZMIANA: Obsługa braku koloru ⭐️
+            if (item.color != null) {
+                try {
+                    colorIndicator.setBackgroundColor(Color.parseColor(item.color));
+                    colorIndicator.setVisibility(View.VISIBLE);
+                } catch (Exception e) {
+                    colorIndicator.setBackgroundColor(Color.GRAY);
+                    colorIndicator.setVisibility(View.VISIBLE);
+                }
+            } else {
+                // To jest nasz folder "Niezgrupowane", ukryj wskaźnik koloru
+                colorIndicator.setVisibility(View.GONE);
             }
 
-            // (Jeśli masz własne ikony, użyj R.drawable.ic_arrow_up / R.drawable.ic_arrow_down)
+            // Ikona folderu (można by też ją zmienić, ale zostawmy)
+            iconFolder.setImageResource(R.drawable.ic_folder);
+
+            // Strzałka (działa tak samo)
             iconExpansion.setImageResource(item.isExpanded ?
                     android.R.drawable.arrow_up_float :
                     android.R.drawable.arrow_down_float);
 
+            // Kliknięcie (działa tak samo)
             itemView.setOnClickListener(v -> callback.onFolderClicked(item));
             itemView.setOnLongClickListener(v -> {
                 callback.onFolderLongClicked(item, v);
@@ -217,38 +240,33 @@ public class FolderAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
     class GatewayViewHolder extends RecyclerView.ViewHolder {
         TextView textGroupName, textGroupStatus;
         ImageView iconGroup;
-        ImageView iconExpansion; // <-- NOWE POLE
+        ImageView iconExpansion;
 
         GatewayViewHolder(View view) {
             super(view);
             textGroupName = view.findViewById(R.id.textGroup);
             textGroupStatus = view.findViewById(R.id.textGroupStatus);
             iconGroup = view.findViewById(R.id.iconGroup);
-            iconExpansion = view.findViewById(R.id.iconExpansionIndicator); // <-- NOWE FINDVIEWBYID
+            iconExpansion = view.findViewById(R.id.iconExpansionIndicator);
         }
 
         void bind(GatewayItem item) {
-            // Logika skopiowana z GatewaySensorCursorAdapter
             textGroupName.setText(item.name);
             iconGroup.setImageResource(R.drawable.ic_gateway);
             if ("online".equalsIgnoreCase(item.status)) {
                 textGroupStatus.setText(R.string.gateway_status_online);
-                textGroupStatus.setTextColor(Color.parseColor("#FF009900")); // Zielony
+                textGroupStatus.setTextColor(Color.parseColor("#FF009900"));
             } else {
                 textGroupStatus.setText(R.string.gateway_status_offline);
-                textGroupStatus.setTextColor(Color.parseColor("#FF990000")); // Czerwony
+                textGroupStatus.setTextColor(Color.parseColor("#FF990000"));
             }
 
-            // ⭐️ NOWA LOGIKA DLA STRZAŁKI ⭐️
-            // Sprawdź, czy ta bramka W OGÓLE może się rozwijać (czy jest rodzicem)
             if (item.isSensorParent) {
-                iconExpansion.setVisibility(View.VISIBLE); // Pokaż strzałkę
-                // Ustaw odpowiednią ikonę (góra/dół)
+                iconExpansion.setVisibility(View.VISIBLE);
                 iconExpansion.setImageResource(item.isExpanded ?
                         android.R.drawable.arrow_up_float :
                         android.R.drawable.arrow_down_float);
             } else {
-                // To jest bramka w ulubionych, nie ma strzałki
                 iconExpansion.setVisibility(View.INVISIBLE);
             }
 
@@ -261,30 +279,77 @@ public class FolderAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
     }
 
     class SensorViewHolder extends RecyclerView.ViewHolder {
-        TextView textView; // Zakładamy, że list_item to tylko TextView
+        TextView textView;
         SensorViewHolder(View view) {
             super(view);
             textView = (TextView) view;
         }
+
         void bind(SensorItem item) {
-            // Logika skopiowana z GatewaySensorCursorAdapter
-            // TODO: Potrzebujemy metody getIcon() (skopiuj z GatewaySensorCursorAdapter)
-            // textView.setCompoundDrawablesWithIntrinsicBounds(getIcon(item.type, item.keyword, null), 0, 0, 0);
+            textView.setCompoundDrawablesWithIntrinsicBounds(getIcon(item.type, item.keyword, null), 0, 0, 0);
 
             String displayText = item.name;
             if (item.gatewayName != null) {
-                // Jeśli to ulubiony czujnik, pokaż bramkę
                 displayText += " (" + item.gatewayName + ")";
             }
             textView.setText(displayText);
 
-            // TODO: Logika kolorowania baterii (skopiuj z GatewaySensorCursorAdapter)
+            int defaultTextColor;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                defaultTextColor = context.getColor(android.R.color.tab_indicator_text);
+            } else {
+                defaultTextColor = context.getResources().getColor(android.R.color.tab_indicator_text);
+            }
+
+            if (item.batteryLevel > 20) {
+                textView.setTextColor(defaultTextColor);
+            } else if (item.batteryLevel > 0) {
+                textView.setTextColor(Color.parseColor("#FF990000"));
+            } else {
+                textView.setTextColor(defaultTextColor);
+            }
 
             itemView.setOnClickListener(v -> callback.onSensorClicked(item));
             itemView.setOnLongClickListener(v -> {
                 callback.onSensorLongClicked(item, v);
                 return true;
             });
+        }
+    }
+
+    private int getIcon(String type, String keyword, String value) {
+        if (keyword != null) {
+            switch (keyword.toLowerCase()) {
+                case "tv": return R.drawable.ic_tv;
+                case "washer": return R.drawable.ic_washer;
+                case "fridge": return R.drawable.ic_fridge;
+                case "oven": return R.drawable.ic_oven;
+                case "socket": return R.drawable.ic_socket;
+                case "dishwasher": return R.drawable.ic_dishwasher;
+                case "hood": return R.drawable.ic_hood;
+            }
+        }
+        if (type == null) return R.drawable.ic_sensor;
+        switch (type.toLowerCase()) {
+            case "button_press": return R.drawable.ic_button;
+            case "temperature": return R.drawable.ic_temp;
+            case "humidity": return R.drawable.ic_humidity;
+            case "power": return R.drawable.ic_power;
+            case "motion": return R.drawable.ic_motion;
+            case "light": return R.drawable.ic_light;
+            case "smoke": return R.drawable.ic_smoke;
+            case "flow": return R.drawable.ic_flow;
+            case "sunlight": return R.drawable.ic_sunlight;
+            case "level": return R.drawable.ic_level;
+            case "valve": return R.drawable.ic_valve;
+            case "contact":
+                if ("1".equals(value)) {
+                    return R.drawable.ic_open;
+                } else {
+                    return R.drawable.ic_closed;
+                }
+            default:
+                return R.drawable.ic_sensor;
         }
     }
 }

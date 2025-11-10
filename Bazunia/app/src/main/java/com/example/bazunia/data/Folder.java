@@ -18,9 +18,13 @@ public class Folder {
     @SerializedName("gatewayIds")
     private Set<Long> gatewayIds;
 
+    @SerializedName("sensorIds")
+    private Set<Long> sensorIds;
+
     // Gettery
     public Long getId() { return id; }
     public String getName() { return name; }
     public String getColor() { return color; }
     public Set<Long> getGatewayIds() { return gatewayIds; }
+    public Set<Long> getSensorIds() { return sensorIds; }
 }

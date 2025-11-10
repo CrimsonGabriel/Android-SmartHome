@@ -6,6 +6,11 @@
     <item
         android:id="@+id/menu_add_to_folder"
         android:title="@string/menu_add_to_folder" />
+
+    <item
+        android:id="@+id/menu_remove_gateway_from_folder"
+        android:title="@string/menu_remove_from_folder" />
+
     <item
         android:id="@+id/menu_add_gateway_to_favorites"
         android:title="@string/menu_add_to_favorites" />

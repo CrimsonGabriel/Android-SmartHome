@@ -199,4 +199,6 @@ public class MainActivity extends AppCompatActivity {
         }
         return getString(R.string.sensor_suffix_many);
     }
+
+
 }
