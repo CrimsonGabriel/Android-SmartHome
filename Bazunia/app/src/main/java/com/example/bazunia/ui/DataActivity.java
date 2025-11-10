@@ -111,6 +111,7 @@ public class DataActivity extends AppCompatActivity {
         btnRefresh.setOnClickListener(v -> {
             Toast.makeText(this, getString(R.string.data_refreshed_manually), Toast.LENGTH_SHORT).show();
             Intent serviceIntent = new Intent(this, VpsClientService.class);
+            serviceIntent.putExtra("FORCE_SYNC_NOW", true);
             startService(serviceIntent);
         });
 
@@ -302,6 +303,7 @@ public class DataActivity extends AppCompatActivity {
                     if (response.isSuccessful()) {
                         Toast.makeText(DataActivity.this, R.string.toast_gateway_deleted, Toast.LENGTH_SHORT).show();
                         Intent serviceIntent = new Intent(DataActivity.this, VpsClientService.class);
+                        serviceIntent.putExtra("FORCE_SYNC_NOW", true);
                         startService(serviceIntent);
                     } else {
                         Toast.makeText(DataActivity.this, R.string.toast_delete_failed, Toast.LENGTH_SHORT).show();

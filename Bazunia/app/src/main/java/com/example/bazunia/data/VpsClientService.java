@@ -356,6 +356,17 @@ public class VpsClientService extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         Log.d(TAG, "Serwis klienta VPS: onStartCommand");
+
+        if (intent != null && intent.getBooleanExtra("FORCE_SYNC_NOW", false)) {
+            Log.d(TAG, "Wymuszono natychmiastową synchronizację bramek!");
+
+            // Upewnij się, że executorService nie jest null (na wszelki wypadek)
+            if (executorService != null && !executorService.isShutdown()) {
+                // Uruchamiamy synchronizację bramek natychmiast w wątku roboczym
+                executorService.submit(this::syncGatewayDefinitions);
+            }
+        }
+
         return START_STICKY;
     }
 
