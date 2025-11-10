@@ -240,4 +240,7 @@
     <string name="list_group_gateway_name_placeholder">Nazwa Bramki</string>
     <string name="list_group_status_placeholder">Online</string>
     <string name="account_copy_secret_key">Kopiuj klucz</string>
+
+
+
 </resources>

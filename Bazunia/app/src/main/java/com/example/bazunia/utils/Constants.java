@@ -19,6 +19,7 @@ public class Constants {
 
     public static final String GATEWAYS_ENDPOINT = VPS_SERVER_IP + "/api/gateways";
     // --- NOWY ENDPOINT DLA GOOGLE AUTH (POPRAWIONO ŚCIEŻKĘ) ---
+    public static final String SENSORS_ENDPOINT = VPS_SERVER_IP + "/api/sensors";
     public static final String GOOGLE_AUTH_ENDPOINT = VPS_SERVER_IP + "/api/auth/google";
 
     // --- NOWE ENDPOINTY 2FA (POPRAWIONO ŚCIEŻKI) ---

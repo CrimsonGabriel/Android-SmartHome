@@ -115,6 +115,10 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         } catch (SQLException e) {
             Log.e("DB_INSERT", "SQLException podczas dodawania odczytu: " + e.getMessage());
         }
+        // <<< POPRAWKA: Należy zamknąć bazę danych, gdy skończysz >>>
+        // Chociaż db.close() w tym miejscu może być problematyczne przy wielu szybkich zapisach.
+        // Lepszą praktyką jest zarządzanie cyklem życia DB w serwisie/aktywności.
+        // Na razie zostawmy bez close(), aby uniknąć błędów "database already closed".
     }
 
     // Używane przez SensorDetailActivity
@@ -139,6 +143,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             Log.e("DB_QUERY_ERROR", String.format(Locale.getDefault(),
                     context.getString(R.string.log_error_db_query), e.getMessage()));
         }
+        // db.close(); // Nie zamykamy, Cursor może być nadal potrzebny (chociaż try-with-resources powinien go zamknąć)
         return latestModel;
     }
 
@@ -163,6 +168,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             Log.e("DB_FILTER_ERROR", String.format(Locale.getDefault(),
                     context.getString(R.string.log_error_db_filter), e.getMessage()));
         }
+        // db.close();
         return latestDataList;
     }
 
@@ -173,6 +179,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 " WHERE " + COLUMN_GATE_ID + " = ? AND " + COLUMN_SENSOR_ID + " = ? " +
                 " ORDER BY " + COLUMN_TIMESTAMP + " DESC " +
                 " LIMIT " + limit;
+        // NIE ZAMYKAJ DB TUTAJ! Cursor jest przekazywany na zewnątrz.
         return db.rawQuery(query, new String[]{gateId, sensorId});
     }
 
@@ -189,6 +196,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         } catch (SQLException e) {
             Log.e("DB_CLEAN", "Błąd automatycznego czyszczenia: " + e.getMessage());
         }
+        // db.close();
         return deletedRows;
     }
 
@@ -233,6 +241,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             if (db.inTransaction()) {
                 db.endTransaction();
             }
+            // db.close(); // Nie zamykamy, db jest zarządzane przez cykl życia
         }
     }
 
@@ -240,7 +249,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     public Cursor getAllGateways() {
         SQLiteDatabase db = this.getReadableDatabase();
 
-        // <<< POPRAWKA: Musimy dodać alias "id AS _id" dla CursorAdaptera >>>
         String query = "SELECT " +
                 G_COLUMN_ID + " AS _id, " + // Kluczowy alias
                 G_COLUMN_NAME + ", " +
@@ -251,6 +259,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 " FROM " + TABLE_GATEWAYS +
                 " ORDER BY " + G_COLUMN_NAME + " ASC";
 
+        // NIE ZAMYKAJ DB TUTAJ!
         return db.rawQuery(query, null);
     }
 
@@ -258,7 +267,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     public Cursor getSensorsForGateway(long gatewayId) {
         SQLiteDatabase db = this.getReadableDatabase();
 
-        // <<< POPRAWKA: Musimy dodać alias "id AS _id" dla CursorAdaptera >>>
         String query = "SELECT " +
                 S_COLUMN_ID + " AS _id, " + // Kluczowy alias
                 S_COLUMN_GATEWAY_ID + ", " +
@@ -270,6 +278,51 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 " WHERE " + S_COLUMN_GATEWAY_ID + " = ? " +
                 " ORDER BY " + S_COLUMN_NAME + " ASC";
 
+        // NIE ZAMYKAJ DB TUTAJ!
         return db.rawQuery(query, new String[]{String.valueOf(gatewayId)});
+    }
+
+    // <<< ⭐️⭐️⭐️ POPRAWIONA SEKCJA ⭐️⭐️⭐️ >>>
+    // Poniższe metody zastępują te zepsute, które miałeś.
+    // Są wywoływane przez DataActivity.
+
+    /**
+     * Aktualizuje nazwę i opis bramki w lokalnej bazie.
+     */
+    public void updateGatewayDetails(long gatewayId, String newName, String newDescription) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        ContentValues values = new ContentValues();
+        // <<< POPRAWKA: Używamy poprawnych stałych >>>
+        values.put(G_COLUMN_NAME, newName);
+        values.put(G_COLUMN_DESCRIPTION, newDescription);
+
+        try {
+            db.update(TABLE_GATEWAYS, values, G_COLUMN_ID + " = ?",
+                    new String[]{String.valueOf(gatewayId)});
+        } catch (Exception e) {
+            Log.e("DB_UPDATE", "Błąd aktualizacji bramki: " + e.getMessage());
+        } finally {
+            db.close(); // Zamykamy bazę po operacji zapisu
+        }
+    }
+
+    /**
+     * Aktualizuje nazwę i opis czujnika w lokalnej bazie.
+     */
+    public void updateSensorDetails(long sensorId, String newName, String newDescription) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        ContentValues values = new ContentValues();
+        // <<< POPRAWKA: Używamy poprawnych stałych >>>
+        values.put(S_COLUMN_NAME, newName);
+        values.put(S_COLUMN_DESCRIPTION, newDescription);
+
+        try {
+            db.update(TABLE_SENSORS, values, S_COLUMN_ID + " = ?",
+                    new String[]{String.valueOf(sensorId)});
+        } catch (Exception e) {
+            Log.e("DB_UPDATE", "Błąd aktualizacji czujnika: " + e.getMessage());
+        } finally {
+            db.close(); // Zamykamy bazę po operacji zapisu
+        }
     }
 }
