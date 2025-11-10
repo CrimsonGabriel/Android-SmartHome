@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/menu_rename_sensor"
+        android:title="@string/menu_rename" />
+    <item
+        android:id="@+id/menu_add_sensor_to_favorites"
+        android:title="@string/menu_add_to_favorites" />
+    <item
+        android:id="@+id/menu_remove_sensor_from_favorites"
+        android:title="@string/menu_remove_from_favorites" />
+</menu>

@@ -241,6 +241,34 @@
     <string name="list_group_status_placeholder">Online</string>
     <string name="account_copy_secret_key">Kopiuj klucz</string>
 
+    <string name="menu_add_to_folder">Dodaj do folderu...</string>
+    <string name="menu_add_to_favorites">Dodaj do ulubionych</string>
+    <string name="menu_remove_from_favorites">Usuń z ulubionych</string>
+    <string name="menu_remove_from_folder">Usuń z folderu</string>
+    <string name="menu_edit_folder">Edytuj folder</string>
+    <string name="menu_delete_folder">Usuń folder</string>
+
+    <string name="fab_add_folder_desc">Dodaj nowy folder</string>
+    <string name="dialog_create_folder_title">Nowy folder</string>
+    <string name="dialog_edit_folder_title">Edytuj folder</string>
+    <string name="dialog_folder_name_hint">Nazwa folderu</string>
+    <string name="dialog_folder_color_hint">Kolor (np. #FF5733)</string>
+    <string name="dialog_select_folder_title">Wybierz folder</string>
+
+    <string name="toast_folder_created">Folder utworzony</string>
+    <string name="toast_folder_updated">Folder zaktualizowany</string>
+    <string name="toast_folder_deleted">Folder usunięty</string>
+    <string name="toast_added_to_folder">Dodano do folderu \'%1$s\'</string>
+    <string name="toast_removed_from_folder">Usunięto z folderu</string>
+    <string name="toast_added_to_favorites">Dodano do ulubionych</string>
+    <string name="toast_removed_from_favorites">Usunięto z ulubionych</string>
+    <string name="toast_api_error">Błąd operacji Api</string>
+
+    <string name="section_favorites">Ulubione</string>
+    <string name="section_uncategorized">Bez folderu</string>
+
+    <string name="favorite_button_desc">Dodaj do ulubionych</string>
+
 
 
 </resources>

@@ -241,4 +241,33 @@
     <string name="list_group_gateway_name_placeholder">Gateway Name</string>
     <string name="list_group_status_placeholder">Online</string>
     <string name="account_copy_secret_key">Copy key</string>
+
+    <string name="menu_add_to_folder">Add to folder...</string>
+    <string name="menu_add_to_favorites">Add to favorites</string>
+    <string name="menu_remove_from_favorites">Remove from favorites</string>
+    <string name="menu_remove_from_folder">Remove from folder</string>
+    <string name="menu_edit_folder">Edit folder</string>
+    <string name="menu_delete_folder">Delete folder</string>
+
+    <string name="fab_add_folder_desc">Add new folder</string>
+    <string name="dialog_create_folder_title">New Folder</string>
+    <string name="dialog_edit_folder_title">Edit Folder</string>
+    <string name="dialog_folder_name_hint">Folder name</string>
+    <string name="dialog_folder_color_hint">Color (e.g. #FF5733)</string>
+    <string name="dialog_select_folder_title">Select folder</string>
+
+    <string name="toast_folder_created">Folder created</string>
+    <string name="toast_folder_updated">Folder updated</string>
+    <string name="toast_folder_deleted">Folder deleted</string>
+    <string name="toast_added_to_folder">Added to folder \'%1$s\'</string>
+    <string name="toast_removed_from_folder">Removed from folder</string>
+    <string name="toast_added_to_favorites">Added to favorites</string>
+    <string name="toast_removed_from_favorites">Removed from favorites</string>
+    <string name="toast_api_error">Api operation error</string>
+
+    <string name="section_favorites">Favorites</string>
+    <string name="section_uncategorized">Uncategorized</string>
+
+    <string name="favorite_button_desc">Add to favorites</string>
+
 </resources>

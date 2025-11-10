@@ -4,6 +4,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.SharedPreferences; // Import dla SharedPreferences
 import android.database.Cursor;
 import android.graphics.Color;
 import android.os.Bundle;
@@ -11,10 +12,14 @@ import android.util.Log;
 import android.util.TypedValue;
 import android.view.View;
 import android.widget.ArrayAdapter;
+import android.widget.ImageButton; // Import dla ImageButton
 import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.SeekBar;
 import android.widget.TextView;
+import android.widget.Toast; // ⭐️⭐️⭐️ WAŻNY IMPORT DLA 'SHORT' ⭐️⭐️⭐️
+
+import androidx.annotation.NonNull; // Import dla NonNull
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import com.example.bazunia.utils.LocaleManager;
@@ -24,12 +29,25 @@ import com.example.bazunia.data.DatabaseHelper;
 import com.example.bazunia.R;
 import com.example.bazunia.data.SensorModel;
 import com.example.bazunia.data.ThresholdManager;
+import com.example.bazunia.data.VpsClientService; // Import dla VpsClientService
 import com.google.android.material.button.MaterialButton;
+
+import org.json.JSONObject; // Import dla JSONObject
+
+import java.io.IOException; // Import dla IOException
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
+
+import okhttp3.Call; // Import dla OkHttp
+import okhttp3.Callback; // Import dla OkHttp
+import okhttp3.MediaType; // Import dla OkHttp
+import okhttp3.OkHttpClient; // Import dla OkHttp
+import okhttp3.Request; // Import dla OkHttp
+import okhttp3.RequestBody; // Import dla OkHttp
+import okhttp3.Response; // Import dla OkHttp
 
 public class SensorDetailActivity extends AppCompatActivity {
 
@@ -51,6 +69,12 @@ public class SensorDetailActivity extends AppCompatActivity {
     private AppearanceManager appearanceManager;
     private String currentTextScale;
     private String currentButtonScale;
+
+    // NOWE POLA
+    private ImageButton btnFavorite;
+    private boolean isFavorite = false;
+    private OkHttpClient httpClient;
+    private SharedPreferences authPrefs;
 
     private final BroadcastReceiver dataUpdateReceiver = new BroadcastReceiver() {
         @Override
@@ -74,6 +98,10 @@ public class SensorDetailActivity extends AppCompatActivity {
         dbHelper = new DatabaseHelper(this);
         thresholdManager = new ThresholdManager(this);
 
+        // NOWA INICJALIZACJA
+        httpClient = new OkHttpClient();
+        authPrefs = getSharedPreferences(LoginActivity.AUTH_PREFS, Context.MODE_PRIVATE);
+
         TextView textSensorTitle = findViewById(R.id.textSensorTitle);
         textSensorDetails = findViewById(R.id.textSensorDetails);
         seekBarThresholdMin = findViewById(R.id.seekBarThresholdMin);
@@ -85,11 +113,19 @@ public class SensorDetailActivity extends AppCompatActivity {
         MaterialButton btnSettings = findViewById(R.id.btnSettings);
         MaterialButton btnBack = findViewById(R.id.btnBackSensorDetail);
 
+        // ⭐️⭐️⭐️ POPRAWKA BŁĘDU 1 ⭐️⭐️⭐️
+        // Usunięto błędny tag z tej linii
+        btnFavorite = findViewById(R.id.btnFavorite);
+
         appearanceManager.applyIconScale(btnSettings);
         appearanceManager.applyIconScale(btnBack);
+        // appearanceManager.applyIconScale(btnFavorite); // Możesz też dodać skalowanie dla tego
 
         btnSettings.setOnClickListener(v -> startActivity(new Intent(this, SettingsActivity.class)));
         btnBack.setOnClickListener(v -> finish());
+
+        // LISTENER DLA ULUBIONYCH
+        btnFavorite.setOnClickListener(v -> toggleFavoriteStatus());
 
         Intent intent = getIntent();
         // Pobieramy nowe long ID przekazane z DataActivity
@@ -111,6 +147,9 @@ public class SensorDetailActivity extends AppCompatActivity {
 
         loadLatestDataAndHistory();
         setupThresholdControls();
+
+        // SPRAWDŹ STATUS ULUBIONYCH
+        checkFavoriteStatus();
     }
 
     @Override
@@ -119,6 +158,7 @@ public class SensorDetailActivity extends AppCompatActivity {
         if (LocaleManager.languageChanged) {
             LocaleManager.languageChanged = false;
             recreate();
+            return;
         }
         if (appearanceManager != null && (!currentTextScale.equals(appearanceManager.getTextScale()) ||
                 !currentButtonScale.equals(appearanceManager.getButtonScale()))) {
@@ -127,12 +167,97 @@ public class SensorDetailActivity extends AppCompatActivity {
         }
         LocalBroadcastManager.getInstance(this).registerReceiver(dataUpdateReceiver, new IntentFilter(Constants.ACTION_DATA_UPDATED));
         loadLatestDataAndHistory();
+
+        // Zaktualizuj status gwiazdki
+        checkFavoriteStatus();
     }
 
     @Override
     protected void onPause() {
         super.onPause();
         LocalBroadcastManager.getInstance(this).unregisterReceiver(dataUpdateReceiver);
+    }
+
+    // NOWA METODA
+    private void checkFavoriteStatus() {
+        isFavorite = dbHelper.isFavoriteSensor(sensorIdLong);
+        if (btnFavorite != null) {
+            // TODO: Zastąp ikony prawdziwymi grafikami gwiazdek (np. ic_star_filled, ic_star_outline)
+            // Użyj R.drawable.ic_check i R.drawable.ic_close jako tymczasowych
+            btnFavorite.setImageResource(isFavorite ? R.drawable.ic_check : R.drawable.ic_close);
+        }
+    }
+
+    // NOWA METODA
+    private void toggleFavoriteStatus() {
+        String jwtToken = authPrefs.getString(LoginActivity.KEY_JWT_TOKEN, null);
+        if (jwtToken == null) {
+            Toast.makeText(this, R.string.toast_error_not_logged_in, Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // Optymistyczna aktualizacja UI
+        final boolean becomingFavorite = !isFavorite;
+        isFavorite = becomingFavorite;
+        checkFavoriteStatus(); // Odśwież ikonę
+
+        String url = Constants.FAVORITE_SENSORS_ENDPOINT; // Musisz dodać to do Constants.java
+        Request request;
+
+        if (becomingFavorite) {
+            // DODAJ DO ULUBIONYCH
+            JSONObject json = new JSONObject();
+            try { json.put("id", sensorIdLong); } catch (Exception e) {}
+
+            RequestBody body = RequestBody.create(json.toString(), MediaType.get("application/json; charset=utf-8"));
+
+            request = new Request.Builder()
+                    .url(url)
+                    .addHeader("Authorization", "Bearer " + jwtToken)
+                    .post(body)
+                    .build();
+        } else {
+            // USUŃ Z ULUBIONYCH
+            url += "/" + sensorIdLong;
+            request = new Request.Builder()
+                    .url(url)
+                    .addHeader("Authorization", "Bearer " + jwtToken)
+                    .delete()
+                    .build();
+        }
+
+        httpClient.newCall(request).enqueue(new Callback() {
+            @Override
+            public void onFailure(@NonNull Call call, @NonNull IOException e) {
+                runOnUiThread(() -> {
+                    Toast.makeText(SensorDetailActivity.this, R.string.toast_api_error, Toast.LENGTH_SHORT).show();
+                    // Wycofaj zmianę UI
+                    isFavorite = !becomingFavorite;
+                    checkFavoriteStatus();
+                });
+            }
+
+            @Override
+            public void onResponse(@NonNull Call call, @NonNull Response response) {
+                runOnUiThread(() -> {
+                    if (response.isSuccessful()) {
+                        Toast.makeText(SensorDetailActivity.this,
+                                becomingFavorite ? R.string.toast_added_to_favorites : R.string.toast_removed_from_favorites,
+                                Toast.LENGTH_SHORT).show();
+                        // Wymuś pełną synchronizację w tle
+                        Intent serviceIntent = new Intent(SensorDetailActivity.this, VpsClientService.class);
+                        serviceIntent.putExtra("FORCE_SYNC_NOW", true);
+                        startService(serviceIntent);
+                    } else {
+                        Toast.makeText(SensorDetailActivity.this, R.string.toast_api_error, Toast.LENGTH_SHORT).show();
+                        // Wycofaj zmianę UI
+                        isFavorite = !becomingFavorite;
+                        checkFavoriteStatus();
+                    }
+                });
+                response.close();
+            }
+        });
     }
 
     private void setupThresholdControls() {
@@ -227,8 +352,11 @@ public class SensorDetailActivity extends AppCompatActivity {
                 do {
                     try {
                         String value = historyCursor.getString(historyCursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_VALUE));
-                        // <<< OTO POPRAWKA >>>
-                        long timestamp = Long.parseLong(historyCursor.getString(historyCursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_TIMESTAMP)));
+
+                        // ⭐️⭐️⭐️ POPRAWKA BŁĘDU 2 ⭐️⭐️⭐️
+                        // Zmieniono 'getColumnIndexOrTry' na 'getColumnIndexOrThrow'
+                        long timestamp = historyCursor.getLong(historyCursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_TIMESTAMP));
+
                         String type = historyCursor.getString(historyCursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_TYPE));
                         historyList.add(String.format(Locale.getDefault(), getString(R.string.sensor_history_item_format), sdf.format(new Date(timestamp)), type, value));
                     } catch (Exception e) {
