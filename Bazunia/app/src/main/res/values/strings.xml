@@ -241,7 +241,7 @@
     <string name="list_group_status_placeholder">Online</string>
     <string name="account_copy_secret_key">Kopiuj klucz</string>
 
-    <string name="menu_add_to_folder">Dodaj do folderu...</string>
+    <string name="menu_add_to_folder">Dodaj do folderu…</string>
     <string name="menu_add_to_favorites">Dodaj do ulubionych</string>
     <string name="menu_remove_from_favorites">Usuń z ulubionych</string>
     <string name="menu_remove_from_folder">Usuń z folderu</string>
@@ -274,4 +274,19 @@
     <string name="action_refresh">Odśwież</string>
     <string name="sync_success">Pobrano aktualne dane.</string>
     <string name="sync_error">Błąd synchronizacji danych.</string>
+
+    <string name="settings_interval_title">Globalna częstotliwość pomiarów</string>
+    <string name="settings_interval_label">Globalny interwał (w sekundach)</string>
+    <string name="settings_interval_desc">Ustawia domyślny interwał (np. 60) dla WSZYSTKICH czujników. RPi pobierze tę wartość automatycznie.</string>
+    <string name="settings_interval_hint">Interwał (sekundy)</string>
+    <string name="settings_interval_save_button">Zapisz globalny interwał</string>
+    <string name="toast_global_interval_updating">Wysyłanie globalnego interwału…</string>
+    <string name="toast_global_interval_success">Zaktualizowano globalny interwał dla %d czujników.</string>
+
+
+    <string name="sensor_detail_interval_title">Indywidualna częstotliwość</string>
+    <string name="sensor_detail_interval_label">Własny interwał (w sekundach)</string>
+    <string name="sensor_detail_interval_hint">Zostaw puste, by użyć globalnego</string>
+    <string name="sensor_detail_save_button">Zapisz ten interwał</string>
+    <string name="toast_interval_update_success">Interwał czujnika zaktualizowany.</string>
 </resources>

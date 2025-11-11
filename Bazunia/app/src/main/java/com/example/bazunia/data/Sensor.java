@@ -13,6 +13,10 @@ public class Sensor {
     Integer batteryLevel;
     String keyword;
 
+    // ⭐️ NOWE POLE ⭐️
+    // Musi pasować do nazwy pola w encji Sensor.java na backendzie
+    Integer intervalSeconds;
+
     // Gettery
     public long getId() { return id; }
     public String getName() { return name; }
@@ -20,4 +24,7 @@ public class Sensor {
     public String getDescription() { return description; }
     public Integer getBatteryLevel() { return batteryLevel; }
     public String getKeyword() { return keyword; }
+
+    // ⭐️ NOWY GETTER ⭐️
+    public Integer getIntervalSeconds() { return intervalSeconds; }
 }

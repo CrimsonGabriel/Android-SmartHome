@@ -77,6 +77,9 @@ public class SensorDetailActivity extends AppCompatActivity {
     private SharedPreferences authPrefs;
     private BroadcastReceiver syncStatusReceiver;
     private long lastSyncToastTime = 0;
+    private com.google.android.material.textfield.TextInputEditText editSensorInterval;
+    private MaterialButton btnSaveInterval;
+    private LinearLayout intervalContainer;
 
     private final BroadcastReceiver dataUpdateReceiver = new BroadcastReceiver() {
         @Override
@@ -114,7 +117,9 @@ public class SensorDetailActivity extends AppCompatActivity {
         listSensorHistory = findViewById(R.id.listSensorHistory);
         MaterialButton btnSettings = findViewById(R.id.btnSettings);
         MaterialButton btnBack = findViewById(R.id.btnBackSensorDetail);
-
+        intervalContainer = findViewById(R.id.intervalContainer);
+        editSensorInterval = findViewById(R.id.editSensorInterval);
+        btnSaveInterval = findViewById(R.id.btnSaveInterval);
         // ⭐️⭐️⭐️ POPRAWKA BŁĘDU 1 ⭐️⭐️⭐️
         // Usunięto błędny tag z tej linii
         btnFavorite = findViewById(R.id.btnFavorite);
@@ -130,7 +135,7 @@ public class SensorDetailActivity extends AppCompatActivity {
 
         // LISTENER DLA ULUBIONYCH
         btnFavorite.setOnClickListener(v -> toggleFavoriteStatus());
-
+        btnSaveInterval.setOnClickListener(v -> saveSensorInterval());
         Intent intent = getIntent();
         // Pobieramy nowe long ID przekazane z DataActivity
         gatewayIdLong = intent.getLongExtra("GATEWAY_ID_LONG", -1);
@@ -150,9 +155,8 @@ public class SensorDetailActivity extends AppCompatActivity {
         textSensorTitle.setText(String.format(getString(R.string.sensor_detail_title), sensorIdString, gatewayIdString));
 
         loadLatestDataAndHistory();
+        loadSensorMetadata();
         setupThresholdControls();
-
-        // SPRAWDŹ STATUS ULUBIONYCH
         checkFavoriteStatus();
     }
 
@@ -196,8 +200,7 @@ public class SensorDetailActivity extends AppCompatActivity {
         LocalBroadcastManager.getInstance(this).registerReceiver(syncStatusReceiver, new IntentFilter(Constants.ACTION_SYNC_STATUS));
         LocalBroadcastManager.getInstance(this).registerReceiver(dataUpdateReceiver, new IntentFilter(Constants.ACTION_DATA_UPDATED));
         loadLatestDataAndHistory();
-
-
+        loadSensorMetadata();
         checkFavoriteStatus();
     }
 
@@ -418,5 +421,94 @@ public class SensorDetailActivity extends AppCompatActivity {
         if (btnFavorite != null) {
             btnFavorite.setImageResource(isFavorite ? R.drawable.ic_star_filled : R.drawable.ic_star_outline);
         }
+    }
+    /**
+     * Ładuje metadane czujnika (jak interwał), które nie są w odczytach.
+     */
+    private void loadSensorMetadata() {
+        // Użyj metody, którą dodałeś do DatabaseHelper
+        Integer interval = dbHelper.getSensorInterval(sensorIdLong);
+
+        // Pokaż tylko dla czujników "aktywnych" (nie przycisków/kontaktronów)
+        if (currentSensorType.equalsIgnoreCase("contact") || currentSensorType.equalsIgnoreCase("button") || currentSensorType.equalsIgnoreCase("motion")) {
+            intervalContainer.setVisibility(View.GONE);
+        } else {
+            intervalContainer.setVisibility(View.VISIBLE);
+            if (interval != null && interval > 0) {
+                editSensorInterval.setText(String.valueOf(interval));
+            } else {
+                editSensorInterval.setText(""); // Puste, jeśli null lub 0
+                editSensorInterval.setHint(getString(R.string.sensor_detail_interval_hint));
+            }
+        }
+    }
+
+
+    /**
+     * Zapisuje nowy interwał dla tego konkretnego czujnika.
+     */
+    private void saveSensorInterval() {
+        String jwtToken = authPrefs.getString(LoginActivity.KEY_JWT_TOKEN, null);
+        if (jwtToken == null) {
+            Toast.makeText(this, R.string.toast_error_not_logged_in, Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        String intervalStr = editSensorInterval.getText() != null ? editSensorInterval.getText().toString() : "";
+        Integer intervalToSend = null; // Domyślnie null (użyje globalnego)
+
+        if (!intervalStr.isEmpty()) {
+            try {
+                intervalToSend = Integer.parseInt(intervalStr);
+                if (intervalToSend <= 0) intervalToSend = null; // Traktuj 0 jako "globalny"
+            } catch (NumberFormatException e) {
+                editSensorInterval.setError("Nieprawidłowa liczba");
+                return;
+            }
+        }
+
+        // Tworzymy JSON: {"intervalSeconds": 120} lub {"intervalSeconds": null}
+        // Wysyłamy TYLKO interwał, reszta (name, desc) będzie null i zostanie zignorowana przez serwis
+        String jsonBody = "{\"intervalSeconds\": " + intervalToSend + "}";
+
+        RequestBody body = RequestBody.create(jsonBody, MediaType.get("application/json; charset=utf-8"));
+
+        // Używamy endpointu, który poprawiliśmy w Kroku 1
+        String url = Constants.SENSORS_ENDPOINT + "/" + sensorIdLong;
+
+        Request request = new Request.Builder()
+                .url(url)
+                .addHeader("Authorization", "Bearer " + jwtToken)
+                .put(body) // Używamy PUT
+                .build();
+
+        httpClient.newCall(request).enqueue(new Callback() {
+            @Override
+            public void onFailure(@NonNull Call call, @NonNull IOException e) {
+                runOnUiThread(() -> Toast.makeText(SensorDetailActivity.this,
+                        // ⭐️ POPRAWKA 1 ⭐️
+                        getString(R.string.toast_api_error) + ": " + e.getMessage(), Toast.LENGTH_SHORT).show());
+            }
+
+            @Override
+            public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
+                if (response.isSuccessful()) {
+                    runOnUiThread(() -> {
+                        Toast.makeText(SensorDetailActivity.this, R.string.toast_interval_update_success, Toast.LENGTH_SHORT).show();
+                        // Po sukcesie, wymuś synchronizację definicji (cicho), aby DB się zaktualizowała
+                        Intent serviceIntent = new Intent(SensorDetailActivity.this, VpsClientService.class);
+                        serviceIntent.putExtra("FORCE_SYNC_NOW", true);
+                        serviceIntent.putExtra("IS_SILENT", true);
+                        startService(serviceIntent);
+                    });
+                } else {
+                    String error = response.body() != null ? response.body().string() : "Unknown error";
+                    runOnUiThread(() -> Toast.makeText(SensorDetailActivity.this,
+                            // ⭐️ POPRAWKA 2 ⭐️
+                            getString(R.string.toast_api_error) + ": " + error, Toast.LENGTH_SHORT).show());
+                }
+                response.close();
+            }
+        });
     }
 }

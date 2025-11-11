@@ -242,7 +242,7 @@
     <string name="list_group_status_placeholder">Online</string>
     <string name="account_copy_secret_key">Copy key</string>
 
-    <string name="menu_add_to_folder">Add to folder...</string>
+    <string name="menu_add_to_folder">Add to folder…</string>
     <string name="menu_add_to_favorites">Add to favorites</string>
     <string name="menu_remove_from_favorites">Remove from favorites</string>
     <string name="menu_remove_from_folder">Remove from folder</string>
@@ -274,5 +274,20 @@
     <string name="action_refresh">Refresh</string>
     <string name="sync_success">Data refreshed successfully.</string>
     <string name="sync_error">Data synchronization failed.</string>
+
+    <string name="settings_interval_title">Global Measurement Frequency</string>
+    <string name="settings_interval_label">Global Interval (in seconds)</string>
+    <string name="settings_interval_desc">Sets the default interval (e.g., 60) for ALL sensors. RPi will fetch this value automatically.</string>
+    <string name="settings_interval_hint">Interval (seconds)</string>
+    <string name="settings_interval_save_button">Save Global Interval</string>
+    <string name="toast_global_interval_updating">Sending global interval…</string>
+    <string name="toast_global_interval_success">Updated global interval for %d sensors.</string>
+
+
+    <string name="sensor_detail_interval_title">Individual Frequency</string>
+    <string name="sensor_detail_interval_label">Custom Interval (in seconds)</string>
+    <string name="sensor_detail_interval_hint">Leave empty to use global default</string>
+    <string name="sensor_detail_save_button">Save this Interval</string>
+    <string name="toast_interval_update_success">Sensor interval updated.</string>
 
 </resources>
