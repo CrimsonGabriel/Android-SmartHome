@@ -270,5 +270,8 @@
     <string name="favorite_button_desc">Dodaj do ulubionych</string>
 
 
-
+    <string name="action_force_sync">Sprawdź poprawność przesyłu</string>
+    <string name="action_refresh">Odśwież</string>
+    <string name="sync_success">Pobrano aktualne dane.</string>
+    <string name="sync_error">Błąd synchronizacji danych.</string>
 </resources>

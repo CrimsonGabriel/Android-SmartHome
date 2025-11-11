@@ -73,6 +73,9 @@ public class DataActivity extends AppCompatActivity implements FolderAdapter.Fol
     private String currentTextScale, currentButtonScale;
     private OkHttpClient httpClient;
     private SharedPreferences authPrefs;
+    private BroadcastReceiver syncStatusReceiver;
+
+    private long lastSyncToastTime = 0;
 
     @Override
     protected void attachBaseContext(Context newBase) {
@@ -112,7 +115,6 @@ public class DataActivity extends AppCompatActivity implements FolderAdapter.Fol
         btnSettings.setOnClickListener(v -> startActivity(new Intent(this, SettingsActivity.class)));
 
         btnRefresh.setOnClickListener(v -> {
-            Toast.makeText(this, getString(R.string.data_refreshed_manually), Toast.LENGTH_SHORT).show();
             forceSync();
         });
 
@@ -270,11 +272,9 @@ public class DataActivity extends AppCompatActivity implements FolderAdapter.Fol
         startActivity(intent);
     }
 
-    // ⭐️ POPRAWKA: Blokuj menu kontekstowe dla obu "fałszywych" folderów ⭐️
+
     @Override public void onFolderLongClicked(FolderAdapter.FolderItem folder, View view) {
-        if (folder.id == UNCATEGORIZED_PARENT_ID || folder.id == PARENT_ID_FAVORITE) {
-            return; // Nie pokazuj menu dla tych sekcji
-        }
+        // ⭐️ ZMIANA: Zezwalamy na menu dla wszystkich folderów ⭐️
         currentContextMenuItem = folder;
         openContextMenu(view);
     }
@@ -297,6 +297,23 @@ public class DataActivity extends AppCompatActivity implements FolderAdapter.Fol
 
         if (currentContextMenuItem instanceof FolderAdapter.FolderItem) {
             inflater.inflate(R.menu.folder_context_menu, menu);
+
+            // Pobierz ID folderu
+            long folderId = ((FolderAdapter.FolderItem) currentContextMenuItem).id;
+
+            // Sprawdź, czy to specjalny folder
+            boolean isSpecialFolder = (folderId == PARENT_ID_FAVORITE || folderId == UNCATEGORIZED_PARENT_ID);
+
+            // Ukryj "Edytuj" i "Usuń" dla folderów specjalnych
+            MenuItem editItem = menu.findItem(R.id.menu_edit_folder);
+            if (editItem != null) {
+                editItem.setVisible(!isSpecialFolder);
+            }
+            MenuItem deleteItem = menu.findItem(R.id.menu_delete_folder);
+            if (deleteItem != null) {
+                deleteItem.setVisible(!isSpecialFolder);
+            }
+            // Opcja "Sprawdź poprawność przesyłu" (action_force_sync) pozostanie widoczna
 
         } else if (currentContextMenuItem instanceof FolderAdapter.GatewayItem) {
             inflater.inflate(R.menu.gateway_context_menu, menu);
@@ -344,6 +361,11 @@ public class DataActivity extends AppCompatActivity implements FolderAdapter.Fol
             } else if (itemId == R.id.menu_delete_folder) {
                 showDeleteFolderDialog(folder);
                 return true;
+
+            } else if (itemId == R.id.action_force_sync) {
+                forceSync();
+                return true;
+
             }
         }
         // Logika dla BRAMKI
@@ -369,6 +391,9 @@ public class DataActivity extends AppCompatActivity implements FolderAdapter.Fol
                 return true;
             } else if (itemId == R.id.menu_delete_gateway) {
                 showDeleteGatewayDialog(gateway.id, gateway.name);
+                return true;
+            } else if (itemId == R.id.action_force_sync) {
+                forceSync(); // Wywołuje pełną synchronizację definicji
                 return true;
             }
         }
@@ -834,7 +859,30 @@ public class DataActivity extends AppCompatActivity implements FolderAdapter.Fol
                 loadDisplayListFromDb();
             }
         };
+        syncStatusReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                boolean success = intent.getBooleanExtra("SYNC_SUCCESS", false);
+                long now = System.currentTimeMillis();
+
+                // Prosty debounce, aby uniknąć podwójnych Toastów (limit 1 na 3 sekundy)
+                if (now - lastSyncToastTime < 3000) {
+                    Log.d(TAG, "SyncStatusReceiver: Zignorowano zduplikowany broadcast o sukcesie.");
+                    return; // Zignoruj ten broadcast, jest za wcześnie
+                }
+
+                if (success) {
+                    Toast.makeText(context, R.string.sync_success, Toast.LENGTH_SHORT).show();
+                } else {
+                    Toast.makeText(context, R.string.sync_error, Toast.LENGTH_SHORT).show();
+                }
+
+                // Zapisz czas ostatniego Toasta (tylko jeśli pokazaliśmy błąd lub sukces)
+                lastSyncToastTime = now;
+            }
+        };
     }
+
 
     @Override
     protected void onResume() {
@@ -850,12 +898,14 @@ public class DataActivity extends AppCompatActivity implements FolderAdapter.Fol
             return;
         }
         LocalBroadcastManager.getInstance(this).registerReceiver(dataUpdateReceiver, new IntentFilter(Constants.ACTION_DATA_UPDATED));
+        LocalBroadcastManager.getInstance(this).registerReceiver(syncStatusReceiver, new IntentFilter(Constants.ACTION_SYNC_STATUS));
         loadDisplayListFromDb();
     }
 
     @Override
     protected void onPause() {
         LocalBroadcastManager.getInstance(this).unregisterReceiver(dataUpdateReceiver);
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(syncStatusReceiver);
         super.onPause();
     }
 }

@@ -82,11 +82,11 @@ public class VpsClientService extends Service {
 
         registerAndroidIp();
 
-        executorService.scheduleWithFixedDelay(this::fetchSensorData, 0, POLLING_INTERVAL_READINGS_SECONDS, TimeUnit.SECONDS);
-        executorService.scheduleWithFixedDelay(this::syncGatewayDefinitions, 1, POLLING_INTERVAL_GATEWAYS_SECONDS, TimeUnit.SECONDS);
+        // ⭐️ NOWY KOD ⭐️
 
-        // ⭐️ NOWE ZADANIE SYNCHRONIZACJI ⭐️
-        executorService.scheduleWithFixedDelay(this::syncFoldersAndFavorites, 2, POLLING_INTERVAL_FOLDERS_SECONDS, TimeUnit.SECONDS);
+        executorService.scheduleWithFixedDelay(() -> fetchSensorData(false), 0, POLLING_INTERVAL_READINGS_SECONDS, TimeUnit.SECONDS);
+        executorService.scheduleWithFixedDelay(() -> syncGatewayDefinitions(false), 1, POLLING_INTERVAL_GATEWAYS_SECONDS, TimeUnit.SECONDS);
+        executorService.scheduleWithFixedDelay(() -> syncFoldersAndFavorites(false), 2, POLLING_INTERVAL_FOLDERS_SECONDS, TimeUnit.SECONDS);
 
         executorService.scheduleWithFixedDelay(this::fetchUpdateStatus, 5, POLLING_INTERVAL_GATEWAYS_SECONDS, TimeUnit.SECONDS);
     }
@@ -116,13 +116,15 @@ public class VpsClientService extends Service {
         return token;
     }
 
+    // ⭐️ ZAKTUALIZOWANA METODA ⭐️
     /**
      * Zadanie 1: Pobiera surowe ODCZYTY (stara logika, /data/android)
+     * @param isManual Jeśli true, wyśle Broadcast o statusie (Toast)
      */
-    private void fetchSensorData() {
-        // ... (bez zmian, kod z dostarczonego pliku)
+    private void fetchSensorData(boolean isManual) {
         String jwtToken = getJwtToken();
         if (jwtToken == null) {
+            if (isManual) sendSyncStatusBroadcast(false); // ⭐️ DODANE ⭐️
             return;
         }
         Request request = new Request.Builder()
@@ -134,31 +136,37 @@ public class VpsClientService extends Service {
             @Override
             public void onFailure(@NonNull Call call, @NonNull IOException e) {
                 Log.e(TAG, "BLAD POBIERANIA (Odczyty): " + e.getMessage());
+                if (isManual) sendSyncStatusBroadcast(false); // ⭐️ ZMIENIONE ⭐️
             }
             @Override
             public void onResponse(@NonNull Call call, @NonNull Response response) {
                 try (Response resp = response) {
                     if (resp.isSuccessful() && resp.body() != null) {
                         String jsonResponse = resp.body().string();
-                        processSensorData(jsonResponse);
+                        processSensorData(jsonResponse); // To wysyła ACTION_DATA_UPDATED
+                        if (isManual) sendSyncStatusBroadcast(true); // ⭐️ ZMIENIONE ⭐️
                     } else {
                         Log.w(TAG, String.format(Locale.getDefault(),
                                 getString(R.string.log_warn_data_failed), resp.code()));
+                        if (isManual) sendSyncStatusBroadcast(false); // ⭐️ ZMIENIONE ⭐️
                     }
                 } catch (Exception e) {
                     Log.e(TAG, "KRYTYCZNY BLAD w onResponse (Odczyty): " + e.getMessage());
+                    if (isManual) sendSyncStatusBroadcast(false); // ⭐️ ZMIENIONE ⭐️
                 }
             }
         });
     }
 
+    // ⭐️ ZAKTUALIZOWANA METODA ⭐️
     /**
      * Zadanie 2: Synchronizuje BRAMKI I CZUJNIKI (NOWA LOGIKA, /api/gateways)
+     * @param isManual Jeśli true, wyśle Broadcast o statusie (Toast)
      */
-    private void syncGatewayDefinitions() {
-        // ... (bez zmian, kod z dostarczonego pliku)
+    private void syncGatewayDefinitions(boolean isManual) {
         String jwtToken = getJwtToken();
         if (jwtToken == null) {
+            if (isManual) sendSyncStatusBroadcast(false); // ⭐️ DODANE ⭐️
             return;
         }
         Request request = new Request.Builder()
@@ -170,6 +178,7 @@ public class VpsClientService extends Service {
             @Override
             public void onFailure(@NonNull Call call, @NonNull IOException e) {
                 Log.e(TAG, "BLAD POBIERANIA (Bramki): " + e.getMessage());
+                if (isManual) sendSyncStatusBroadcast(false); // ⭐️ ZMIENIONE ⭐️
             }
             @Override
             public void onResponse(@NonNull Call call, @NonNull Response response) {
@@ -180,24 +189,31 @@ public class VpsClientService extends Service {
                         List<Gateway> gateways = gson.fromJson(jsonResponse, listType);
                         dbHelper.syncGatewaysAndSensors(gateways);
                         sendDataUpdateBroadcast();
+                        if (isManual) sendSyncStatusBroadcast(true); // ⭐️ ZMIENIONE ⭐️
                     } else {
                         Log.w(TAG, String.format(Locale.getDefault(),
                                 "Pobieranie bramek nieudane, kod: %d", resp.code()));
+                        if (isManual) sendSyncStatusBroadcast(false); // ⭐️ ZMIENIONE ⭐️
                     }
                 } catch (Exception e) {
                     Log.e(TAG, "KRYTYCZNY BLAD w onResponse (Bramki): " + e.getMessage());
+                    if (isManual) sendSyncStatusBroadcast(false); // ⭐️ ZMIENIONE ⭐️
                 }
             }
         });
     }
 
+    // ⭐️ ZAKTUALIZOWANA METODA ⭐️
     /**
-     * ⭐️ NOWA METODA ⭐️
      * Zadanie 3: Synchronizuje Foldery i Ulubione (NOWA LOGIKA)
+     * @param isManual Jeśli true, wyśle Broadcast o statusie (Toast)
      */
-    private void syncFoldersAndFavorites() {
+    private void syncFoldersAndFavorites(boolean isManual) {
         String jwtToken = getJwtToken();
-        if (jwtToken == null) return;
+        if (jwtToken == null) {
+            if (isManual) sendSyncStatusBroadcast(false); // ⭐️ ZMIENIONE ⭐️
+            return;
+        }
 
         try {
             // --- 1. Pobierz Foldery ---
@@ -241,9 +257,11 @@ public class VpsClientService extends Service {
 
             // 5. Powiadom UI (DataActivity), że dane się zmieniły
             sendDataUpdateBroadcast();
+            if (isManual) sendSyncStatusBroadcast(true); // ⭐️ ZMIENIONE ⭐️
 
         } catch (Exception e) {
             Log.e(TAG, "KRYTYCZNY BŁĄD w syncFoldersAndFavorites: " + e.getMessage());
+            if (isManual) sendSyncStatusBroadcast(false); // ⭐️ ZMIENIONE ⭐️
         }
     }
 
@@ -399,13 +417,34 @@ public class VpsClientService extends Service {
     public int onStartCommand(Intent intent, int flags, int startId) {
         Log.d(TAG, "Serwis klienta VPS: onStartCommand");
 
-        if (intent != null && intent.getBooleanExtra("FORCE_SYNC_NOW", false)) {
-            Log.d(TAG, "Wymuszono natychmiastową synchronizację!");
+        if (intent != null) {
+            // Ten blok jest dla DataActivity (Bramki, Foldery)
+            if (intent.getBooleanExtra("FORCE_SYNC_NOW", false)) {
+                // Sprawdź, czy to ma być cicha synchronizacja (np. po kliknięciu gwiazdki)
+                boolean isSilent = intent.getBooleanExtra("IS_SILENT", false);
+                // Używamy negacji: jeśli "isSilent" jest true, to "isManual" musi być false
+                boolean isManual = !isSilent;
 
-            if (executorService != null && !executorService.isShutdown()) {
+                if (isManual) {
+                    Log.d(TAG, "Wymuszono natychmiastową synchronizację DEFINICJI (ręcznie)!");
+                } else {
+                    Log.d(TAG, "Wymuszono natychmiastową synchronizację DEFINICJI (cicho)!");
+                }
 
-                executorService.submit(this::syncGatewayDefinitions);
-                executorService.submit(this::syncFoldersAndFavorites);
+                if (executorService != null && !executorService.isShutdown()) {
+                    // Wywołaj z 'isManual' (które będzie 'false', jeśli 'isSilent' było 'true')
+                    executorService.submit(() -> syncGatewayDefinitions(isManual));
+                    executorService.submit(() -> syncFoldersAndFavorites(isManual));
+                }
+            }
+
+            // Ten blok jest dla SensorDetailActivity (Odczyty)
+            if (intent.getBooleanExtra("FORCE_READINGS_NOW", false)) {
+                Log.d(TAG, "Wymuszono natychmiastową synchronizację ODCZYTÓW (ręcznie)!");
+                if (executorService != null && !executorService.isShutdown()) {
+                    // Wywołaj z 'true'
+                    executorService.submit(() -> fetchSensorData(true));
+                }
             }
         }
         return START_STICKY;
@@ -425,5 +464,11 @@ public class VpsClientService extends Service {
     @Override
     public IBinder onBind(Intent intent) {
         return null;
+    }
+
+    private void sendSyncStatusBroadcast(boolean success) {
+        Intent intent = new Intent(Constants.ACTION_SYNC_STATUS);
+        intent.putExtra("SYNC_SUCCESS", success);
+        LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
     }
 }

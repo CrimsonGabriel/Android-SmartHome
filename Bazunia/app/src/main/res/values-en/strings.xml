@@ -270,4 +270,9 @@
 
     <string name="favorite_button_desc">Add to favorites</string>
 
+    <string name="action_force_sync">Check data validity</string>
+    <string name="action_refresh">Refresh</string>
+    <string name="sync_success">Data refreshed successfully.</string>
+    <string name="sync_error">Data synchronization failed.</string>
+
 </resources>

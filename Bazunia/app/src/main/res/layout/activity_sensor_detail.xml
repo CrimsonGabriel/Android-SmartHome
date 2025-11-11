@@ -32,6 +32,18 @@
         app:tint="?attr/colorOnSurface" />
 
     <ImageButton
+        android:id="@+id/btnRefresh"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:contentDescription="@string/action_refresh"
+        android:padding="8dp"
+        app:srcCompat="@drawable/ic_refresh"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintEnd_toStartOf="@+id/btnFavorite"
+        app:tint="?attr/colorOnSurface" />
+
+    <ImageButton
         android:id="@+id/btnFavorite"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"

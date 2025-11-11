@@ -20,4 +20,7 @@
     <item
         android:id="@+id/menu_delete_gateway"
         android:title="@string/menu_delete" />
+    <item
+        android:id="@+id/action_force_sync"
+        android:title="@string/action_force_sync" />
 </menu>
