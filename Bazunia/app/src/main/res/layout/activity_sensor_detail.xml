@@ -76,21 +76,18 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/textSensorTitle">
-
         <TextView
             android:id="@+id/textThresholdMin"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/threshold_min_label"
             android:textSize="16sp" />
-
         <SeekBar
             android:id="@+id/seekBarThresholdMin"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
             android:max="100" />
-
         <TextView
             android:id="@+id/textThresholdMax"
             android:layout_width="wrap_content"
@@ -98,7 +95,6 @@
             android:layout_marginTop="12dp"
             android:text="@string/threshold_max_label"
             android:textSize="16sp" />
-
         <SeekBar
             android:id="@+id/seekBarThresholdMax"
             android:layout_width="match_parent"
@@ -107,23 +103,51 @@
             android:max="100" />
     </LinearLayout>
 
+
     <LinearLayout
-        android:id="@+id/intervalContainer"
+        android:id="@+id/reportingContainer"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
         android:orientation="vertical"
-        android:padding="8dp"
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/thresholdContainer">
 
+        <com.google.android.material.switchmaterial.SwitchMaterial
+            android:id="@+id/switchReporting"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:minHeight="48dp"
+            android:text="@string/sensor_detail_reporting_label"
+            android:textAppearance="@style/TextAppearance.Material3.BodyLarge" />
+
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/sensor_detail_interval_title"
-            android:textAppearance="@style/TextAppearance.Material3.TitleMedium" />
+            android:layout_marginStart="4dp"
+            android:text="@string/sensor_detail_reporting_hint"
+            android:textAppearance="@style/TextAppearance.Material3.BodySmall" />
 
+    </LinearLayout>
+
+
+    <LinearLayout
+        android:id="@+id/intervalContainer"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:orientation="vertical"
+        android:padding="8dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/reportingContainer"> <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/sensor_detail_interval_title"
+        android:textAppearance="@style/TextAppearance.Material3.TitleMedium" />
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/layoutSensorInterval"
             style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
@@ -131,7 +155,6 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
             android:hint="@string/sensor_detail_interval_label">
-
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/editSensorInterval"
                 android:layout_width="match_parent"
@@ -139,14 +162,12 @@
                 android:inputType="number"
                 android:maxLength="5" />
         </com.google.android.material.textfield.TextInputLayout>
-
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="4dp"
             android:text="@string/sensor_detail_interval_hint"
             android:textAppearance="@style/TextAppearance.Material3.BodySmall" />
-
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnSaveInterval"
             android:layout_width="wrap_content"
@@ -154,7 +175,6 @@
             android:layout_gravity="end"
             android:layout_marginTop="8dp"
             android:text="@string/sensor_detail_save_button" />
-
     </LinearLayout>
 
     <TextView

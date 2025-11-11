@@ -17,6 +17,10 @@ public class Sensor {
     // Musi pasować do nazwy pola w encji Sensor.java na backendzie
     Integer intervalSeconds;
 
+    // 🔽🔽🔽 DODAJ TO POLE I GETTER 🔽🔽🔽
+    // Nazwa musi pasować do DTO z backendu (SensorDto)
+    boolean reportingEnabled;
+
     // Gettery
     public long getId() { return id; }
     public String getName() { return name; }
@@ -27,4 +31,7 @@ public class Sensor {
 
     // ⭐️ NOWY GETTER ⭐️
     public Integer getIntervalSeconds() { return intervalSeconds; }
+
+    // 🔽🔽🔽 DODAJ TEN GETTER 🔽🔽🔽
+    public boolean isReportingEnabled() { return reportingEnabled; }
 }

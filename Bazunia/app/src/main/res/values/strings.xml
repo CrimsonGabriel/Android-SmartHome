@@ -289,4 +289,11 @@
     <string name="sensor_detail_interval_hint">Zostaw puste, by użyć globalnego</string>
     <string name="sensor_detail_save_button">Zapisz ten interwał</string>
     <string name="toast_interval_update_success">Interwał czujnika zaktualizowany.</string>
+
+    <string name="sensor_detail_reporting_label">Przesyłanie odczytów</string>
+    <string name="sensor_detail_reporting_hint">Wyłączenie tej opcji zatrzyma wysyłanie nowych danych z czujnika na serwer. Sterowanie (jeśli dostępne) będzie nadal działać.</string>
+    <string name="toast_reporting_enabled">Włączono przesyłanie odczytów</string>
+    <string name="toast_reporting_disabled">Wyłączono przesyłanie odczytów</string>
+    <string name="toast_api_error_parsing">Błąd przetwarzania odpowiedzi serwera</string>
+
 </resources>

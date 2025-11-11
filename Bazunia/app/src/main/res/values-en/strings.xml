@@ -290,4 +290,9 @@
     <string name="sensor_detail_save_button">Save this Interval</string>
     <string name="toast_interval_update_success">Sensor interval updated.</string>
 
+    <string name="sensor_detail_reporting_label">Reporting readings</string>
+    <string name="sensor_detail_reporting_hint">Disabling this will stop the sensor from sending new readings. Control (if available) will still work.</string>
+    <string name="toast_reporting_enabled">Reporting enabled</string>
+    <string name="toast_reporting_disabled">Reporting disabled</string>
+    <string name="toast_api_error_parsing">Error parsing server response</string>
 </resources>

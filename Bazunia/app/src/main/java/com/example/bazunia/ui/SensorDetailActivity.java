@@ -27,10 +27,14 @@ import com.example.bazunia.utils.AppearanceManager;
 import com.example.bazunia.utils.Constants;
 import com.example.bazunia.data.DatabaseHelper;
 import com.example.bazunia.R;
+// ⭐️ ZMIANA 1: Import modelu Sensor (będzie potrzebny)
+import com.example.bazunia.data.Sensor;
 import com.example.bazunia.data.SensorModel;
 import com.example.bazunia.data.ThresholdManager;
 import com.example.bazunia.data.VpsClientService;
 import com.google.android.material.button.MaterialButton;
+// ⭐️ ZMIANA 2: Import SwitchMaterial
+import com.google.android.material.switchmaterial.SwitchMaterial;
 
 import org.json.JSONObject;
 
@@ -52,6 +56,8 @@ import okhttp3.Response;
 public class SensorDetailActivity extends AppCompatActivity {
 
     private static final int HISTORY_LIMIT = 10;
+    private static final String TAG = "SensorDetailActivity"; // Dodano TAG do logowania
+
     private TextView textSensorDetails, textThresholdMin, textThresholdMax;
     private SeekBar seekBarThresholdMin, seekBarThresholdMax;
     private LinearLayout thresholdContainer;
@@ -61,16 +67,13 @@ public class SensorDetailActivity extends AppCompatActivity {
 
     private long gatewayIdLong;
     private long sensorIdLong;
-    // Zatrzymujemy stare String ID do odpytywania tabeli odczytów (READINGS)
     private String gatewayIdString, sensorIdString;
-
     private String currentSensorType = "";
 
     private AppearanceManager appearanceManager;
     private String currentTextScale;
     private String currentButtonScale;
 
-    // NOWE POLA
     private ImageButton btnFavorite;
     private boolean isFavorite = false;
     private OkHttpClient httpClient;
@@ -80,6 +83,10 @@ public class SensorDetailActivity extends AppCompatActivity {
     private com.google.android.material.textfield.TextInputEditText editSensorInterval;
     private MaterialButton btnSaveInterval;
     private LinearLayout intervalContainer;
+
+    // ⭐️ ZMIANA 3: Dodanie nowych pól dla przełącznika
+    private SwitchMaterial switchReporting;
+    private LinearLayout reportingContainer;
 
     private final BroadcastReceiver dataUpdateReceiver = new BroadcastReceiver() {
         @Override
@@ -92,6 +99,7 @@ public class SensorDetailActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        // ... (inicjalizacja appearanceManager, super.onCreate, setContentView)
         appearanceManager = new AppearanceManager(this);
         currentTextScale = appearanceManager.getTextScale();
         currentButtonScale = appearanceManager.getButtonScale();
@@ -102,11 +110,10 @@ public class SensorDetailActivity extends AppCompatActivity {
 
         dbHelper = new DatabaseHelper(this);
         thresholdManager = new ThresholdManager(this);
-
-        // NOWA INICJALIZACJA
         httpClient = new OkHttpClient();
         authPrefs = getSharedPreferences(LoginActivity.AUTH_PREFS, Context.MODE_PRIVATE);
 
+        // --- Wyszukiwanie widoków ---
         TextView textSensorTitle = findViewById(R.id.textSensorTitle);
         textSensorDetails = findViewById(R.id.textSensorDetails);
         seekBarThresholdMin = findViewById(R.id.seekBarThresholdMin);
@@ -120,28 +127,38 @@ public class SensorDetailActivity extends AppCompatActivity {
         intervalContainer = findViewById(R.id.intervalContainer);
         editSensorInterval = findViewById(R.id.editSensorInterval);
         btnSaveInterval = findViewById(R.id.btnSaveInterval);
-        // ⭐️⭐️⭐️ POPRAWKA BŁĘDU 1 ⭐️⭐️⭐️
-        // Usunięto błędny tag z tej linii
         btnFavorite = findViewById(R.id.btnFavorite);
         ImageButton btnRefresh = findViewById(R.id.btnRefresh);
+
+        // ⭐️ ZMIANA 4: Wyszukiwanie nowych widoków
+        switchReporting = findViewById(R.id.switchReporting);
+        reportingContainer = findViewById(R.id.reportingContainer);
+
+        // --- Skalowanie ---
         appearanceManager.applyIconScale(btnSettings);
         appearanceManager.applyIconScale(btnBack);
 
-        //appearanceManager.applyIconScale(btnFavorite); // Możesz też dodać skalowanie dla tego
-
+        // --- Listenery ---
         btnRefresh.setOnClickListener(v -> forceReadingsSync());
         btnSettings.setOnClickListener(v -> startActivity(new Intent(this, SettingsActivity.class)));
         btnBack.setOnClickListener(v -> finish());
-
-        // LISTENER DLA ULUBIONYCH
         btnFavorite.setOnClickListener(v -> toggleFavoriteStatus());
         btnSaveInterval.setOnClickListener(v -> saveSensorInterval());
+
+        // ⭐️ ZMIANA 5: Dodanie listenera dla przełącznika
+        // Używamy setOnClickListener, aby ręcznie kontrolować stan (zapobiega "mruganiu")
+        switchReporting.setOnClickListener(v -> {
+            // Natychmiast wyłącz przełącznik, aby pokazać, że trwa operacja
+            switchReporting.setEnabled(false);
+            // Wywołaj metodę API
+            toggleReportingStatus();
+        });
+
+        // --- Pobieranie Intent ---
+        // ... (reszta onCreate bez zmian)
         Intent intent = getIntent();
-        // Pobieramy nowe long ID przekazane z DataActivity
         gatewayIdLong = intent.getLongExtra("GATEWAY_ID_LONG", -1);
         sensorIdLong = intent.getLongExtra("SENSOR_ID_LONG", -1);
-
-        // Konwertujemy long na String dla starych metod DB (do odczytów)
         gatewayIdString = String.valueOf(gatewayIdLong);
         sensorIdString = String.valueOf(sensorIdLong);
 
@@ -151,17 +168,17 @@ public class SensorDetailActivity extends AppCompatActivity {
             return;
         }
 
-        // TODO: W przyszłości pobierz nazwę czujnika i bramki z tabel METADATA
         textSensorTitle.setText(String.format(getString(R.string.sensor_detail_title), sensorIdString, gatewayIdString));
 
-        loadLatestDataAndHistory();
-        loadSensorMetadata();
+        loadLatestDataAndHistory(); // To ustawi currentSensorType
+        loadSensorMetadata(); // To ustawi stan przełącznika
         setupThresholdControls();
         checkFavoriteStatus();
     }
 
     @Override
     protected void onResume() {
+        // ... (cała metoda onResume bez zmian, ładuje dane)
         super.onResume();
         if (LocaleManager.languageChanged) {
             LocaleManager.languageChanged = false;
@@ -179,20 +196,15 @@ public class SensorDetailActivity extends AppCompatActivity {
                 public void onReceive(Context context, Intent intent) {
                     boolean success = intent.getBooleanExtra("SYNC_SUCCESS", false);
                     long now = System.currentTimeMillis();
-
-                    // Prosty debounce, aby uniknąć podwójnych Toastów (limit 1 na 3 sekundy)
                     if (now - lastSyncToastTime < 3000) {
                         Log.d("SensorDetailActivity", "SyncStatusReceiver: Zignorowano zduplikowany broadcast o sukcesie.");
-                        return; // Zignoruj ten broadcast, jest za wcześnie
+                        return;
                     }
-
                     if (success) {
                         Toast.makeText(context, R.string.sync_success, Toast.LENGTH_SHORT).show();
                     } else {
                         Toast.makeText(context, R.string.sync_error, Toast.LENGTH_SHORT).show();
                     }
-
-                    // Zapisz czas ostatniego Toasta
                     lastSyncToastTime = now;
                 }
             };
@@ -206,40 +218,34 @@ public class SensorDetailActivity extends AppCompatActivity {
 
     @Override
     protected void onPause() {
+        // ... (bez zmian)
         super.onPause();
         LocalBroadcastManager.getInstance(this).unregisterReceiver(dataUpdateReceiver);
-
-
         if (syncStatusReceiver != null) {
             LocalBroadcastManager.getInstance(this).unregisterReceiver(syncStatusReceiver);
         }
-
     }
 
-    // NOWA METODA
+    // ... (metody checkFavoriteStatus, toggleFavoriteStatus, setupThresholdControls, createSeekBarListener, updateSeekBarUI, loadLatestDataAndHistory, updateSensorDetailsUI, loadSensorHistory, forceReadingsSync, updateFavoriteIcon... są OK)
+    // Poniżej wklejone dla kompletności:
     private void checkFavoriteStatus() {
         isFavorite = dbHelper.isFavoriteSensor(sensorIdLong);
-        updateFavoriteIcon(); // Wywołaj nową metodę
+        updateFavoriteIcon();
     }
 
-    // ⭐️ ZAKTUALIZOWANA METODA ⭐️
     private void toggleFavoriteStatus() {
+        // ... (bez zmian)
         String jwtToken = authPrefs.getString(LoginActivity.KEY_JWT_TOKEN, null);
         if (jwtToken == null) {
             Toast.makeText(this, R.string.toast_error_not_logged_in, Toast.LENGTH_SHORT).show();
             return;
         }
-
-        // 1. Optymistyczna aktualizacja UI
         final boolean becomingFavorite = !isFavorite;
         isFavorite = becomingFavorite;
-        updateFavoriteIcon(); // ⭐️ POPRAWKA: Bezpośrednio aktualizuj ikonę
-
+        updateFavoriteIcon();
         String url = Constants.FAVORITE_SENSORS_ENDPOINT;
         Request request;
-
         if (becomingFavorite) {
-            // DODAJ DO ULUBIONYCH
             JSONObject json = new JSONObject();
             try { json.put("id", sensorIdLong); } catch (Exception e) {}
             RequestBody body = RequestBody.create(json.toString(), MediaType.get("application/json; charset=utf-8"));
@@ -249,7 +255,6 @@ public class SensorDetailActivity extends AppCompatActivity {
                     .post(body)
                     .build();
         } else {
-            // USUŃ Z ULUBIONYCH
             url += "/" + sensorIdLong;
             request = new Request.Builder()
                     .url(url)
@@ -257,18 +262,15 @@ public class SensorDetailActivity extends AppCompatActivity {
                     .delete()
                     .build();
         }
-
         httpClient.newCall(request).enqueue(new Callback() {
             @Override
             public void onFailure(@NonNull Call call, @NonNull IOException e) {
                 runOnUiThread(() -> {
                     Toast.makeText(SensorDetailActivity.this, R.string.toast_api_error, Toast.LENGTH_SHORT).show();
-                    // 2. Wycofaj zmianę UI w razie błędu
                     isFavorite = !becomingFavorite;
-                    updateFavoriteIcon(); // ⭐️ POPRAWKA ⭐️
+                    updateFavoriteIcon();
                 });
             }
-
             @Override
             public void onResponse(@NonNull Call call, @NonNull Response response) {
                 runOnUiThread(() -> {
@@ -276,19 +278,14 @@ public class SensorDetailActivity extends AppCompatActivity {
                         Toast.makeText(SensorDetailActivity.this,
                                 becomingFavorite ? R.string.toast_added_to_favorites : R.string.toast_removed_from_favorites,
                                 Toast.LENGTH_SHORT).show();
-
-
-                        // 3. Wymuś pełną (CICHĄ) synchronizację w tle
                         Intent serviceIntent = new Intent(SensorDetailActivity.this, VpsClientService.class);
                         serviceIntent.putExtra("FORCE_SYNC_NOW", true);
-
                         serviceIntent.putExtra("IS_SILENT", true);
                         startService(serviceIntent);
                     } else {
                         Toast.makeText(SensorDetailActivity.this, R.string.toast_api_error, Toast.LENGTH_SHORT).show();
-                        // 4. Wycofaj zmianę UI w razie błędu serwera
                         isFavorite = !becomingFavorite;
-                        updateFavoriteIcon(); // ⭐️ POPRAWKA ⭐️
+                        updateFavoriteIcon();
                     }
                 });
                 response.close();
@@ -297,21 +294,20 @@ public class SensorDetailActivity extends AppCompatActivity {
     }
 
     private void setupThresholdControls() {
+        // ... (bez zmian)
         boolean isHumidity = getString(R.string.sensor_type_humidity).equalsIgnoreCase(currentSensorType);
         float defaultMin = isHumidity ? 5.0f : 18.0f;
         float defaultMax = isHumidity ? 30.0f : 22.0f;
-
         float savedMin = thresholdManager.getMinThreshold(gatewayIdString, sensorIdString, defaultMin);
         float savedMax = thresholdManager.getMaxThreshold(gatewayIdString, sensorIdString, defaultMax);
-
         updateSeekBarUI(seekBarThresholdMin, textThresholdMin, getString(R.string.threshold_min_label), savedMin);
         updateSeekBarUI(seekBarThresholdMax, textThresholdMax, getString(R.string.threshold_max_label), savedMax);
-
         seekBarThresholdMin.setOnSeekBarChangeListener(createSeekBarListener(false));
         seekBarThresholdMax.setOnSeekBarChangeListener(createSeekBarListener(true));
     }
 
     private SeekBar.OnSeekBarChangeListener createSeekBarListener(boolean isMaxSlider) {
+        // ... (bez zmian)
         return new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
@@ -320,9 +316,7 @@ public class SensorDetailActivity extends AppCompatActivity {
                 String label = isMaxSlider ? getString(R.string.threshold_max_label) : getString(R.string.threshold_min_label);
                 targetTextView.setText(String.format(Locale.getDefault(), getString(R.string.threshold_label_format), label, value));
             }
-
             @Override public void onStartTrackingTouch(SeekBar seekBar) {}
-
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {
                 float newMin = (float) seekBarThresholdMin.getProgress() / 2.0f;
@@ -334,32 +328,33 @@ public class SensorDetailActivity extends AppCompatActivity {
     }
 
     private void updateSeekBarUI(SeekBar seekBar, TextView textView, String label, float value) {
+        // ... (bez zmian)
         seekBar.setProgress((int) (value * 2.0));
         textView.setText(String.format(Locale.getDefault(), getString(R.string.threshold_label_format), label, value));
     }
 
     private void loadLatestDataAndHistory() {
+        // ... (bez zmian)
         SensorModel latestModel = dbHelper.getLatestSensorData(gatewayIdString, sensorIdString);
         if (latestModel != null) {
             currentSensorType = latestModel.type;
             updateSensorDetailsUI(latestModel);
         } else {
             textSensorDetails.setText(getString(R.string.sensor_detail_no_data));
-            loadSensorHistory(); // Mimo wszystko załaduj historię (może być pusta)
+            loadSensorHistory();
         }
     }
 
     private void updateSensorDetailsUI(SensorModel model) {
+        // ... (bez zmian)
         String displayData = getString(R.string.sensor_detail_type, model.type) + "\n"
                 + getString(R.string.sensor_detail_value, model.value) + "\n"
                 + getString(R.string.sensor_detail_timestamp, model.getFormattedTimestamp());
         textSensorDetails.setText(displayData);
-
         int defaultColor;
         TypedValue typedValue = new TypedValue();
         getTheme().resolveAttribute(com.google.android.material.R.attr.colorOnSurface, typedValue, true);
         defaultColor = typedValue.data;
-
         if (getString(R.string.sensor_type_door_contact).equalsIgnoreCase(model.type)) {
             thresholdContainer.setVisibility(View.GONE);
             textSensorDetails.setTextColor(getString(R.string.door_contact_open_value).equals(model.value) ? Color.RED : defaultColor);
@@ -381,6 +376,7 @@ public class SensorDetailActivity extends AppCompatActivity {
     }
 
     private void loadSensorHistory() {
+        // ... (bez zmian)
         List<String> historyList = new ArrayList<>();
         SimpleDateFormat sdf = new SimpleDateFormat("HH:mm:ss", Locale.getDefault());
         try (Cursor historyCursor = dbHelper.getSensorHistory(gatewayIdString, sensorIdString, HISTORY_LIMIT)) {
@@ -388,11 +384,7 @@ public class SensorDetailActivity extends AppCompatActivity {
                 do {
                     try {
                         String value = historyCursor.getString(historyCursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_VALUE));
-
-                        // ⭐️⭐️⭐️ POPRAWKA BŁĘDU 2 ⭐️⭐️⭐️
-                        // Zmieniono 'getColumnIndexOrTry' na 'getColumnIndexOrThrow'
                         long timestamp = historyCursor.getLong(historyCursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_TIMESTAMP));
-
                         String type = historyCursor.getString(historyCursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_TYPE));
                         historyList.add(String.format(Locale.getDefault(), getString(R.string.sensor_history_item_format), sdf.format(new Date(timestamp)), type, value));
                     } catch (Exception e) {
@@ -406,48 +398,146 @@ public class SensorDetailActivity extends AppCompatActivity {
         ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, historyList);
         listSensorHistory.setAdapter(adapter);
     }
+
     private void forceReadingsSync() {
+        // ... (bez zmian)
         Intent serviceIntent = new Intent(this, VpsClientService.class);
-        // Używamy nowego extra "FORCE_READINGS_NOW"
         serviceIntent.putExtra("FORCE_READINGS_NOW", true);
         startService(serviceIntent);
-
-        // NIE pokazujemy Toast "sync_started" tutaj - poczekamy na odpowiedź serwisu
     }
-    /**
-     * Aktualizuje WYGLĄD ikony na podstawie aktualnego stanu zmiennej 'isFavorite'.
-     */
+
     private void updateFavoriteIcon() {
+        // ... (bez zmian)
         if (btnFavorite != null) {
             btnFavorite.setImageResource(isFavorite ? R.drawable.ic_star_filled : R.drawable.ic_star_outline);
         }
     }
+
+    // ⭐️ ZMIANA 6: Przebudowa metody `loadSensorMetadata`
     /**
-     * Ładuje metadane czujnika (jak interwał), które nie są w odczytach.
+     * Ładuje metadane czujnika (interwał, stan raportowania), które nie są w odczytach.
      */
     private void loadSensorMetadata() {
-        // Użyj metody, którą dodałeś do DatabaseHelper
-        Integer interval = dbHelper.getSensorInterval(sensorIdLong);
+        // Użyj nowej metody z DatabaseHelper, która zwraca obiekt Sensor
+        Sensor sensorData = dbHelper.getSensorMetadata(sensorIdLong);
 
         // Pokaż tylko dla czujników "aktywnych" (nie przycisków/kontaktronów)
         if (currentSensorType.equalsIgnoreCase("contact") || currentSensorType.equalsIgnoreCase("button") || currentSensorType.equalsIgnoreCase("motion")) {
             intervalContainer.setVisibility(View.GONE);
+            reportingContainer.setVisibility(View.GONE); // Ukryj też nowy kontener
         } else {
             intervalContainer.setVisibility(View.VISIBLE);
-            if (interval != null && interval > 0) {
-                editSensorInterval.setText(String.valueOf(interval));
+            reportingContainer.setVisibility(View.VISIBLE); // Pokaż nowy kontener
+
+            if (sensorData != null) {
+                // 1. Ustaw interwał
+                Integer interval = sensorData.getIntervalSeconds();
+                if (interval != null && interval > 0) {
+                    editSensorInterval.setText(String.valueOf(interval));
+                } else {
+                    editSensorInterval.setText(""); // Puste, jeśli null lub 0
+                    editSensorInterval.setHint(getString(R.string.sensor_detail_interval_hint));
+                }
+
+                // 2. Ustaw stan przełącznika raportowania
+                boolean isEnabled = sensorData.isReportingEnabled();
+                // Ustaw stan wizualny bez wywoływania listenera
+                switchReporting.setChecked(isEnabled);
+                // Upewnij się, że jest włączony (na wypadek, gdyby API failowało)
+                switchReporting.setEnabled(true);
+
             } else {
-                editSensorInterval.setText(""); // Puste, jeśli null lub 0
-                editSensorInterval.setHint(getString(R.string.sensor_detail_interval_hint));
+                // Nie udało się pobrać metadanych, ukryj ustawienia
+                Log.w(TAG, "Nie można załadować metadanych dla sensora: " + sensorIdLong);
+                intervalContainer.setVisibility(View.GONE);
+                reportingContainer.setVisibility(View.GONE);
             }
         }
     }
 
+    // ⭐️ ZMIANA 7: Dodanie nowej metody do przełączania stanu raportowania
+    /**
+     * Wywołuje endpoint API /toggle-reporting.
+     * Aktualizuje UI i bazę danych na podstawie odpowiedzi serwera.
+     */
+    private void toggleReportingStatus() {
+        String jwtToken = authPrefs.getString(LoginActivity.KEY_JWT_TOKEN, null);
+        if (jwtToken == null) {
+            Toast.makeText(this, R.string.toast_error_not_logged_in, Toast.LENGTH_SHORT).show();
+            switchReporting.setEnabled(true); // Włącz z powrotem
+            return;
+        }
+
+        // Endpoint, który zdefiniowaliśmy na backendzie
+        String url = Constants.SENSORS_ENDPOINT + "/" + sensorIdLong + "/toggle-reporting";
+
+        // Tworzymy puste ciało dla żądania POST
+        RequestBody body = RequestBody.create(new byte[0]); // Puste ciało
+
+        Request request = new Request.Builder()
+                .url(url)
+                .addHeader("Authorization", "Bearer " + jwtToken)
+                .post(body) // Używamy POST
+                .build();
+
+        httpClient.newCall(request).enqueue(new Callback() {
+            @Override
+            public void onFailure(@NonNull Call call, @NonNull IOException e) {
+                runOnUiThread(() -> {
+                    Toast.makeText(SensorDetailActivity.this,
+                            getString(R.string.toast_api_error) + ": " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    // Włącz przełącznik po błędzie
+                    switchReporting.setEnabled(true);
+                });
+            }
+
+            @Override
+            public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
+                final String responseBody = response.body() != null ? response.body().string() : "";
+
+                if (response.isSuccessful()) {
+                    try {
+                        // Serwer zwraca zaktualizowany obiekt Sensor
+                        JSONObject sensorJson = new JSONObject(responseBody);
+                        final boolean newStatus = sensorJson.getBoolean("reportingEnabled");
+
+                        // Zaktualizuj lokalną bazę danych
+                        dbHelper.updateSensorReportingStatus(sensorIdLong, newStatus);
+
+                        // Zaktualizuj UI na podstawie odpowiedzi serwera
+                        runOnUiThread(() -> {
+                            switchReporting.setChecked(newStatus);
+                            switchReporting.setEnabled(true); // Włącz przełącznik
+                            Toast.makeText(SensorDetailActivity.this,
+                                    newStatus ? R.string.toast_reporting_enabled : R.string.toast_reporting_disabled,
+                                    Toast.LENGTH_SHORT).show();
+                        });
+
+                    } catch (Exception e) {
+                        Log.e(TAG, "Błąd parsowania odpowiedzi z /toggle-reporting", e);
+                        runOnUiThread(() -> {
+                            Toast.makeText(SensorDetailActivity.this, R.string.toast_api_error_parsing, Toast.LENGTH_SHORT).show();
+                            switchReporting.setEnabled(true);
+                        });
+                    }
+                } else {
+                    // Błąd serwera (np. 403, 500)
+                    runOnUiThread(() -> {
+                        Toast.makeText(SensorDetailActivity.this,
+                                getString(R.string.toast_api_error) + ": " + responseBody, Toast.LENGTH_SHORT).show();
+                        switchReporting.setEnabled(true); // Włącz przełącznik
+                    });
+                }
+                response.close();
+            }
+        });
+    }
 
     /**
      * Zapisuje nowy interwał dla tego konkretnego czujnika.
      */
     private void saveSensorInterval() {
+        // ... (bez zmian)
         String jwtToken = authPrefs.getString(LoginActivity.KEY_JWT_TOKEN, null);
         if (jwtToken == null) {
             Toast.makeText(this, R.string.toast_error_not_logged_in, Toast.LENGTH_SHORT).show();
@@ -455,38 +545,32 @@ public class SensorDetailActivity extends AppCompatActivity {
         }
 
         String intervalStr = editSensorInterval.getText() != null ? editSensorInterval.getText().toString() : "";
-        Integer intervalToSend = null; // Domyślnie null (użyje globalnego)
+        Integer intervalToSend = null;
 
         if (!intervalStr.isEmpty()) {
             try {
                 intervalToSend = Integer.parseInt(intervalStr);
-                if (intervalToSend <= 0) intervalToSend = null; // Traktuj 0 jako "globalny"
+                if (intervalToSend <= 0) intervalToSend = null;
             } catch (NumberFormatException e) {
                 editSensorInterval.setError("Nieprawidłowa liczba");
                 return;
             }
         }
 
-        // Tworzymy JSON: {"intervalSeconds": 120} lub {"intervalSeconds": null}
-        // Wysyłamy TYLKO interwał, reszta (name, desc) będzie null i zostanie zignorowana przez serwis
         String jsonBody = "{\"intervalSeconds\": " + intervalToSend + "}";
-
         RequestBody body = RequestBody.create(jsonBody, MediaType.get("application/json; charset=utf-8"));
-
-        // Używamy endpointu, który poprawiliśmy w Kroku 1
         String url = Constants.SENSORS_ENDPOINT + "/" + sensorIdLong;
 
         Request request = new Request.Builder()
                 .url(url)
                 .addHeader("Authorization", "Bearer " + jwtToken)
-                .put(body) // Używamy PUT
+                .put(body)
                 .build();
 
         httpClient.newCall(request).enqueue(new Callback() {
             @Override
             public void onFailure(@NonNull Call call, @NonNull IOException e) {
                 runOnUiThread(() -> Toast.makeText(SensorDetailActivity.this,
-                        // ⭐️ POPRAWKA 1 ⭐️
                         getString(R.string.toast_api_error) + ": " + e.getMessage(), Toast.LENGTH_SHORT).show());
             }
 
@@ -495,7 +579,6 @@ public class SensorDetailActivity extends AppCompatActivity {
                 if (response.isSuccessful()) {
                     runOnUiThread(() -> {
                         Toast.makeText(SensorDetailActivity.this, R.string.toast_interval_update_success, Toast.LENGTH_SHORT).show();
-                        // Po sukcesie, wymuś synchronizację definicji (cicho), aby DB się zaktualizowała
                         Intent serviceIntent = new Intent(SensorDetailActivity.this, VpsClientService.class);
                         serviceIntent.putExtra("FORCE_SYNC_NOW", true);
                         serviceIntent.putExtra("IS_SILENT", true);
@@ -504,7 +587,6 @@ public class SensorDetailActivity extends AppCompatActivity {
                 } else {
                     String error = response.body() != null ? response.body().string() : "Unknown error";
                     runOnUiThread(() -> Toast.makeText(SensorDetailActivity.this,
-                            // ⭐️ POPRAWKA 2 ⭐️
                             getString(R.string.toast_api_error) + ": " + error, Toast.LENGTH_SHORT).show());
                 }
                 response.close();

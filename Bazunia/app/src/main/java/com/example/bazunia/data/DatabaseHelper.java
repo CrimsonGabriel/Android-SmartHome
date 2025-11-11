@@ -15,8 +15,8 @@ import java.util.Locale;
 public class DatabaseHelper extends SQLiteOpenHelper {
 
     private static final String DATABASE_NAME = "sensor_data.db";
-    // ⭐️ ZMIANA 1: Podniesienie wersji bazy danych, aby wywołać onUpgrade
-    private static final int DATABASE_VERSION = 1;
+    // ⭐️ ZMIANA 1: Podniesienie wersji bazy danych
+    private static final int DATABASE_VERSION = 2; // Było 1
 
     // Tabela 1: Odczyty
     public static final String TABLE_READINGS = "readings";
@@ -45,25 +45,23 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     public static final String S_COLUMN_DESCRIPTION = "description";
     public static final String S_COLUMN_BATTERY = "battery_level";
     public static final String S_COLUMN_KEYWORD = "keyword";
-    // ⭐️ ZMIANA 2: Dodanie nowej stałej dla kolumny
     public static final String S_COLUMN_INTERVAL = "interval_seconds";
+    // ⭐️ ZMIANA 2: Dodanie nowej stałej dla kolumny
+    public static final String S_COLUMN_REPORTING_ENABLED = "reporting_enabled";
 
-    // Tabele v3
+
+    // Tabele v3 (bez zmian)
     public static final String TABLE_FOLDERS = "folders";
     public static final String F_COLUMN_ID = "id";
     public static final String F_COLUMN_NAME = "name";
     public static final String F_COLUMN_COLOR = "color";
-
     public static final String TABLE_FOLDER_GATEWAYS = "folder_gateways";
     public static final String FG_COLUMN_FOLDER_ID = "folder_id";
     public static final String FG_COLUMN_GATEWAY_ID = "gateway_id";
-
     public static final String TABLE_FAVORITE_GATEWAYS = "favorite_gateways";
     public static final String FAV_G_GATEWAY_ID = "gateway_id";
-
     public static final String TABLE_FAVORITE_SENSORS = "favorite_sensors";
     public static final String FAV_S_SENSOR_ID = "sensor_id";
-
     public static final String TABLE_FOLDER_SENSORS = "folder_sensors";
     public static final String FS_COLUMN_FOLDER_ID = "folder_id";
     public static final String FS_COLUMN_SENSOR_ID = "sensor_id";
@@ -101,7 +99,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 G_COLUMN_LAST_SEEN + " TEXT)";
         db.execSQL(CREATE_TABLE_GATEWAYS);
 
-        // ⭐️ ZMIANA 3: Dodanie S_COLUMN_INTERVAL do definicji tabeli (dla nowych instalacji)
+        // ⭐️ ZMIANA 3: Dodanie S_COLUMN_REPORTING_ENABLED do definicji tabeli (dla nowych instalacji)
         String CREATE_TABLE_SENSORS = "CREATE TABLE " + TABLE_SENSORS + " (" +
                 S_COLUMN_ID + " INTEGER PRIMARY KEY, " +
                 S_COLUMN_GATEWAY_ID + " INTEGER, " +
@@ -110,12 +108,14 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 S_COLUMN_DESCRIPTION + " TEXT, " +
                 S_COLUMN_BATTERY + " INTEGER, " +
                 S_COLUMN_KEYWORD + " TEXT, " +
-                S_COLUMN_INTERVAL + " INTEGER, " + // Nowa kolumna
+                S_COLUMN_INTERVAL + " INTEGER, " +
+                S_COLUMN_REPORTING_ENABLED + " INTEGER NOT NULL DEFAULT 1, " + // Nowa kolumna (1=true)
                 "FOREIGN KEY(" + S_COLUMN_GATEWAY_ID + ") REFERENCES " + TABLE_GATEWAYS + "(" + G_COLUMN_ID + ") ON DELETE CASCADE)";
         db.execSQL(CREATE_TABLE_SENSORS);
     }
 
     private void createFolderAndFavoriteTables(SQLiteDatabase db) {
+        // ... (bez zmian)
         String CREATE_TABLE_FOLDERS = "CREATE TABLE " + TABLE_FOLDERS + " (" +
                 F_COLUMN_ID + " INTEGER PRIMARY KEY, " +
                 F_COLUMN_NAME + " TEXT, " +
@@ -145,12 +145,21 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
+
+        // ⭐️ ZMIANA 4: Dodanie migracji dla wersji 2 (dla istniejących użytkowników)
         if (oldVersion < 2) {
             try {
-                // Ta migracja jest ryzykowna, ale zostawiamy ją, jak była
+                db.execSQL("ALTER TABLE " + TABLE_SENSORS + " ADD COLUMN " + S_COLUMN_REPORTING_ENABLED + " INTEGER NOT NULL DEFAULT 1");
+            } catch (SQLException e) {
+                Log.e("DB_UPGRADE", "Nie udało się dodać kolumny reporting_enabled: " + e.getMessage());
+            }
+        }
+
+        // Istniejące migracje z Twojego pliku (są OK)
+        if (oldVersion < 2) { // To jest Twoja stara migracja v2
+            try {
                 db.execSQL("ALTER TABLE sensors RENAME TO " + TABLE_READINGS);
             } catch (SQLException e) {
-                // Jeśli się nie uda, utwórz wszystko od nowa
                 db.execSQL("DROP TABLE IF EXISTS " + TABLE_READINGS); // Stara nazwa
                 db.execSQL("DROP TABLE IF EXISTS " + TABLE_GATEWAYS);
                 db.execSQL("DROP TABLE IF EXISTS " + TABLE_SENSORS);
@@ -160,27 +169,24 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 db.execSQL("DROP TABLE IF EXISTS " + TABLE_FAVORITE_SENSORS);
                 db.execSQL("DROP TABLE IF EXISTS " + TABLE_FOLDER_SENSORS);
                 onCreate(db);
-                return; // Zakończ, bo onCreate zrobiło wszystko
+                return;
             }
-            // Jeśli RENAME się powiodło, stwórz brakujące tabele
             createGatewayAndSensorTables(db);
         }
-        if (oldVersion < 3) {
-            // Dodaj tabele z wersji 3
+        if (oldVersion < 3) { // Twoja migracja v3
             createFolderAndFavoriteTables(db);
         }
-        // ⭐️ ZMIANA 4: Dodanie migracji dla wersji 4 (dla istniejących użytkowników)
-        if (oldVersion < 4) {
+        if (oldVersion < 4) { // Twoja migracja v4 (dla S_COLUMN_INTERVAL)
             try {
                 db.execSQL("ALTER TABLE " + TABLE_SENSORS + " ADD COLUMN " + S_COLUMN_INTERVAL + " INTEGER");
             } catch (SQLException e) {
                 Log.e("DB_UPGRADE", "Nie udało się dodać kolumny interval_seconds: " + e.getMessage());
-                // Jeśli to się nie uda, to już poważny problem, ale nie niszczymy danych
             }
         }
     }
 
     // --- METODY ODCZYTÓW ---
+    // ... (addSensorData, getLatestSensorData, getLatestUniqueSensorData, getSensorHistory, cleanOldSensorData bez zmian)
     public void addSensorData(SensorModel sensor) {
         SQLiteDatabase db = this.getWritableDatabase();
         ContentValues values = new ContentValues();
@@ -267,6 +273,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         return deletedRows;
     }
 
+
     // --- METODY ZARZĄDZANIA METADANYMI ---
 
     public void syncGatewaysAndSensors(List<Gateway> gateways) {
@@ -278,6 +285,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
             for (Gateway gateway : gateways) {
                 ContentValues gwValues = new ContentValues();
+                // ... (gwValues.put... bez zmian)
                 gwValues.put(G_COLUMN_ID, gateway.getId());
                 gwValues.put(G_COLUMN_NAME, gateway.getName());
                 gwValues.put(G_COLUMN_STATUS, gateway.getStatus());
@@ -296,8 +304,10 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                         sValues.put(S_COLUMN_DESCRIPTION, sensor.getDescription());
                         sValues.put(S_COLUMN_BATTERY, sensor.getBatteryLevel());
                         sValues.put(S_COLUMN_KEYWORD, sensor.getKeyword());
-                        // ⭐️ ZMIANA 5: Zapisywanie interwału podczas synchronizacji
                         sValues.put(S_COLUMN_INTERVAL, sensor.getIntervalSeconds());
+                        // ⭐️ ZMIANA 5: Zapisywanie reportingEnabled podczas synchronizacji
+                        sValues.put(S_COLUMN_REPORTING_ENABLED, sensor.isReportingEnabled() ? 1 : 0);
+
                         db.insert(TABLE_SENSORS, null, sValues);
                     }
                 }
@@ -314,7 +324,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     }
 
     // --- METODY FOLDERÓW I ULUBIONYCH (v3) ---
-
+    // ... (cała sekcja syncFoldersAndFavorites bez zmian)
     public void syncFoldersAndFavorites(List<Folder> folders, List<Gateway> favoriteGateways, List<Sensor> favoriteSensors) {
         SQLiteDatabase db = this.getWritableDatabase();
         try {
@@ -382,7 +392,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         }
     }
 
-    // (Metody add/remove z folderów są OK, bez zmian)
     public void addGatewayToFolder(long gatewayId, long folderId) {
         SQLiteDatabase db = this.getWritableDatabase();
         ContentValues values = new ContentValues();
@@ -426,9 +435,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             Log.e("DB_UPDATE", "Błąd usuwania czujnika z folderu lokalnie: " + e.getMessage());
         }
     }
-
-    // --- Metody pobierania kursorów dla DataActivity (OK, bez zmian) ---
-
     public Cursor getFoldersCursor() {
         SQLiteDatabase db = this.getReadableDatabase();
         String query = "SELECT " + F_COLUMN_ID + " AS _id, " +
@@ -510,30 +516,55 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         }
     }
 
-    // ⭐️ ZMIANA 6: Poprawka metody, aby używała stałej S_COLUMN_INTERVAL
+    // ⭐️ ZMIANA 6: Usunięcie starej metody getSensorInterval
+    // public Integer getSensorInterval(long sensorId) { ... }
+
+
+    // ⭐️ ZMIANA 7: Dodanie nowej metody do pobierania metadanych (zastępuje getSensorInterval)
     /**
-     * Pobiera zapisany interwał dla konkretnego czujnika z tabeli metadanych.
-     * Zwraca null, jeśli nie ustawiono.
+     * Pobiera metadane czujnika (interwał, stan raportowania) z bazy danych.
+     * Używa obiektu Sensor jako wygodnego kontenera na dane.
      */
-    public Integer getSensorInterval(long sensorId) {
+    public Sensor getSensorMetadata(long sensorId) {
+        Sensor sensorData = null;
         SQLiteDatabase db = this.getReadableDatabase();
-        Integer interval = null;
-        try (Cursor cursor = db.query(
-                TABLE_SENSORS, // Używamy tabeli metadanych
-                new String[]{ S_COLUMN_INTERVAL }, // Używamy stałej
-                S_COLUMN_ID + " = ?", // Używamy S_COLUMN_ID
+        try (Cursor cursor = db.query(TABLE_SENSORS,
+                new String[]{S_COLUMN_INTERVAL, S_COLUMN_REPORTING_ENABLED}, // Pola do pobrania
+                S_COLUMN_ID + " = ?",
                 new String[]{String.valueOf(sensorId)},
-                null, null, null
-        )) {
+                null, null, null)) {
+
             if (cursor != null && cursor.moveToFirst()) {
-                int colIndex = cursor.getColumnIndex(S_COLUMN_INTERVAL); // Używamy stałej
-                if (!cursor.isNull(colIndex)) {
-                    interval = cursor.getInt(colIndex);
+                sensorData = new Sensor(); // Używamy POJO jako kontenera
+
+                int intervalIndex = cursor.getColumnIndex(S_COLUMN_INTERVAL);
+                if (!cursor.isNull(intervalIndex)) {
+                    sensorData.intervalSeconds = cursor.getInt(intervalIndex);
                 }
+
+                int reportingIndex = cursor.getColumnIndex(S_COLUMN_REPORTING_ENABLED);
+                // Domyślnie true (1), jeśli z jakiegoś powodu jest NULL (chociaż baza ma DEFAULT 1)
+                sensorData.reportingEnabled = cursor.getInt(reportingIndex) != 0;
             }
         } catch (Exception e) {
-            Log.e("DatabaseHelper", "Błąd przy pobieraniu interwału sensora", e);
+            Log.e("DatabaseHelper", "Błąd przy pobieraniu metadanych czujnika", e);
         }
-        return interval; // Zwróci null, jeśli nie ustawiono lub błąd
+        return sensorData; // Zwróci obiekt Sensor lub null
+    }
+
+    // ⭐️ ZMIANA 8: Dodanie nowej metody do aktualizacji flagi raportowania
+    /**
+     * Aktualizuje tylko stan 'reporting_enabled' dla danego czujnika w lokalnej bazie.
+     */
+    public void updateSensorReportingStatus(long sensorId, boolean isEnabled) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        ContentValues values = new ContentValues();
+        values.put(S_COLUMN_REPORTING_ENABLED, isEnabled ? 1 : 0);
+
+        try {
+            db.update(TABLE_SENSORS, values, S_COLUMN_ID + " = ?", new String[]{String.valueOf(sensorId)});
+        } catch (Exception e) {
+            Log.e("DatabaseHelper", "Błąd aktualizacji statusu raportowania w DB", e);
+        }
     }
 }
