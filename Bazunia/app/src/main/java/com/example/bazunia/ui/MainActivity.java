@@ -21,10 +21,14 @@ import com.example.bazunia.utils.LocaleManager;
 import com.google.android.gms.auth.api.signin.GoogleSignIn;
 import com.google.android.gms.auth.api.signin.GoogleSignInClient;
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
-
+import android.content.pm.PackageManager;
+import android.os.Build;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.core.content.ContextCompat;
 import java.util.List;
 import java.util.Locale;
-
+import android.Manifest;
 public class MainActivity extends AppCompatActivity {
 
     private DatabaseHelper dbHelper;
@@ -38,6 +42,15 @@ public class MainActivity extends AppCompatActivity {
 
     // [NOWA ZMIENNA] Klient Google potrzebny do wylogowania
     private GoogleSignInClient mGoogleSignInClient;
+
+    private final ActivityResultLauncher<String> requestPermissionLauncher =
+            registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
+                if (isGranted) {
+                    Log.d("MainActivity", "Zgoda na powiadomienia przyznana.");
+                } else {
+                    Log.w("MainActivity", "Użytkownik odmówił zgody na powiadomienia.");
+                }
+            });
 
     @Override
     protected void attachBaseContext(Context newBase) {
@@ -55,7 +68,7 @@ public class MainActivity extends AppCompatActivity {
 
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
+        askNotificationPermission();
         dbHelper = new DatabaseHelper(this);
         thresholdManager = new ThresholdManager(this);
 
@@ -200,5 +213,23 @@ public class MainActivity extends AppCompatActivity {
         return getString(R.string.sensor_suffix_many);
     }
 
+    // [NOWA METODA] Pyta o zgodę na powiadomienia na Androidzie 13+
+    private void askNotificationPermission() {
+        // Sprawdzamy, czy działamy na Androidzie 13 (API 33) lub nowszym
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
 
+            // Sprawdzamy, czy zgoda NIE JEST jeszcze przyznana
+            if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.POST_NOTIFICATIONS) !=
+                    PackageManager.PERMISSION_GRANTED) {
+
+                // Wyświetl systemowe okno dialogowe z prośbą o zgodę
+                Log.d("MainActivity", "Pytam o zgodę na powiadomienia...");
+                requestPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS);
+            } else {
+                // Zgoda jest już przyznana
+                Log.d("MainActivity", "Zgoda na powiadomienia jest już przyznana.");
+            }
+        }
+        // Na starszych wersjach Androida (poniżej 13) zgoda jest domyślnie przyznana
+    }
 }

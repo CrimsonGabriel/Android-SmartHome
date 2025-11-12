@@ -296,4 +296,8 @@
     <string name="toast_reporting_disabled">Wyłączono przesyłanie odczytów</string>
     <string name="toast_api_error_parsing">Błąd przetwarzania odpowiedzi serwera</string>
 
+    <string name="alert_title_battery_low">Niski poziom baterii</string>
+    <string name="alert_msg_battery_20">Bateria czujnika %1$s (%2$s) jest niska (%3$d%%). Rozważ wymianę.</string>
+    <string name="alert_msg_battery_10">Bateria czujnika %1$s (%2$s) jest krytycznie niska (%3$d%%).</string>
+    <string name="alert_msg_battery_1">Bateria czujnika %1$s (%2$s) jest wyczerpana (%3$d%%)! Wymiana wymagana.</string>
 </resources>

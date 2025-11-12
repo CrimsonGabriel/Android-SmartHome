@@ -295,4 +295,10 @@
     <string name="toast_reporting_enabled">Reporting enabled</string>
     <string name="toast_reporting_disabled">Reporting disabled</string>
     <string name="toast_api_error_parsing">Error parsing server response</string>
+
+
+    <string name="alert_title_battery_low">Low Battery</string>
+    <string name="alert_msg_battery_20">Sensor %1$s (%2$s) battery is low (%3$d%%). Consider replacement.</string>
+    <string name="alert_msg_battery_10">Sensor %1$s (%2$s) battery is critically low (%3$d%%).</string>
+    <string name="alert_msg_battery_1">Sensor %1$s (%2$s) battery is depleted (%3$d%%)! Replacement required.</string>
 </resources>

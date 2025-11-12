@@ -321,10 +321,13 @@ public class FolderAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
                     iconBattery.setImageResource(R.drawable.ic_battery_full);
                 } else if (item.batteryLevel > 50) {
                     iconBattery.setImageResource(R.drawable.ic_battery_good);
-                } else if (item.batteryLevel > 25) {
+                } else if (item.batteryLevel > 20) { // Zmieniony próg z 25 na 20
                     iconBattery.setImageResource(R.drawable.ic_battery_medium);
-                } else {
+                } else if (item.batteryLevel > 1) { // Nowy próg dla "low"
                     iconBattery.setImageResource(R.drawable.ic_battery_low);
+                } else {
+                    // Poziom 1% lub 0
+                    iconBattery.setImageResource(R.drawable.ic_battery_empty); // <-- NOWA IKONA
                 }
 
                 // Zmiana koloru tekstu NAZWY

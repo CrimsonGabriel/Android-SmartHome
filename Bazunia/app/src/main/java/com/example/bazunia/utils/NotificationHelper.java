@@ -10,7 +10,7 @@ import android.util.Log;
 import androidx.core.app.NotificationCompat;
 
 import com.example.bazunia.R;
-import com.example.bazunia.data.SensorModel;
+import com.example.bazunia.data.SensorModel; // Ten import jest OK dla starej metody
 import com.example.bazunia.ui.AcceptUpdateActivity;
 import com.example.bazunia.ui.DeferUpdateActivity;
 
@@ -28,7 +28,8 @@ public class NotificationHelper {
     private final NotificationManager notificationManager;
 
     public enum ThresholdType {
-        LOW, HIGH, DOOR
+        LOW, HIGH, DOOR,
+        BATTERY // <<< 1. DODANY NOWY TYP
     }
 
     public NotificationHelper(Context context) {
@@ -58,6 +59,7 @@ public class NotificationHelper {
         }
     }
 
+    // Ta metoda jest ogólna i używana przez inne
     public void showNotification(String title, String message, int notificationId) {
         NotificationCompat.Builder builder = new NotificationCompat.Builder(context, CHANNEL_ID_ALERTS)
                 .setSmallIcon(R.drawable.ic_notification_alert)
@@ -73,6 +75,7 @@ public class NotificationHelper {
         }
     }
 
+    // Metoda dla aktualizacji (bez zmian)
     public void showUpdateNotification(String updateKey, String status) {
         // Używamy replace() zamiast String.format()
         String title = context.getString(R.string.notification_update_title);
@@ -97,6 +100,7 @@ public class NotificationHelper {
                 .setContentTitle(title)
                 .setContentText(message)
                 .setStyle(new NotificationCompat.BigTextStyle().bigText(message))
+                // <<< POPRAWKA: Literówka 'NotificationJpcompat' -> 'NotificationCompat'
                 .setPriority(NotificationCompat.PRIORITY_DEFAULT)
                 .setAutoCancel(true)
                 .addAction(R.drawable.ic_check, context.getString(R.string.action_accept_update), acceptPendingIntent)
@@ -109,7 +113,34 @@ public class NotificationHelper {
     }
 
     /**
-     * <<< NOWA WERSJA UŻYWAJĄCA .replace() >>>
+     * <<< 2. NOWA METODA DLA POWIADOMIEŃ O BATERII >>>
+     * Używa nowych stringów i formatowania.
+     */
+    public void showBatteryAlert(String sensorName, String gatewayName, int batteryLevel) {
+        String title = context.getString(R.string.alert_title_battery_low);
+        String message;
+
+        // Używamy ID powiadomienia na podstawie nazwy, aby nadpisać poprzednie powiadomienie
+        // o baterii dla tego samego czujnika.
+        int notificationId = (gatewayName + "_" + sensorName + "_battery").hashCode();
+
+        // Wybierz odpowiedni komunikat na podstawie poziomu baterii
+        if (batteryLevel <= 1) {
+            message = context.getString(R.string.alert_msg_battery_1, sensorName, gatewayName, batteryLevel);
+        } else if (batteryLevel <= 10) {
+            message = context.getString(R.string.alert_msg_battery_10, sensorName, gatewayName, batteryLevel);
+        } else {
+            // Domyślnie dla progu 20% (lub innego między 11 a 20)
+            message = context.getString(R.string.alert_msg_battery_20, sensorName, gatewayName, batteryLevel);
+        }
+
+        // Użyj ogólnej metody do zbudowania i wysłania
+        showNotification(title, message, notificationId);
+    }
+
+
+    /**
+     * Stara metoda dla progów (temp, drzwi)
      */
     public void showThresholdAlert(SensorModel sensor, float currentValue, float threshold, ThresholdType type) {
         String title, message;
@@ -143,7 +174,6 @@ public class NotificationHelper {
 
 
             case HIGH:
-            default:
                 title = context.getString(R.string.alert_title_temp_humidity)
                         .replace("[TYP]", sensor.type)
                         .replace("[ID]", sensor.sensorId);
@@ -153,6 +183,14 @@ public class NotificationHelper {
                         .replace("[WARTOŚĆ]", valStr)
                         .replace("[PROG]", thrStr);
                 break;
+
+            // <<< 3. DODANA OBSŁUGA NOWEGO TYPU ENUM (aby uniknąć błędu) >>>
+            case BATTERY:
+            default:
+                // Ta metoda nie powinna być nigdy wywołana dla 'BATTERY'
+                // Używamy 'showBatteryAlert'
+                Log.e(TAG, "showThresholdAlert został błędnie wywołany dla typu BATTERY.");
+                return; // Nie wysyłaj powiadomienia
         }
 
         // Używamy standardowej metody showNotification do wyświetlenia

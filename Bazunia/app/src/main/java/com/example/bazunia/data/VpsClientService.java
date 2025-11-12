@@ -9,7 +9,8 @@ import android.content.SharedPreferences;
 import android.os.IBinder;
 import android.util.Log;
 import android.content.Context;
-
+import com.example.bazunia.data.Gateway;
+import com.example.bazunia.data.Sensor;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
@@ -52,8 +53,10 @@ public class VpsClientService extends Service {
 
     private static final int POLLING_INTERVAL_READINGS_SECONDS = 5;
     private static final int POLLING_INTERVAL_GATEWAYS_SECONDS = 60;
-    // ⭐️ NOWA STAŁA ⭐️
     private static final int POLLING_INTERVAL_FOLDERS_SECONDS = 60;
+
+    // <<< 1. POPRAWKA: Dodanie brakującej stałej
+    private static final String BATTERY_PREFS = "BatteryNotificationPrefs";
 
     private OkHttpClient httpClient;
     private ScheduledExecutorService executorService;
@@ -62,6 +65,8 @@ public class VpsClientService extends Service {
     private NotificationHelper notificationHelper;
     private CleanupManager cleanupManager;
     private SharedPreferences authPrefs;
+    // <<< 2. POPRAWKA: Dodanie brakującej deklaracji pola
+    private SharedPreferences batteryPrefs;
     private Gson gson;
 
     @Override
@@ -77,22 +82,20 @@ public class VpsClientService extends Service {
         notificationHelper = new NotificationHelper(this);
         cleanupManager = new CleanupManager(this);
         authPrefs = getSharedPreferences(LoginActivity.AUTH_PREFS, Context.MODE_PRIVATE);
-
+        // Ta linia jest już poprawna, bo 'batteryPrefs' i 'BATTERY_PREFS' są zadeklarowane
+        batteryPrefs = getSharedPreferences(BATTERY_PREFS, Context.MODE_PRIVATE);
         executorService = Executors.newSingleThreadScheduledExecutor();
 
         registerAndroidIp();
 
-        // ⭐️ NOWY KOD ⭐️
-
         executorService.scheduleWithFixedDelay(() -> fetchSensorData(false), 0, POLLING_INTERVAL_READINGS_SECONDS, TimeUnit.SECONDS);
         executorService.scheduleWithFixedDelay(() -> syncGatewayDefinitions(false), 1, POLLING_INTERVAL_GATEWAYS_SECONDS, TimeUnit.SECONDS);
         executorService.scheduleWithFixedDelay(() -> syncFoldersAndFavorites(false), 2, POLLING_INTERVAL_FOLDERS_SECONDS, TimeUnit.SECONDS);
-
         executorService.scheduleWithFixedDelay(this::fetchUpdateStatus, 5, POLLING_INTERVAL_GATEWAYS_SECONDS, TimeUnit.SECONDS);
     }
 
     private Notification createNotification() {
-        // ... (bez zmian, kod z dostarczonego pliku)
+        // ... (bez zmian)
         NotificationChannel channel = new NotificationChannel(
                 CHANNEL_ID, "Serwis Klienta VPS", NotificationManager.IMPORTANCE_LOW
         );
@@ -108,7 +111,7 @@ public class VpsClientService extends Service {
     }
 
     private String getJwtToken() {
-        // ... (bez zmian, kod z dostarczonego pliku)
+        // ... (bez zmian)
         String token = authPrefs.getString(LoginActivity.KEY_JWT_TOKEN, null);
         if (token == null) {
             Log.e(TAG, getString(R.string.log_error_no_token));
@@ -116,15 +119,13 @@ public class VpsClientService extends Service {
         return token;
     }
 
-    // ⭐️ ZAKTUALIZOWANA METODA ⭐️
     /**
      * Zadanie 1: Pobiera surowe ODCZYTY (stara logika, /data/android)
-     * @param isManual Jeśli true, wyśle Broadcast o statusie (Toast)
      */
     private void fetchSensorData(boolean isManual) {
         String jwtToken = getJwtToken();
         if (jwtToken == null) {
-            if (isManual) sendSyncStatusBroadcast(false); // ⭐️ DODANE ⭐️
+            if (isManual) sendSyncStatusBroadcast(false);
             return;
         }
         Request request = new Request.Builder()
@@ -136,37 +137,37 @@ public class VpsClientService extends Service {
             @Override
             public void onFailure(@NonNull Call call, @NonNull IOException e) {
                 Log.e(TAG, "BLAD POBIERANIA (Odczyty): " + e.getMessage());
-                if (isManual) sendSyncStatusBroadcast(false); // ⭐️ ZMIENIONE ⭐️
+                if (isManual) sendSyncStatusBroadcast(false);
             }
+
             @Override
             public void onResponse(@NonNull Call call, @NonNull Response response) {
                 try (Response resp = response) {
                     if (resp.isSuccessful() && resp.body() != null) {
                         String jsonResponse = resp.body().string();
                         processSensorData(jsonResponse); // To wysyła ACTION_DATA_UPDATED
-                        if (isManual) sendSyncStatusBroadcast(true); // ⭐️ ZMIENIONE ⭐️
+                        if (isManual) sendSyncStatusBroadcast(true);
                     } else {
                         Log.w(TAG, String.format(Locale.getDefault(),
                                 getString(R.string.log_warn_data_failed), resp.code()));
-                        if (isManual) sendSyncStatusBroadcast(false); // ⭐️ ZMIENIONE ⭐️
+                        if (isManual) sendSyncStatusBroadcast(false);
                     }
                 } catch (Exception e) {
                     Log.e(TAG, "KRYTYCZNY BLAD w onResponse (Odczyty): " + e.getMessage());
-                    if (isManual) sendSyncStatusBroadcast(false); // ⭐️ ZMIENIONE ⭐️
+                    if (isManual) sendSyncStatusBroadcast(false);
                 }
             }
         });
     }
 
-    // ⭐️ ZAKTUALIZOWANA METODA ⭐️
+
     /**
      * Zadanie 2: Synchronizuje BRAMKI I CZUJNIKI (NOWA LOGIKA, /api/gateways)
-     * @param isManual Jeśli true, wyśle Broadcast o statusie (Toast)
      */
     private void syncGatewayDefinitions(boolean isManual) {
         String jwtToken = getJwtToken();
         if (jwtToken == null) {
-            if (isManual) sendSyncStatusBroadcast(false); // ⭐️ DODANE ⭐️
+            if (isManual) sendSyncStatusBroadcast(false);
             return;
         }
         Request request = new Request.Builder()
@@ -178,40 +179,47 @@ public class VpsClientService extends Service {
             @Override
             public void onFailure(@NonNull Call call, @NonNull IOException e) {
                 Log.e(TAG, "BLAD POBIERANIA (Bramki): " + e.getMessage());
-                if (isManual) sendSyncStatusBroadcast(false); // ⭐️ ZMIENIONE ⭐️
+                if (isManual) sendSyncStatusBroadcast(false);
             }
+
             @Override
             public void onResponse(@NonNull Call call, @NonNull Response response) {
                 try (Response resp = response) {
                     if (resp.isSuccessful() && resp.body() != null) {
                         String jsonResponse = resp.body().string();
-                        Type listType = new TypeToken<List<Gateway>>() {}.getType();
+                        Type listType = new TypeToken<List<Gateway>>() {
+                        }.getType();
                         List<Gateway> gateways = gson.fromJson(jsonResponse, listType);
+
+                        // Ta sekcja jest już poprawna
+                        if (gateways != null && !gateways.isEmpty()) {
+                            checkAllBatteryThresholds(gateways);
+                        }
+
                         dbHelper.syncGatewaysAndSensors(gateways);
                         sendDataUpdateBroadcast();
-                        if (isManual) sendSyncStatusBroadcast(true); // ⭐️ ZMIENIONE ⭐️
+                        if (isManual) sendSyncStatusBroadcast(true);
                     } else {
                         Log.w(TAG, String.format(Locale.getDefault(),
                                 "Pobieranie bramek nieudane, kod: %d", resp.code()));
-                        if (isManual) sendSyncStatusBroadcast(false); // ⭐️ ZMIENIONE ⭐️
+                        if (isManual) sendSyncStatusBroadcast(false);
                     }
                 } catch (Exception e) {
                     Log.e(TAG, "KRYTYCZNY BLAD w onResponse (Bramki): " + e.getMessage());
-                    if (isManual) sendSyncStatusBroadcast(false); // ⭐️ ZMIENIONE ⭐️
+                    if (isManual) sendSyncStatusBroadcast(false);
                 }
             }
         });
     }
 
-    // ⭐️ ZAKTUALIZOWANA METODA ⭐️
+
     /**
      * Zadanie 3: Synchronizuje Foldery i Ulubione (NOWA LOGIKA)
-     * @param isManual Jeśli true, wyśle Broadcast o statusie (Toast)
      */
     private void syncFoldersAndFavorites(boolean isManual) {
         String jwtToken = getJwtToken();
         if (jwtToken == null) {
-            if (isManual) sendSyncStatusBroadcast(false); // ⭐️ ZMIENIONE ⭐️
+            if (isManual) sendSyncStatusBroadcast(false);
             return;
         }
 
@@ -222,10 +230,12 @@ public class VpsClientService extends Service {
                     .addHeader("Authorization", "Bearer " + jwtToken)
                     .get().build();
             Response foldersResponse = httpClient.newCall(foldersRequest).execute();
-            if (!foldersResponse.isSuccessful()) throw new IOException("Błąd pobierania folderów: " + foldersResponse.code());
+            if (!foldersResponse.isSuccessful())
+                throw new IOException("Błąd pobierania folderów: " + foldersResponse.code());
 
             String foldersJson = foldersResponse.body().string();
-            Type folderListType = new TypeToken<List<Folder>>() {}.getType();
+            Type folderListType = new TypeToken<List<Folder>>() {
+            }.getType();
             List<Folder> folders = gson.fromJson(foldersJson, folderListType);
 
             // --- 2. Pobierz Ulubione Bramki ---
@@ -234,10 +244,12 @@ public class VpsClientService extends Service {
                     .addHeader("Authorization", "Bearer " + jwtToken)
                     .get().build();
             Response favGatewaysResponse = httpClient.newCall(favGatewaysRequest).execute();
-            if (!favGatewaysResponse.isSuccessful()) throw new IOException("Błąd pobierania ulubionych bramek: " + favGatewaysResponse.code());
+            if (!favGatewaysResponse.isSuccessful())
+                throw new IOException("Błąd pobierania ulubionych bramek: " + favGatewaysResponse.code());
 
             String favGatewaysJson = favGatewaysResponse.body().string();
-            Type gatewayListType = new TypeToken<List<Gateway>>() {}.getType();
+            Type gatewayListType = new TypeToken<List<Gateway>>() {
+            }.getType();
             List<Gateway> favoriteGateways = gson.fromJson(favGatewaysJson, gatewayListType);
 
             // --- 3. Pobierz Ulubione Czujniki ---
@@ -246,10 +258,12 @@ public class VpsClientService extends Service {
                     .addHeader("Authorization", "Bearer " + jwtToken)
                     .get().build();
             Response favSensorsResponse = httpClient.newCall(favSensorsRequest).execute();
-            if (!favSensorsResponse.isSuccessful()) throw new IOException("Błąd pobierania ulubionych czujników: " + favSensorsResponse.code());
+            if (!favSensorsResponse.isSuccessful())
+                throw new IOException("Błąd pobierania ulubionych czujników: " + favSensorsResponse.code());
 
             String favSensorsJson = favSensorsResponse.body().string();
-            Type sensorListType = new TypeToken<List<Sensor>>() {}.getType();
+            Type sensorListType = new TypeToken<List<Sensor>>() {
+            }.getType();
             List<Sensor> favoriteSensors = gson.fromJson(favSensorsJson, sensorListType);
 
             // --- 4. Zapisz wszystko do bazy w jednej transakcji ---
@@ -257,11 +271,11 @@ public class VpsClientService extends Service {
 
             // 5. Powiadom UI (DataActivity), że dane się zmieniły
             sendDataUpdateBroadcast();
-            if (isManual) sendSyncStatusBroadcast(true); // ⭐️ ZMIENIONE ⭐️
+            if (isManual) sendSyncStatusBroadcast(true);
 
         } catch (Exception e) {
             Log.e(TAG, "KRYTYCZNY BŁĄD w syncFoldersAndFavorites: " + e.getMessage());
-            if (isManual) sendSyncStatusBroadcast(false); // ⭐️ ZMIENIONE ⭐️
+            if (isManual) sendSyncStatusBroadcast(false);
         }
     }
 
@@ -270,7 +284,7 @@ public class VpsClientService extends Service {
      * Zadanie 4: Pobiera status aktualizacji (stara logika)
      */
     private void fetchUpdateStatus() {
-        // ... (bez zmian, kod z dostarczonego pliku)
+        // ... (bez zmian)
         String jwtToken = getJwtToken();
         if (jwtToken == null) return;
         Request request = new Request.Builder()
@@ -283,6 +297,7 @@ public class VpsClientService extends Service {
             public void onFailure(@NonNull Call call, @NonNull IOException e) {
                 Log.e(TAG, "BLAD POBIERANIA (Update Status): " + e.getMessage());
             }
+
             @Override
             public void onResponse(@NonNull Call call, @NonNull Response response) {
                 try (Response resp = response) {
@@ -302,7 +317,7 @@ public class VpsClientService extends Service {
     // --- Reszta metod ---
 
     private void processUpdateStatus(String json) {
-        // ... (bez zmian, kod z dostarczonego pliku)
+        // ... (bez zmian)
         try {
             JSONObject root = new JSONObject(json);
             Iterator<String> keys = root.keys();
@@ -319,7 +334,7 @@ public class VpsClientService extends Service {
     }
 
     private void processSensorData(String json) {
-        // ... (bez zmian, kod z dostarczonego pliku)
+        // ... (bez zmian)
         try {
             JSONObject root = new JSONObject(json);
             JSONArray jsonArray = root.getJSONArray("sensors");
@@ -346,7 +361,7 @@ public class VpsClientService extends Service {
     }
 
     private void checkThresholds(SensorModel sensor) {
-        // ... (bez zmian, kod z dostarczonego pliku)
+        // ... (bez zmian)
         if (sensor == null || sensor.type == null) return;
         String type = sensor.type.toLowerCase();
         String doorContactType = getString(R.string.sensor_type_door_contact);
@@ -355,8 +370,7 @@ public class VpsClientService extends Service {
             if (getString(R.string.door_contact_open_value).equals(sensor.value)) {
                 notificationHelper.showThresholdAlert(sensor, 0, 0, NotificationHelper.ThresholdType.DOOR);
             }
-        }
-        else if (type.equals("temperature") || type.equals(humidityType)) {
+        } else if (type.equals("temperature") || type.equals(humidityType)) {
             try {
                 float currentValue = Float.parseFloat(sensor.value);
                 boolean isHumidity = type.equals(humidityType);
@@ -382,7 +396,7 @@ public class VpsClientService extends Service {
     }
 
     private void registerAndroidIp() {
-        // ... (bez zmian, kod z dostarczonego pliku)
+        // ... (bez zmian)
         JSONObject jsonBody = new JSONObject();
         try {
             jsonBody.put("password", Constants.SECRET_PASSWORD);
@@ -401,9 +415,10 @@ public class VpsClientService extends Service {
             public void onFailure(@NonNull Call call, @NonNull IOException e) {
                 Log.e(TAG, "Blad rejestracji Android IP: " + e.getMessage());
             }
+
             @Override
             public void onResponse(@NonNull Call call, @NonNull Response response) {
-                if(response.isSuccessful()) {
+                if (response.isSuccessful()) {
                     Log.d(TAG, "Pomyslnie zarejestrowano IP Androida na serwerze.");
                 } else {
                     Log.w(TAG, "Rejestracja IP Androida nieudana, kod: " + response.code());
@@ -418,11 +433,9 @@ public class VpsClientService extends Service {
         Log.d(TAG, "Serwis klienta VPS: onStartCommand");
 
         if (intent != null) {
-            // Ten blok jest dla DataActivity (Bramki, Foldery)
+            // ... (logika onStartCommand bez zmian)
             if (intent.getBooleanExtra("FORCE_SYNC_NOW", false)) {
-                // Sprawdź, czy to ma być cicha synchronizacja (np. po kliknięciu gwiazdki)
                 boolean isSilent = intent.getBooleanExtra("IS_SILENT", false);
-                // Używamy negacji: jeśli "isSilent" jest true, to "isManual" musi być false
                 boolean isManual = !isSilent;
 
                 if (isManual) {
@@ -432,17 +445,14 @@ public class VpsClientService extends Service {
                 }
 
                 if (executorService != null && !executorService.isShutdown()) {
-                    // Wywołaj z 'isManual' (które będzie 'false', jeśli 'isSilent' było 'true')
                     executorService.submit(() -> syncGatewayDefinitions(isManual));
                     executorService.submit(() -> syncFoldersAndFavorites(isManual));
                 }
             }
 
-            // Ten blok jest dla SensorDetailActivity (Odczyty)
             if (intent.getBooleanExtra("FORCE_READINGS_NOW", false)) {
                 Log.d(TAG, "Wymuszono natychmiastową synchronizację ODCZYTÓW (ręcznie)!");
                 if (executorService != null && !executorService.isShutdown()) {
-                    // Wywołaj z 'true'
                     executorService.submit(() -> fetchSensorData(true));
                 }
             }
@@ -452,7 +462,6 @@ public class VpsClientService extends Service {
 
     @Override
     public void onDestroy() {
-
         Log.d(TAG, "Serwis klienta VPS: onDestroy");
         if (executorService != null && !executorService.isShutdown()) {
             executorService.shutdownNow();
@@ -470,5 +479,58 @@ public class VpsClientService extends Service {
         Intent intent = new Intent(Constants.ACTION_SYNC_STATUS);
         intent.putExtra("SYNC_SUCCESS", success);
         LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
+    }
+
+    /**
+     * Iteruje po wszystkich bramkach i czujnikach, aby sprawdzić stan baterii.
+     */
+    private void checkAllBatteryThresholds(List<Gateway> gateways) {
+        for (Gateway gateway : gateways) {
+            if (gateway.getSensors() != null) {
+                for (Sensor sensor : gateway.getSensors()) {
+                    // Sprawdź tylko sensory, które raportują poziom baterii
+                    if (sensor.getBatteryLevel() != null && sensor.getBatteryLevel() > 0) {
+                        checkSensorBattery(sensor, gateway.getName());
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Sprawdza poziom baterii dla pojedynczego czujnika i wysyła powiadomienie,
+     * jeśli przekroczono nowy próg (i nie powiadomiono o tym wcześniej).
+     */
+    private void checkSensorBattery(Sensor sensor, String gatewayName) {
+        int newLevel = sensor.getBatteryLevel();
+        String prefKey = "battery_notified_" + sensor.getId();
+
+        // Ta linia jest już poprawna, bo 'batteryPrefs' jest zadeklarowane
+        int lastNotifiedLevel = batteryPrefs.getInt(prefKey, 100);
+
+        SharedPreferences.Editor editor = batteryPrefs.edit();
+
+        // Logika progów: powiadamiaj tylko przy *przejściu* przez próg w dół.
+
+        // PRÓG 1: Krytyczny (1%)
+        if (newLevel <= 1 && lastNotifiedLevel > 1) {
+            notificationHelper.showBatteryAlert(sensor.getName(), gatewayName, newLevel);
+            editor.putInt(prefKey, 1).apply();
+        }
+        // PRÓG 2: Bardzo niski (10%)
+        else if (newLevel <= 10 && lastNotifiedLevel > 10) {
+            notificationHelper.showBatteryAlert(sensor.getName(), gatewayName, newLevel);
+            editor.putInt(prefKey, 10).apply();
+        }
+        // PRÓG 3: Niski (20%)
+        else if (newLevel <= 20 && lastNotifiedLevel > 20) {
+            notificationHelper.showBatteryAlert(sensor.getName(), gatewayName, newLevel);
+            editor.putInt(prefKey, 20).apply();
+        }
+        // RESET: Jeśli bateria została naładowana/wymieniona (np. > 20%)
+        else if (newLevel > 20 && lastNotifiedLevel <= 20) {
+            // Resetuj stan, aby przyszłe powiadomienia mogły być wysłane
+            editor.putInt(prefKey, 100).apply();
+        }
     }
 }

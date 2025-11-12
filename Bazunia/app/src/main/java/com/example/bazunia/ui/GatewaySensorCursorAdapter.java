@@ -92,14 +92,18 @@ public class GatewaySensorCursorAdapter extends CursorTreeAdapter {
             iconBattery.setVisibility(View.VISIBLE);
 
             // Ustaw odpowiednią ikonę (musisz dodać te drawable)
+            // NOWA LOGIKA
             if (batteryLevel > 75) {
                 iconBattery.setImageResource(R.drawable.ic_battery_full);
             } else if (batteryLevel > 50) {
                 iconBattery.setImageResource(R.drawable.ic_battery_good);
-            } else if (batteryLevel > 25) {
+            } else if (batteryLevel > 20) { // Zmieniony próg z 25 na 20
                 iconBattery.setImageResource(R.drawable.ic_battery_medium);
-            } else {
+            } else if (batteryLevel > 1) { // Nowy próg dla "low"
                 iconBattery.setImageResource(R.drawable.ic_battery_low);
+            } else {
+                // Poziom 1% lub 0
+                iconBattery.setImageResource(R.drawable.ic_battery_empty); // <-- NOWA IKONA
             }
 
             // Zmiana koloru tekstu NAZWY (tak jak miałeś)
