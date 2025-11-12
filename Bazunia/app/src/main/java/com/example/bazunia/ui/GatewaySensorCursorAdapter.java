@@ -66,31 +66,64 @@ public class GatewaySensorCursorAdapter extends CursorTreeAdapter {
         return inflater.inflate(R.layout.list_item, parent, false);
     }
 
+    // W pliku GatewaySensorCursorAdapter.java
     @Override
     protected void bindChildView(View view, Context context, Cursor cursor, boolean isLastChild) {
-        // Ta logika jest w porządku, zostawiamy bez zmian
-        // Zakładamy, że R.layout.list_item to TYLKO TextView
-        TextView textView = (TextView) view;
+
+        // 1. Znajdź nowe widoki
+        TextView textSensorName = view.findViewById(R.id.sensor_name_text);
+        TextView textBatteryLevel = view.findViewById(R.id.battery_text);
+        ImageView iconBattery = view.findViewById(R.id.battery_icon);
+
+        // 2. Pobierz dane z kursora
         String name = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.S_COLUMN_NAME));
         String type = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.S_COLUMN_TYPE));
         int batteryLevel = cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseHelper.S_COLUMN_BATTERY));
         String keyword = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.S_COLUMN_KEYWORD));
-        textView.setCompoundDrawablesWithIntrinsicBounds(getIcon(type, keyword, null), 0, 0, 0);
-        textView.setText(name);
 
-        int defaultTextColor;
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
-            defaultTextColor = this.context.getColor(android.R.color.tab_indicator_text);
+        // 3. Ustaw nazwę sensora i ikonę (logika z getIcon jest OK)
+        textSensorName.setText(name);
+        textSensorName.setCompoundDrawablesWithIntrinsicBounds(getIcon(type, keyword, null), 0, 0, 0);
+
+        // 4. Ustaw stan baterii (ikona + tekst)
+        if (batteryLevel > 0) {
+            textBatteryLevel.setText(batteryLevel + "%");
+            textBatteryLevel.setVisibility(View.VISIBLE);
+            iconBattery.setVisibility(View.VISIBLE);
+
+            // Ustaw odpowiednią ikonę (musisz dodać te drawable)
+            if (batteryLevel > 75) {
+                iconBattery.setImageResource(R.drawable.ic_battery_full);
+            } else if (batteryLevel > 50) {
+                iconBattery.setImageResource(R.drawable.ic_battery_good);
+            } else if (batteryLevel > 25) {
+                iconBattery.setImageResource(R.drawable.ic_battery_medium);
+            } else {
+                iconBattery.setImageResource(R.drawable.ic_battery_low);
+            }
+
+            // Zmiana koloru tekstu NAZWY (tak jak miałeś)
+            if (batteryLevel <= 20) {
+                textSensorName.setTextColor(Color.parseColor("#FF990000")); // Czerwony
+            } else {
+                textSensorName.setTextColor(getDefaultTextColor()); // Użyj metody pomocniczej
+            }
+
         } else {
-            defaultTextColor = this.context.getResources().getColor(android.R.color.tab_indicator_text);
+            // Jeśli bateria = 0 lub null, ukryj elementy baterii
+            textBatteryLevel.setVisibility(View.GONE);
+            iconBattery.setVisibility(View.GONE);
+            textSensorName.setTextColor(getDefaultTextColor()); // Domyślny kolor
         }
+    }
 
-        if (batteryLevel > 20) {
-            textView.setTextColor(defaultTextColor);
-        } else if (batteryLevel > 0) {
-            textView.setTextColor(Color.parseColor("#FF990000")); // Czerwony dla niskiej baterii
+    // Metoda pomocnicza, którą miałeś (trochę ją uprościłem)
+    private int getDefaultTextColor() {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+            return this.context.getColor(android.R.color.tab_indicator_text);
         } else {
-            textView.setTextColor(defaultTextColor);
+            //noinspection deprecation
+            return this.context.getResources().getColor(android.R.color.tab_indicator_text);
         }
     }
 

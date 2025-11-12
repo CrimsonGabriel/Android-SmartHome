@@ -146,6 +146,7 @@ public class FolderAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
                 View gatewayView = inflater.inflate(R.layout.list_group, parent, false);
                 return new GatewayViewHolder(gatewayView);
             case VIEW_TYPE_SENSOR:
+                // Używamy tego samego layoutu co GatewaySensorCursorAdapter
                 View sensorView = inflater.inflate(R.layout.list_item, parent, false);
                 return new SensorViewHolder(sensorView);
             default:
@@ -278,42 +279,88 @@ public class FolderAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
         }
     }
 
+    // ###############################################################
+    // ###                        POCZĄTEK POPRAWKI                  ###
+    // ###############################################################
     class SensorViewHolder extends RecyclerView.ViewHolder {
-        TextView textView;
+
+        // 1. Zdefiniuj wszystkie widoki z list_item.xml
+        TextView textSensorName;
+        TextView textBatteryLevel;
+        ImageView iconBattery;
+
         SensorViewHolder(View view) {
             super(view);
-            textView = (TextView) view;
+
+            // 2. Znajdź widoki za pomocą findViewById (TO BYŁ BŁĄD)
+            textSensorName = view.findViewById(R.id.sensor_name_text);
+            textBatteryLevel = view.findViewById(R.id.battery_text);
+            iconBattery = view.findViewById(R.id.battery_icon);
         }
 
         void bind(SensorItem item) {
-            textView.setCompoundDrawablesWithIntrinsicBounds(getIcon(item.type, item.keyword, null), 0, 0, 0);
+
+            // 3. Ustaw ikonę i nazwę sensora
+            textSensorName.setCompoundDrawablesWithIntrinsicBounds(getIcon(item.type, item.keyword, null), 0, 0, 0);
 
             String displayText = item.name;
+            // Dodaj nazwę bramki (dla listy ulubionych/folderów)
             if (item.gatewayName != null) {
                 displayText += " (" + item.gatewayName + ")";
             }
-            textView.setText(displayText);
+            textSensorName.setText(displayText);
 
-            int defaultTextColor;
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                defaultTextColor = context.getColor(android.R.color.tab_indicator_text);
+            // 4. Ustaw stan baterii (logika skopiowana z GatewaySensorCursorAdapter)
+            if (item.batteryLevel > 0) {
+                textBatteryLevel.setText(item.batteryLevel + "%");
+                textBatteryLevel.setVisibility(View.VISIBLE);
+                iconBattery.setVisibility(View.VISIBLE);
+
+                // Ustaw odpowiednią ikonę (musisz dodać te drawable)
+                if (item.batteryLevel > 75) {
+                    iconBattery.setImageResource(R.drawable.ic_battery_full);
+                } else if (item.batteryLevel > 50) {
+                    iconBattery.setImageResource(R.drawable.ic_battery_good);
+                } else if (item.batteryLevel > 25) {
+                    iconBattery.setImageResource(R.drawable.ic_battery_medium);
+                } else {
+                    iconBattery.setImageResource(R.drawable.ic_battery_low);
+                }
+
+                // Zmiana koloru tekstu NAZWY
+                if (item.batteryLevel <= 20) {
+                    textSensorName.setTextColor(Color.parseColor("#FF990000")); // Czerwony
+                } else {
+                    textSensorName.setTextColor(getDefaultTextColor()); // Domyślny
+                }
+
             } else {
-                defaultTextColor = context.getResources().getColor(android.R.color.tab_indicator_text);
+                // Jeśli bateria = 0 lub null, ukryj elementy baterii
+                textBatteryLevel.setVisibility(View.GONE);
+                iconBattery.setVisibility(View.GONE);
+                textSensorName.setTextColor(getDefaultTextColor()); // Domyślny kolor
             }
 
-            if (item.batteryLevel > 20) {
-                textView.setTextColor(defaultTextColor);
-            } else if (item.batteryLevel > 0) {
-                textView.setTextColor(Color.parseColor("#FF990000"));
-            } else {
-                textView.setTextColor(defaultTextColor);
-            }
-
+            // 5. Ustaw listenery
             itemView.setOnClickListener(v -> callback.onSensorClicked(item));
             itemView.setOnLongClickListener(v -> {
                 callback.onSensorLongClicked(item, v);
                 return true;
             });
+        }
+    }
+    // ###############################################################
+    // ###                         KONIEC POPRAWKI                 ###
+    // ###############################################################
+
+
+    // Metoda pomocnicza do pobierania domyślnego koloru tekstu
+    private int getDefaultTextColor() {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+            return this.context.getColor(android.R.color.tab_indicator_text);
+        } else {
+            //noinspection deprecation
+            return this.context.getResources().getColor(android.R.color.tab_indicator_text);
         }
     }
 
