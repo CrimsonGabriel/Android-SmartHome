@@ -128,6 +128,19 @@ public class DataActivity extends AppCompatActivity implements FolderAdapter.Fol
         startService(serviceIntent);
     }
 
+    /**
+     * Wymusza synchronizację tylko metadanych (w tym baterii),
+     * wysyłając specjalny intent do VpsClientService.
+     */
+    private void forceBatteryCheck() {
+        Intent serviceIntent = new Intent(this, VpsClientService.class);
+        // Używamy nowego "extra", który dodaliśmy w VpsClientService
+        serviceIntent.putExtra("FORCE_BATTERY_CHECK_NOW", true);
+        startService(serviceIntent);
+
+        // Pokaż natychmiastowy Toast (używa stringu z Kroku 1)
+        Toast.makeText(this, R.string.toast_battery_check_started, Toast.LENGTH_SHORT).show();
+    }
 
     // ⭐️ POPRAWKA: Ulubione są teraz zwijanym folderem ⭐️
     private void loadDisplayListFromDb() {
@@ -361,11 +374,13 @@ public class DataActivity extends AppCompatActivity implements FolderAdapter.Fol
             } else if (itemId == R.id.menu_delete_folder) {
                 showDeleteFolderDialog(folder);
                 return true;
-
             } else if (itemId == R.id.action_force_sync) {
-                forceSync();
+                forceSync(); // Stara akcja
                 return true;
-
+                // 🔽🔽🔽 NOWA OBSŁUGA KLIKNIĘCIA 🔽🔽🔽
+            } else if (itemId == R.id.action_check_battery) {
+                forceBatteryCheck(); // Nowa akcja
+                return true;
             }
         }
         // Logika dla BRAMKI
@@ -378,11 +393,9 @@ public class DataActivity extends AppCompatActivity implements FolderAdapter.Fol
             } else if (itemId == R.id.menu_add_to_folder) {
                 showSelectFolderDialog(gateway);
                 return true;
-
             } else if (itemId == R.id.menu_remove_gateway_from_folder) {
                 removeGatewayFromFolderOnServer(gateway.id, gateway.parentFolderId);
                 return true;
-
             } else if (itemId == R.id.menu_add_gateway_to_favorites) {
                 toggleFavoriteGateway(gateway.id, true);
                 return true;
@@ -393,7 +406,11 @@ public class DataActivity extends AppCompatActivity implements FolderAdapter.Fol
                 showDeleteGatewayDialog(gateway.id, gateway.name);
                 return true;
             } else if (itemId == R.id.action_force_sync) {
-                forceSync(); // Wywołuje pełną synchronizację definicji
+                forceSync(); // Stara akcja
+                return true;
+                // 🔽🔽🔽 NOWA OBSŁUGA KLIKNIĘCIA 🔽🔽🔽
+            } else if (itemId == R.id.action_check_battery) {
+                forceBatteryCheck(); // Nowa akcja
                 return true;
             }
         }
@@ -404,20 +421,21 @@ public class DataActivity extends AppCompatActivity implements FolderAdapter.Fol
             if (itemId == R.id.menu_rename_sensor) {
                 showRenameDialog(sensor.id, sensor.name, "Brak opisu", false);
                 return true;
-
             } else if (itemId == R.id.menu_add_sensor_to_folder) {
                 showSelectFolderDialogForSensor(sensor);
                 return true;
-
             } else if (itemId == R.id.menu_remove_sensor_from_folder) {
                 removeSensorFromFolderOnServer(sensor.id, sensor.parentFolderId);
                 return true;
-
             } else if (itemId == R.id.menu_add_sensor_to_favorites) {
                 toggleFavoriteSensor(sensor.id, true);
                 return true;
             } else if (itemId == R.id.menu_remove_sensor_from_favorites) {
                 toggleFavoriteSensor(sensor.id, false);
+                return true;
+                // 🔽🔽🔽 NOWA OBSŁUGA KLIKNIĘCIA 🔽🔽🔽
+            } else if (itemId == R.id.action_check_battery) {
+                forceBatteryCheck(); // Nowa akcja
                 return true;
             }
         }

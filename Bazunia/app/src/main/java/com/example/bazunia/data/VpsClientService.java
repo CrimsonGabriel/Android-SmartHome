@@ -433,7 +433,7 @@ public class VpsClientService extends Service {
         Log.d(TAG, "Serwis klienta VPS: onStartCommand");
 
         if (intent != null) {
-            // ... (logika onStartCommand bez zmian)
+            // Blok dla pełnej synchronizacji (bez zmian)
             if (intent.getBooleanExtra("FORCE_SYNC_NOW", false)) {
                 boolean isSilent = intent.getBooleanExtra("IS_SILENT", false);
                 boolean isManual = !isSilent;
@@ -450,12 +450,24 @@ public class VpsClientService extends Service {
                 }
             }
 
+            // Blok dla odczytów (bez zmian)
             if (intent.getBooleanExtra("FORCE_READINGS_NOW", false)) {
                 Log.d(TAG, "Wymuszono natychmiastową synchronizację ODCZYTÓW (ręcznie)!");
                 if (executorService != null && !executorService.isShutdown()) {
                     executorService.submit(() -> fetchSensorData(true));
                 }
             }
+
+            // 🔽🔽🔽 NOWY BLOK TYLKO DLA BATERII 🔽🔽🔽
+            if (intent.getBooleanExtra("FORCE_BATTERY_CHECK_NOW", false)) {
+                Log.d(TAG, "Wymuszono natychmiastową synchronizację BATERII (ręcznie)!");
+                if (executorService != null && !executorService.isShutdown()) {
+                    // Uruchamiamy tylko `syncGatewayDefinitions`, bo tam są dane o baterii.
+                    // Oznaczamy jako "manual" (true), aby serwis wysłał Toasta (przez ACTION_SYNC_STATUS)
+                    executorService.submit(() -> syncGatewayDefinitions(true));
+                }
+            }
+            // 🔼🔼🔼 KONIEC NOWEGO BLOKU 🔼🔼🔼
         }
         return START_STICKY;
     }

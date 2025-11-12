@@ -301,4 +301,7 @@
     <string name="alert_msg_battery_20">Sensor %1$s (%2$s) battery is low (%3$d%%). Consider replacement.</string>
     <string name="alert_msg_battery_10">Sensor %1$s (%2$s) battery is critically low (%3$d%%).</string>
     <string name="alert_msg_battery_1">Sensor %1$s (%2$s) battery is depleted (%3$d%%)! Replacement required.</string>
+
+    <string name="action_check_battery">Check battery status</string>
+    <string name="toast_battery_check_started">Starting battery check…</string>
 </resources>

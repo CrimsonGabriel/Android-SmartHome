@@ -23,4 +23,7 @@
     <item
         android:id="@+id/action_force_sync"
         android:title="@string/action_force_sync" />
+    <item
+        android:id="@+id/action_check_battery"
+        android:title="@string/action_check_battery" />
 </menu>
