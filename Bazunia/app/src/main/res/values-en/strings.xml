@@ -304,4 +304,19 @@
 
     <string name="action_check_battery">Check battery status</string>
     <string name="toast_battery_check_started">Starting battery check…</string>
+    <string name="menu_disable_threshold_notifications">Disable value alerts (temp/door)</string>
+    <string name="menu_enable_threshold_notifications">Enable value alerts</string>
+    <string name="menu_disable_battery_notifications">Disable battery alerts</string>
+    <string name="menu_enable_battery_notifications">Enable battery alerts</string>
+
+
+    <string name="menu_disable_gateway_threshold_notifications">Mute value alerts in gateway</string>
+    <string name="menu_enable_gateway_threshold_notifications">Unmute value alerts in gateway</string>
+    <string name="menu_disable_gateway_battery_notifications">Mute battery alerts in gateway</string>
+    <string name="menu_enable_gateway_battery_notifications">Unmute battery alerts in gateway</string>
+
+    <string name="menu_disable_folder_threshold_notifications">Mute value alerts in folder</string>
+    <string name="menu_enable_folder_threshold_notifications">Unmute value alerts in folder</string>
+    <string name="menu_disable_folder_battery_notifications">Mute battery alerts in folder</string>
+    <string name="menu_enable_folder_battery_notifications">Unmute battery alerts in folder</string>
 </resources>

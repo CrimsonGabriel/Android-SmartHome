@@ -76,6 +76,7 @@ public class DataActivity extends AppCompatActivity implements FolderAdapter.Fol
     private BroadcastReceiver syncStatusReceiver;
 
     private long lastSyncToastTime = 0;
+    private SharedPreferences mutePrefs;
 
     @Override
     protected void attachBaseContext(Context newBase) {
@@ -96,7 +97,7 @@ public class DataActivity extends AppCompatActivity implements FolderAdapter.Fol
         dbHelper = new DatabaseHelper(this);
         httpClient = new OkHttpClient();
         authPrefs = getSharedPreferences(LoginActivity.AUTH_PREFS, Context.MODE_PRIVATE);
-
+        mutePrefs = getSharedPreferences("NotificationMutePrefs", Context.MODE_PRIVATE);
         recyclerView = findViewById(R.id.recyclerView);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         adapter = new FolderAdapter(this, displayItems, this);
@@ -309,54 +310,62 @@ public class DataActivity extends AppCompatActivity implements FolderAdapter.Fol
         MenuInflater inflater = getMenuInflater();
 
         if (currentContextMenuItem instanceof FolderAdapter.FolderItem) {
+            FolderAdapter.FolderItem folder = (FolderAdapter.FolderItem) currentContextMenuItem;
             inflater.inflate(R.menu.folder_context_menu, menu);
 
-            // Pobierz ID folderu
-            long folderId = ((FolderAdapter.FolderItem) currentContextMenuItem).id;
-
-            // Sprawdź, czy to specjalny folder
+            long folderId = folder.id;
             boolean isSpecialFolder = (folderId == PARENT_ID_FAVORITE || folderId == UNCATEGORIZED_PARENT_ID);
 
-            // Ukryj "Edytuj" i "Usuń" dla folderów specjalnych
-            MenuItem editItem = menu.findItem(R.id.menu_edit_folder);
-            if (editItem != null) {
-                editItem.setVisible(!isSpecialFolder);
-            }
-            MenuItem deleteItem = menu.findItem(R.id.menu_delete_folder);
-            if (deleteItem != null) {
-                deleteItem.setVisible(!isSpecialFolder);
-            }
-            // Opcja "Sprawdź poprawność przesyłu" (action_force_sync) pozostanie widoczna
+            // Ukryj Edytuj/Usuń dla folderów specjalnych
+            menu.findItem(R.id.menu_edit_folder).setVisible(!isSpecialFolder);
+            menu.findItem(R.id.menu_delete_folder).setVisible(!isSpecialFolder);
+
+            // 🔽🔽🔽 NOWA LOGIKA UKRYWANIA DLA FOLDERÓW SPECJALNYCH 🔽🔽🔽
+            menu.findItem(R.id.menu_disable_folder_threshold_notifications).setVisible(!isSpecialFolder);
+            menu.findItem(R.id.menu_enable_folder_threshold_notifications).setVisible(!isSpecialFolder);
+            menu.findItem(R.id.menu_disable_folder_battery_notifications).setVisible(!isSpecialFolder);
+            menu.findItem(R.id.menu_enable_folder_battery_notifications).setVisible(!isSpecialFolder);
 
         } else if (currentContextMenuItem instanceof FolderAdapter.GatewayItem) {
             inflater.inflate(R.menu.gateway_context_menu, menu);
-
             FolderAdapter.GatewayItem gateway = (FolderAdapter.GatewayItem) currentContextMenuItem;
 
+            // --- Logika Ulubionych i Folderów (bez zmian) ---
             boolean isFav = dbHelper.isFavoriteGateway(gateway.id);
             menu.findItem(R.id.menu_add_gateway_to_favorites).setVisible(!isFav);
             menu.findItem(R.id.menu_remove_gateway_from_favorites).setVisible(isFav);
-
             boolean showRemoveFromFolder = (gateway.parentFolderId >= 0);
             menu.findItem(R.id.menu_remove_gateway_from_folder).setVisible(showRemoveFromFolder);
-
             boolean showAddToFolder = (gateway.parentFolderId != PARENT_ID_FAVORITE);
             menu.findItem(R.id.menu_add_to_folder).setVisible(showAddToFolder);
 
+            // 🔽🔽🔽 NOWA LOGIKA POKAZYWANIA DLA BRAMEK (zawsze widoczne) 🔽🔽🔽
+            menu.findItem(R.id.menu_disable_gateway_threshold_notifications).setVisible(true);
+            menu.findItem(R.id.menu_enable_gateway_threshold_notifications).setVisible(true);
+            menu.findItem(R.id.menu_disable_gateway_battery_notifications).setVisible(true);
+            menu.findItem(R.id.menu_enable_gateway_battery_notifications).setVisible(true);
+
+
         } else if (currentContextMenuItem instanceof FolderAdapter.SensorItem) {
             inflater.inflate(R.menu.sensor_context_menu, menu);
-
             FolderAdapter.SensorItem sensor = (FolderAdapter.SensorItem) currentContextMenuItem;
 
+            // --- Logika Ulubionych i Folderów (bez zmian) ---
             boolean isFav = dbHelper.isFavoriteSensor(sensor.id);
             menu.findItem(R.id.menu_add_sensor_to_favorites).setVisible(!isFav);
             menu.findItem(R.id.menu_remove_sensor_from_favorites).setVisible(isFav);
-
             boolean showRemoveFromFolder = (sensor.parentFolderId >= 0);
             menu.findItem(R.id.menu_remove_sensor_from_folder).setVisible(showRemoveFromFolder);
-
             boolean showAddToFolder = (sensor.parentFolderId != PARENT_ID_FAVORITE);
             menu.findItem(R.id.menu_add_sensor_to_folder).setVisible(showAddToFolder);
+
+            // --- Logika wyciszania dla czujnika (bez zmian) ---
+            boolean isThreshMuted = mutePrefs.getBoolean("thresh_sensor_" + sensor.id, false);
+            menu.findItem(R.id.menu_disable_threshold_notifications).setVisible(!isThreshMuted);
+            menu.findItem(R.id.menu_enable_threshold_notifications).setVisible(isThreshMuted);
+            boolean isBattMuted = mutePrefs.getBoolean("batt_sensor_" + sensor.id, false);
+            menu.findItem(R.id.menu_disable_battery_notifications).setVisible(!isBattMuted);
+            menu.findItem(R.id.menu_enable_battery_notifications).setVisible(isBattMuted);
         }
     }
 
@@ -364,22 +373,39 @@ public class DataActivity extends AppCompatActivity implements FolderAdapter.Fol
     public boolean onContextItemSelected(@NonNull MenuItem item) {
         if (currentContextMenuItem == null) return false;
 
+        // Pobierz edytor SharedPreferences (będzie potrzebny w wielu miejscach)
+        SharedPreferences.Editor editor = mutePrefs.edit();
+
         // Logika dla FOLDERU
         if (currentContextMenuItem instanceof FolderAdapter.FolderItem) {
             FolderAdapter.FolderItem folder = (FolderAdapter.FolderItem) currentContextMenuItem;
             int itemId = item.getItemId();
+
             if (itemId == R.id.menu_edit_folder) {
-                showCreateFolderDialog(folder);
-                return true;
+                showCreateFolderDialog(folder); return true;
             } else if (itemId == R.id.menu_delete_folder) {
-                showDeleteFolderDialog(folder);
-                return true;
+                showDeleteFolderDialog(folder); return true;
             } else if (itemId == R.id.action_force_sync) {
-                forceSync(); // Stara akcja
-                return true;
-                // 🔽🔽🔽 NOWA OBSŁUGA KLIKNIĘCIA 🔽🔽🔽
+                forceSync(); return true;
             } else if (itemId == R.id.action_check_battery) {
-                forceBatteryCheck(); // Nowa akcja
+                forceBatteryCheck(); return true;
+
+                // 🔽🔽🔽 NOWA LOGIKA DLA FOLDERU 🔽🔽🔽
+            } else if (itemId == R.id.menu_disable_folder_threshold_notifications) {
+                setFolderMuteState(folder, "thresh_sensor_", true);
+                Toast.makeText(this, R.string.menu_disable_folder_threshold_notifications, Toast.LENGTH_SHORT).show();
+                return true;
+            } else if (itemId == R.id.menu_enable_folder_threshold_notifications) {
+                setFolderMuteState(folder, "thresh_sensor_", false);
+                Toast.makeText(this, R.string.menu_enable_folder_threshold_notifications, Toast.LENGTH_SHORT).show();
+                return true;
+            } else if (itemId == R.id.menu_disable_folder_battery_notifications) {
+                setFolderMuteState(folder, "batt_sensor_", true);
+                Toast.makeText(this, R.string.menu_disable_folder_battery_notifications, Toast.LENGTH_SHORT).show();
+                return true;
+            } else if (itemId == R.id.menu_enable_folder_battery_notifications) {
+                setFolderMuteState(folder, "batt_sensor_", false);
+                Toast.makeText(this, R.string.menu_enable_folder_battery_notifications, Toast.LENGTH_SHORT).show();
                 return true;
             }
         }
@@ -387,30 +413,40 @@ public class DataActivity extends AppCompatActivity implements FolderAdapter.Fol
         else if (currentContextMenuItem instanceof FolderAdapter.GatewayItem) {
             FolderAdapter.GatewayItem gateway = (FolderAdapter.GatewayItem) currentContextMenuItem;
             int itemId = item.getItemId();
+
             if (itemId == R.id.menu_rename_gateway) {
-                showRenameDialog(gateway.id, gateway.name, gateway.description, true);
-                return true;
+                showRenameDialog(gateway.id, gateway.name, gateway.description, true); return true;
             } else if (itemId == R.id.menu_add_to_folder) {
-                showSelectFolderDialog(gateway);
-                return true;
+                showSelectFolderDialog(gateway); return true;
             } else if (itemId == R.id.menu_remove_gateway_from_folder) {
-                removeGatewayFromFolderOnServer(gateway.id, gateway.parentFolderId);
-                return true;
+                removeGatewayFromFolderOnServer(gateway.id, gateway.parentFolderId); return true;
             } else if (itemId == R.id.menu_add_gateway_to_favorites) {
-                toggleFavoriteGateway(gateway.id, true);
-                return true;
+                toggleFavoriteGateway(gateway.id, true); return true;
             } else if (itemId == R.id.menu_remove_gateway_from_favorites) {
-                toggleFavoriteGateway(gateway.id, false);
-                return true;
+                toggleFavoriteGateway(gateway.id, false); return true;
             } else if (itemId == R.id.menu_delete_gateway) {
-                showDeleteGatewayDialog(gateway.id, gateway.name);
-                return true;
+                showDeleteGatewayDialog(gateway.id, gateway.name); return true;
             } else if (itemId == R.id.action_force_sync) {
-                forceSync(); // Stara akcja
-                return true;
-                // 🔽🔽🔽 NOWA OBSŁUGA KLIKNIĘCIA 🔽🔽🔽
+                forceSync(); return true;
             } else if (itemId == R.id.action_check_battery) {
-                forceBatteryCheck(); // Nowa akcja
+                forceBatteryCheck(); return true;
+
+                // 🔽🔽🔽 NOWA LOGIKA DLA BRAMKI 🔽🔽🔽
+            } else if (itemId == R.id.menu_disable_gateway_threshold_notifications) {
+                setGatewayMuteState(gateway, "thresh_sensor_", true);
+                Toast.makeText(this, R.string.menu_disable_gateway_threshold_notifications, Toast.LENGTH_SHORT).show();
+                return true;
+            } else if (itemId == R.id.menu_enable_gateway_threshold_notifications) {
+                setGatewayMuteState(gateway, "thresh_sensor_", false);
+                Toast.makeText(this, R.string.menu_enable_gateway_threshold_notifications, Toast.LENGTH_SHORT).show();
+                return true;
+            } else if (itemId == R.id.menu_disable_gateway_battery_notifications) {
+                setGatewayMuteState(gateway, "batt_sensor_", true);
+                Toast.makeText(this, R.string.menu_disable_gateway_battery_notifications, Toast.LENGTH_SHORT).show();
+                return true;
+            } else if (itemId == R.id.menu_enable_gateway_battery_notifications) {
+                setGatewayMuteState(gateway, "batt_sensor_", false);
+                Toast.makeText(this, R.string.menu_enable_gateway_battery_notifications, Toast.LENGTH_SHORT).show();
                 return true;
             }
         }
@@ -418,24 +454,36 @@ public class DataActivity extends AppCompatActivity implements FolderAdapter.Fol
         else if (currentContextMenuItem instanceof FolderAdapter.SensorItem) {
             FolderAdapter.SensorItem sensor = (FolderAdapter.SensorItem) currentContextMenuItem;
             int itemId = item.getItemId();
+
             if (itemId == R.id.menu_rename_sensor) {
-                showRenameDialog(sensor.id, sensor.name, "Brak opisu", false);
-                return true;
+                showRenameDialog(sensor.id, sensor.name, "Brak opisu", false); return true;
             } else if (itemId == R.id.menu_add_sensor_to_folder) {
-                showSelectFolderDialogForSensor(sensor);
-                return true;
+                showSelectFolderDialogForSensor(sensor); return true;
             } else if (itemId == R.id.menu_remove_sensor_from_folder) {
-                removeSensorFromFolderOnServer(sensor.id, sensor.parentFolderId);
-                return true;
+                removeSensorFromFolderOnServer(sensor.id, sensor.parentFolderId); return true;
             } else if (itemId == R.id.menu_add_sensor_to_favorites) {
-                toggleFavoriteSensor(sensor.id, true);
-                return true;
+                toggleFavoriteSensor(sensor.id, true); return true;
             } else if (itemId == R.id.menu_remove_sensor_from_favorites) {
-                toggleFavoriteSensor(sensor.id, false);
-                return true;
-                // 🔽🔽🔽 NOWA OBSŁUGA KLIKNIĘCIA 🔽🔽🔽
+                toggleFavoriteSensor(sensor.id, false); return true;
             } else if (itemId == R.id.action_check_battery) {
-                forceBatteryCheck(); // Nowa akcja
+                forceBatteryCheck(); return true;
+
+                // --- Logika wyciszania dla czujnika (bez zmian) ---
+            } else if (itemId == R.id.menu_disable_threshold_notifications) {
+                editor.putBoolean("thresh_sensor_" + sensor.id, true).apply();
+                Toast.makeText(this, R.string.menu_disable_threshold_notifications, Toast.LENGTH_SHORT).show();
+                return true;
+            } else if (itemId == R.id.menu_enable_threshold_notifications) {
+                editor.putBoolean("thresh_sensor_" + sensor.id, false).apply();
+                Toast.makeText(this, R.string.menu_enable_threshold_notifications, Toast.LENGTH_SHORT).show();
+                return true;
+            } else if (itemId == R.id.menu_disable_battery_notifications) {
+                editor.putBoolean("batt_sensor_" + sensor.id, true).apply();
+                Toast.makeText(this, R.string.menu_disable_battery_notifications, Toast.LENGTH_SHORT).show();
+                return true;
+            } else if (itemId == R.id.menu_enable_battery_notifications) {
+                editor.putBoolean("batt_sensor_" + sensor.id, false).apply();
+                Toast.makeText(this, R.string.menu_enable_battery_notifications, Toast.LENGTH_SHORT).show();
                 return true;
             }
         }
@@ -925,5 +973,62 @@ public class DataActivity extends AppCompatActivity implements FolderAdapter.Fol
         LocalBroadcastManager.getInstance(this).unregisterReceiver(dataUpdateReceiver);
         LocalBroadcastManager.getInstance(this).unregisterReceiver(syncStatusReceiver);
         super.onPause();
+    }
+
+    /**
+     * 🔽🔽🔽 NOWA METODA POMOCNICZA 🔽🔽🔽
+     * Ustawia stan wyciszenia (mute) dla wszystkich czujników w danej BRAMCE.
+     * @param gateway Bramka, której czujniki mają być zmienione
+     * @param prefKeyPrefix Klucz SharedPreferences (np. "thresh_sensor_" lub "batt_sensor_")
+     * @param mute Wartość do ustawienia (true = wycisz, false = odcisz)
+     */
+    private void setGatewayMuteState(FolderAdapter.GatewayItem gateway, String prefKeyPrefix, boolean mute) {
+        Log.d(TAG, "Zmieniam stan wyciszenia dla bramki " + gateway.id + " na " + mute);
+        SharedPreferences.Editor editor = mutePrefs.edit();
+        try (Cursor c = dbHelper.getSensorsForGateway(gateway.id)) {
+            while (c.moveToNext()) {
+                long sensorId = c.getLong(c.getColumnIndexOrThrow("_id"));
+                editor.putBoolean(prefKeyPrefix + sensorId, mute);
+                // Log.d(TAG, "  -> Zastosowano dla sensorId: " + sensorId);
+            }
+        }
+        editor.apply();
+    }
+
+    /**
+     * 🔽🔽🔽 NOWA METODA POMOCNICZA 🔽🔽🔽
+     * Ustawia stan wyciszenia (mute) dla wszystkich czujników w danym FOLDERZE.
+     * @param folder Folder, którego czujniki mają być zmienione
+     * @param prefKeyPrefix Klucz SharedPreferences (np. "thresh_sensor_" lub "batt_sensor_")
+     * @param mute Wartość do ustawienia (true = wycisz, false = odcisz)
+     */
+    private void setFolderMuteState(FolderAdapter.FolderItem folder, String prefKeyPrefix, boolean mute) {
+        Log.d(TAG, "Zmieniam stan wyciszenia dla folderu " + folder.id + " na " + mute);
+        SharedPreferences.Editor editor = mutePrefs.edit();
+
+        // 1. Zastosuj dla czujników bezpośrednio w folderze
+        try (Cursor c = dbHelper.getSensorsForFolderCursor(folder.id)) {
+            while (c.moveToNext()) {
+                long sensorId = c.getLong(c.getColumnIndexOrThrow("_id"));
+                editor.putBoolean(prefKeyPrefix + sensorId, mute);
+                // Log.d(TAG, "  -> Zastosowano dla sensora w folderze: " + sensorId);
+            }
+        }
+
+        // 2. Zastosuj dla wszystkich czujników we wszystkich bramkach w tym folderze
+        try (Cursor gateways = dbHelper.getGatewaysForFolderCursor(folder.id)) {
+            while (gateways.moveToNext()) {
+                long gatewayId = gateways.getLong(gateways.getColumnIndexOrThrow("_id"));
+                // Log.d(TAG, "  -> Przetwarzam bramkę w folderze: " + gatewayId);
+                try (Cursor sensors = dbHelper.getSensorsForGateway(gatewayId)) {
+                    while (sensors.moveToNext()) {
+                        long sensorId = sensors.getLong(sensors.getColumnIndexOrThrow("_id"));
+                        editor.putBoolean(prefKeyPrefix + sensorId, mute);
+                        // Log.d(TAG, "    -> Zastosowano dla sensora w bramce: " + sensorId);
+                    }
+                }
+            }
+        }
+        editor.apply();
     }
 }

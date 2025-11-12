@@ -26,4 +26,16 @@
     <item
         android:id="@+id/action_check_battery"
         android:title="@string/action_check_battery" />
+    <item
+        android:id="@+id/menu_disable_gateway_threshold_notifications"
+        android:title="@string/menu_disable_gateway_threshold_notifications" />
+    <item
+        android:id="@+id/menu_enable_gateway_threshold_notifications"
+        android:title="@string/menu_enable_gateway_threshold_notifications" />
+    <item
+        android:id="@+id/menu_disable_gateway_battery_notifications"
+        android:title="@string/menu_disable_gateway_battery_notifications" />
+    <item
+        android:id="@+id/menu_enable_gateway_battery_notifications"
+        android:title="@string/menu_enable_gateway_battery_notifications" />
 </menu>

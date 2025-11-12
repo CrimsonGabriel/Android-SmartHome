@@ -303,5 +303,21 @@
 
 
     <string name="action_check_battery">Sprawdź stan baterii</string>
-    <string name="toast_battery_check_started">Rozpoczęto sprawdzanie baterii...</string>
+    <string name="toast_battery_check_started">Rozpoczęto sprawdzanie baterii…</string>
+
+    <string name="menu_disable_threshold_notifications">Wyłącz alerty wartości (temp/drzwi)</string>
+    <string name="menu_enable_threshold_notifications">Włącz alerty wartości</string>
+    <string name="menu_disable_battery_notifications">Wyłącz alerty baterii</string>
+    <string name="menu_enable_battery_notifications">Włącz alerty baterii</string>
+
+
+    <string name="menu_disable_gateway_threshold_notifications">Wycisz alerty wartości w bramce</string>
+    <string name="menu_enable_gateway_threshold_notifications">Włącz alerty wartości w bramce</string>
+    <string name="menu_disable_gateway_battery_notifications">Wycisz alerty baterii w bramce</string>
+    <string name="menu_enable_gateway_battery_notifications">Włącz alerty baterii w bramce</string>
+
+    <string name="menu_disable_folder_threshold_notifications">Wycisz alerty wartości w folderze</string>
+    <string name="menu_enable_folder_threshold_notifications">Włącz alerty wartości w folderze</string>
+    <string name="menu_disable_folder_battery_notifications">Wycisz alerty baterii w folderze</string>
+    <string name="menu_enable_folder_battery_notifications">Włącz alerty baterii w folderze</string>
 </resources>

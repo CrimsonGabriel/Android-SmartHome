@@ -68,7 +68,7 @@ public class VpsClientService extends Service {
     // <<< 2. POPRAWKA: Dodanie brakującej deklaracji pola
     private SharedPreferences batteryPrefs;
     private Gson gson;
-
+    private SharedPreferences mutePrefs;
     @Override
     public void onCreate() {
         super.onCreate();
@@ -84,6 +84,7 @@ public class VpsClientService extends Service {
         authPrefs = getSharedPreferences(LoginActivity.AUTH_PREFS, Context.MODE_PRIVATE);
         // Ta linia jest już poprawna, bo 'batteryPrefs' i 'BATTERY_PREFS' są zadeklarowane
         batteryPrefs = getSharedPreferences(BATTERY_PREFS, Context.MODE_PRIVATE);
+        mutePrefs = getSharedPreferences("NotificationMutePrefs", Context.MODE_PRIVATE);
         executorService = Executors.newSingleThreadScheduledExecutor();
 
         registerAndroidIp();
@@ -363,6 +364,12 @@ public class VpsClientService extends Service {
     private void checkThresholds(SensorModel sensor) {
         // ... (bez zmian)
         if (sensor == null || sensor.type == null) return;
+        // Sprawdź, czy alerty wartości (progi) są wyciszone dla tego sensora
+        String muteKey = "thresh_sensor_" + sensor.sensorId;
+        if (mutePrefs.getBoolean(muteKey, false)) {
+            // Log.d(TAG, "Alerty wartości dla " + sensor.sensorId + " są wyciszone.");
+            return; // Zakończ, nie wysyłaj powiadomienia
+        }
         String type = sensor.type.toLowerCase();
         String doorContactType = getString(R.string.sensor_type_door_contact);
         String humidityType = getString(R.string.sensor_type_humidity);
@@ -515,6 +522,12 @@ public class VpsClientService extends Service {
      */
     private void checkSensorBattery(Sensor sensor, String gatewayName) {
         int newLevel = sensor.getBatteryLevel();
+        // Sprawdź, czy alerty baterii są wyciszone dla tego sensora
+        String muteKey = "batt_sensor_" + sensor.getId();
+        if (mutePrefs.getBoolean(muteKey, false)) {
+            // Log.d(TAG, "Alerty baterii dla " + sensor.getId() + " są wyciszone.");
+            return; // Zakończ, nie wysyłaj powiadomienia
+        }
         String prefKey = "battery_notified_" + sensor.getId();
 
         // Ta linia jest już poprawna, bo 'batteryPrefs' jest zadeklarowane
