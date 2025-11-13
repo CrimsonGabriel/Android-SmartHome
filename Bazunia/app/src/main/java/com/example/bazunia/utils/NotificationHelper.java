@@ -196,4 +196,11 @@ public class NotificationHelper {
         // Używamy standardowej metody showNotification do wyświetlenia
         showNotification(title, message, notificationId);
     }
+    public void showSensorCommsError(String entityName, String errorMessage) {
+        String title = context.getString(R.string.alert_title_sensor_comms_error); // Nowy string
+        int notificationId = (entityName + "_comms_error").hashCode(); // Unikalne ID
+        showNotification(title, errorMessage, notificationId); // Użyj generycznej metody
+    }
+
+
 }

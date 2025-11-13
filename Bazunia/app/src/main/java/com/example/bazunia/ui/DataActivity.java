@@ -17,7 +17,10 @@ import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.Toast;
-
+import com.example.bazunia.data.SensorStatusErrorDto;
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
+import java.lang.reflect.Type;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
@@ -77,7 +80,8 @@ public class DataActivity extends AppCompatActivity implements FolderAdapter.Fol
 
     private long lastSyncToastTime = 0;
     private SharedPreferences mutePrefs;
-
+    private MaterialButton btnTestConnection;
+    private Gson gson;
     @Override
     protected void attachBaseContext(Context newBase) {
         LocaleManager localeManager = new LocaleManager(newBase);
@@ -98,6 +102,7 @@ public class DataActivity extends AppCompatActivity implements FolderAdapter.Fol
         httpClient = new OkHttpClient();
         authPrefs = getSharedPreferences(LoginActivity.AUTH_PREFS, Context.MODE_PRIVATE);
         mutePrefs = getSharedPreferences("NotificationMutePrefs", Context.MODE_PRIVATE);
+        gson = new Gson();
         recyclerView = findViewById(R.id.recyclerView);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         adapter = new FolderAdapter(this, displayItems, this);
@@ -108,7 +113,7 @@ public class DataActivity extends AppCompatActivity implements FolderAdapter.Fol
         MaterialButton btnBack = findViewById(R.id.btnBack);
         MaterialButton btnSettings = findViewById(R.id.btnSettings);
         MaterialButton btnRefresh = findViewById(R.id.btnRefresh);
-
+        btnTestConnection = findViewById(R.id.btnTestConnection);
         FloatingActionButton fabAddFolder = findViewById(R.id.fab_add_folder);
         fabAddFolder.setOnClickListener(v -> showCreateFolderDialog(null));
 
@@ -118,7 +123,7 @@ public class DataActivity extends AppCompatActivity implements FolderAdapter.Fol
         btnRefresh.setOnClickListener(v -> {
             forceSync();
         });
-
+        btnTestConnection.setOnClickListener(v -> testConnection());
         setupBroadcastReceiver();
         loadDisplayListFromDb();
     }
@@ -1030,5 +1035,81 @@ public class DataActivity extends AppCompatActivity implements FolderAdapter.Fol
             }
         }
         editor.apply();
+    }
+    /**
+     * Wykonuje ręczny test połączenia i statusu urządzeń.
+     * Wywoływany przez przycisk btnTestConnection.
+     */
+    private void testConnection() {
+        // Pokaż natychmiastową informację zwrotną
+        Toast.makeText(this, "Testowanie połączenia...", Toast.LENGTH_SHORT).show();
+
+        // 1. Zdobądź token
+        String jwtToken = authPrefs.getString(LoginActivity.KEY_JWT_TOKEN, null);
+        if (jwtToken == null) {
+            Toast.makeText(this, "Błąd: Brak tokena logowania.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // 2. Zbuduj zapytanie (zakładam, że masz SENSOR_STATUS_ENDPOINT w Constants)
+        // Jeśli nie, użyj pełnego URL
+        Request request = new Request.Builder()
+                .url(Constants.SENSOR_STATUS_ENDPOINT)
+                .addHeader("Authorization", "Bearer " + jwtToken)
+                .get()
+                .build();
+
+        // 3. Wywołaj asynchronicznie (tak jak reszta metod w tej klasie)
+        httpClient.newCall(request).enqueue(new Callback() {
+            @Override
+            public void onFailure(@NonNull Call call, @NonNull IOException e) {
+                // Błąd sieci (np. brak internetu, serwer nieosiągalny)
+                runOnUiThread(() -> Toast.makeText(DataActivity.this,
+                        "Błąd sieci: " + e.getMessage(),
+                        Toast.LENGTH_LONG).show());
+            }
+
+            @Override
+            public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
+                final String responseBody = response.body() != null ? response.body().string() : "";
+
+                if (response.isSuccessful()) {
+                    // Sukces - parsowanie JSON
+                    Type listType = new TypeToken<List<SensorStatusErrorDto>>() {}.getType();
+
+                    try {
+                        // Użyj GSON do sparsowania odpowiedzi
+                        List<SensorStatusErrorDto> errors = gson.fromJson(responseBody, listType);
+
+                        if (errors == null || errors.isEmpty()) {
+                            // Wszystko OK
+                            runOnUiThread(() -> Toast.makeText(DataActivity.this,
+                                    "Połączenie OK. Wszystkie urządzenia online.",
+                                    Toast.LENGTH_LONG).show());
+                        } else {
+                            // Znaleziono błąd
+                            String firstErrorMessage = errors.get(0).readableMessage;
+                            runOnUiThread(() -> Toast.makeText(DataActivity.this,
+                                    "Wykryto błąd: " + firstErrorMessage,
+                                    Toast.LENGTH_LONG).show());
+                        }
+                    } catch (Exception e) {
+                        // Błąd parsowania JSON
+                        Log.e(TAG, "testConnection: Błąd parsowania JSON: " + e.getMessage() + ", Odpowiedź: " + responseBody);
+                        runOnUiThread(() -> Toast.makeText(DataActivity.this,
+                                "Błąd parsowania odpowiedzi serwera.",
+                                Toast.LENGTH_LONG).show());
+                    }
+
+                } else {
+                    // Błąd API (np. 404, 500, 403)
+                    Log.e(TAG, "testConnection: Błąd serwera. Kod: " + response.code() + ", Odpowiedź: " + responseBody);
+                    runOnUiThread(() -> Toast.makeText(DataActivity.this,
+                            "Błąd odpowiedzi serwera (kod: " + response.code() + ")",
+                            Toast.LENGTH_LONG).show());
+                }
+                response.close(); // Zawsze zamykaj response w onResponse
+            }
+        });
     }
 }

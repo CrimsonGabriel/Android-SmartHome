@@ -49,4 +49,8 @@ public class Constants {
     public static final String FOLDERS_ENDPOINT = VPS_SERVER_IP + "/api/folders";
     public static final String FAVORITE_GATEWAYS_ENDPOINT = VPS_SERVER_IP + "/api/favorites/gateways";
     public static final String FAVORITE_SENSORS_ENDPOINT = VPS_SERVER_IP + "/api/favorites/sensors";
+
+    public static final String SENSOR_STATUS_ENDPOINT = VPS_SERVER_IP + "/api/sensors/status";
+
+
 }

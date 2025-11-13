@@ -93,6 +93,7 @@ public class VpsClientService extends Service {
         executorService.scheduleWithFixedDelay(() -> syncGatewayDefinitions(false), 1, POLLING_INTERVAL_GATEWAYS_SECONDS, TimeUnit.SECONDS);
         executorService.scheduleWithFixedDelay(() -> syncFoldersAndFavorites(false), 2, POLLING_INTERVAL_FOLDERS_SECONDS, TimeUnit.SECONDS);
         executorService.scheduleWithFixedDelay(this::fetchUpdateStatus, 5, POLLING_INTERVAL_GATEWAYS_SECONDS, TimeUnit.SECONDS);
+        executorService.scheduleWithFixedDelay(this::fetchSensorErrorStatus, 10, 60, TimeUnit.SECONDS);
     }
 
     private Notification createNotification() {
@@ -557,5 +558,69 @@ public class VpsClientService extends Service {
             // Resetuj stan, aby przyszłe powiadomienia mogły być wysłane
             editor.putInt(prefKey, 100).apply();
         }
+    }
+    /**
+     * NOWE ZADANIE: Pobiera statusy błędów (np. offline) dla czujników/bramek
+     */
+    private void fetchSensorErrorStatus() {
+        String jwtToken = getJwtToken();
+        if (jwtToken == null) {
+            Log.w(TAG, "Brak tokena, pomijam sprawdzanie statusu błędów.");
+            return;
+        }
+
+        // Upewnij się, że dodałeś ten endpoint do pliku Constants.java
+        Request request = new Request.Builder()
+                .url(Constants.SENSOR_STATUS_ENDPOINT)
+                .addHeader("Authorization", "Bearer " + jwtToken)
+                .get()
+                .build();
+
+        httpClient.newCall(request).enqueue(new Callback() {
+            @Override
+            public void onFailure(@NonNull Call call, @NonNull IOException e) {
+                Log.e(TAG, "BLAD POBIERANIA (Status Błędów): " + e.getMessage());
+            }
+
+            @Override
+            public void onResponse(@NonNull Call call, @NonNull Response response) {
+                try (Response resp = response) {
+                    if (resp.isSuccessful() && resp.body() != null) {
+                        String jsonResponse = resp.body().string();
+
+                        // Używamy GSON, tak jak w syncGatewayDefinitions
+                        // Będziemy potrzebować nowej klasy SensorStatusErrorDto
+                        Type listType = new TypeToken<List<SensorStatusErrorDto>>() {}.getType();
+                        List<SensorStatusErrorDto> errors = gson.fromJson(jsonResponse, listType);
+
+                        if (errors != null && !errors.isEmpty()) {
+                            Log.w(TAG, "Wykryto " + errors.size() + " błędów statusu czujników.");
+                            for (SensorStatusErrorDto error : errors) {
+
+                                // Użyj nazwy encji (np. "Bramka Kuchnia") jeśli jest dostępna,
+                                // w przeciwnym razie użyj ID (np. "sensor_123")
+                                String entityIdentifier;
+                                if (error.entityName != null && !error.entityName.isEmpty()) {
+                                    entityIdentifier = error.entityName;
+                                } else {
+                                    entityIdentifier = error.entityType + "_" + error.entityId;
+                                }
+
+                                // Wywołaj nową metodę z NotificationHelpera
+                                notificationHelper.showSensorCommsError(entityIdentifier, error.readableMessage);
+                            }
+                        } else {
+                            // To jest normalne, oznacza że nie ma błędów
+                            Log.d(TAG, "Brak błędów statusu czujników.");
+                        }
+                    } else {
+                        Log.w(TAG, "Pobieranie statusu błędów nieudane, kod: " + resp.code());
+                    }
+                } catch (Exception e) {
+                    // Np. błąd parsowania JSON
+                    Log.e(TAG, "KRYTYCZNY BLAD w onResponse (Status Błędów): " + e.getMessage());
+                }
+            }
+        });
     }
 }

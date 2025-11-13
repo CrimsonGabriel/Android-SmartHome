@@ -335,4 +335,7 @@
     <string name="sensor_detail_notification_interval_hint">Zostaw puste, by użyć globalnego</string>
     <string name="sensor_detail_save_notification_button">Zapisz ten odstęp</string>
     <string name="toast_notification_interval_saved">Zapisano częstotliwość powiadomień dla czujnika.</string>
+    <string name="alert_title_sensor_comms_error">Błąd Komunikacji</string>
+
+    <string name="test_connection_desc">Testuj połączenie z serwerem</string>
 </resources>

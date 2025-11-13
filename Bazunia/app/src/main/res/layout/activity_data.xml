@@ -36,6 +36,17 @@
                 android:layout_gravity="center_horizontal" />
 
             <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnTestConnection"
+                style="?attr/myIconButtonTextStyle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                app:icon="@drawable/ic_check"
+                android:contentDescription="@string/test_connection_desc"
+                android:layout_gravity="end"
+                android:layout_marginEnd="16dp"
+                app:tint="?attr/colorOnSurface" />
+
+            <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnSettings"
                 style="?attr/myIconButtonTextStyle"
                 android:layout_width="wrap_content"
