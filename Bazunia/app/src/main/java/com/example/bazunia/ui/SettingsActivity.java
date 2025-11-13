@@ -6,15 +6,16 @@ import android.os.Bundle;
 import android.widget.RadioGroup;
 import android.util.Log;
 import android.widget.Toast;
-import android.content.SharedPreferences; // ⭐️ DODANY IMPORT
-import androidx.annotation.NonNull; // ⭐️ DODANY IMPORT
+import android.content.SharedPreferences;
+import android.view.inputmethod.InputMethodManager;
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
-import com.example.bazunia.data.VpsClientService; // ⭐️ DODANY IMPORT
+import com.example.bazunia.data.VpsClientService;
 import com.example.bazunia.utils.AppearanceManager;
 import com.example.bazunia.utils.CleanupManager;
-import com.example.bazunia.utils.Constants; // ⭐️ DODANY IMPORT
+import com.example.bazunia.utils.Constants;
 import com.example.bazunia.utils.LocaleManager;
 import com.example.bazunia.R;
 import com.google.android.material.button.MaterialButton;
@@ -53,6 +54,12 @@ public class SettingsActivity extends AppCompatActivity {
     private MaterialButton btnSaveGlobalInterval;
     private OkHttpClient httpClient;
     private SharedPreferences authPrefs;
+    public static final String NOTIFICATION_PREFS = "NotificationSettings";
+    public static final String KEY_GLOBAL_NOTIFICATION_INTERVAL = "global_notification_interval_minutes";
+
+    private TextInputEditText editGlobalNotificationInterval;
+    private MaterialButton btnSaveGlobalNotificationInterval;
+    private SharedPreferences notificationPrefs;
 
     @Override
     protected void attachBaseContext(Context newBase) {
@@ -72,12 +79,17 @@ public class SettingsActivity extends AppCompatActivity {
         // ⭐️ INICJALIZACJA SIECI ⭐️
         httpClient = new OkHttpClient();
         authPrefs = getSharedPreferences(LoginActivity.AUTH_PREFS, Context.MODE_PRIVATE);
-
+        notificationPrefs = getSharedPreferences(NOTIFICATION_PREFS, Context.MODE_PRIVATE);
         // Inicjalizacja komponentów
         cleanupManager = new CleanupManager(this);
         setupViews();
         loadCurrentAppearanceSettings();
         setupAppearanceListeners();
+        btnSaveGlobalInterval.setOnClickListener(v -> saveGlobalInterval());
+        btnSaveGlobalNotificationInterval.setOnClickListener(v -> saveGlobalNotificationInterval());
+
+        // 🔽🔽🔽 DODAJ WYWOŁANIE TEJ METODY 🔽🔽🔽
+        loadCurrentNotificationSettings();
 
         // --- LOGIKA OBSŁUGI PRZYCISKÓW ---
 
@@ -94,6 +106,7 @@ public class SettingsActivity extends AppCompatActivity {
 
         // ⭐️ NOWY LISTENER ⭐️
         btnSaveGlobalInterval.setOnClickListener(v -> saveGlobalInterval());
+
     }
 
     private void setupViews() {
@@ -108,7 +121,10 @@ public class SettingsActivity extends AppCompatActivity {
         // ⭐️ NOWE WIDOKI ⭐️
         editGlobalInterval = findViewById(R.id.editGlobalInterval);
         btnSaveGlobalInterval = findViewById(R.id.btnSaveGlobalInterval);
+        editGlobalNotificationInterval = findViewById(R.id.editGlobalNotificationInterval);
+        btnSaveGlobalNotificationInterval = findViewById(R.id.btnSaveGlobalNotificationInterval);
     }
+
 
     private void loadCurrentAppearanceSettings() {
         // --- Tryb Ciemny ---
@@ -234,6 +250,61 @@ public class SettingsActivity extends AppCompatActivity {
                 })
                 .setNegativeButton(getString(R.string.dialog_cancel_button), null)
                 .show();
+    }
+
+    /**
+     * Wczytuje zapisany globalny interwał powiadomień i ustawia pole tekstowe.
+     */
+    private void loadCurrentNotificationSettings() {
+        int savedInterval = notificationPrefs.getInt(KEY_GLOBAL_NOTIFICATION_INTERVAL, 0); // 0 = wyłączone
+        if (savedInterval > 0) {
+            editGlobalNotificationInterval.setText(String.valueOf(savedInterval));
+        } else {
+            editGlobalNotificationInterval.setText("");
+        }
+    }
+
+    // 🔽🔽🔽 DODAJ TĘ NOWĄ METODĘ 🔽🔽🔽
+    /**
+     * Zapisuje globalny interwał powiadomień do SharedPreferences.
+     */
+    /**
+     * Zapisuje globalny interwał powiadomień do SharedPreferences.
+     */
+    private void saveGlobalNotificationInterval() {
+        String intervalStr = editGlobalNotificationInterval.getText() != null ? editGlobalNotificationInterval.getText().toString() : "";
+        int intervalToSave = 0; // Domyślnie 0 (bez limitu)
+
+        if (!intervalStr.isEmpty()) {
+            try {
+                intervalToSave = Integer.parseInt(intervalStr);
+                if (intervalToSave <= 0) {
+                    intervalToSave = 0;
+                }
+            } catch (NumberFormatException e) {
+                editGlobalNotificationInterval.setError("Nieprawidłowa liczba");
+                return;
+            }
+        }
+
+        notificationPrefs.edit()
+                .putInt(KEY_GLOBAL_NOTIFICATION_INTERVAL, intervalToSave)
+                .apply();
+
+        Toast.makeText(this, R.string.toast_global_notification_interval_saved, Toast.LENGTH_SHORT).show();
+
+        // 🔽🔽🔽 POPRAWIONY BLOK 🔽🔽🔽
+        // Ukryj klawiaturę (opcjonalne, ale miłe)
+        try {
+            // Używamy prostej nazwy klasy dzięki importowi
+            InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+            if (imm != null && getCurrentFocus() != null) {
+                imm.hideSoftInputFromWindow(getCurrentFocus().getWindowToken(), 0);
+            }
+        } catch (Exception e) {
+            // ignoruj
+        }
+        // 🔼🔼🔼 KONIEC POPRAWKI 🔼🔼🔼
     }
 
     // ⭐️ ⭐️ ⭐️ NOWA METODA (Z POPRAWKĄ String.format) ⭐️ ⭐️ ⭐️

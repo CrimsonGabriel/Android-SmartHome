@@ -11,6 +11,7 @@ import android.os.Bundle;
 import android.util.Log;
 import android.util.TypedValue;
 import android.view.View;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.ArrayAdapter;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
@@ -27,8 +28,9 @@ import com.example.bazunia.utils.AppearanceManager;
 import com.example.bazunia.utils.Constants;
 import com.example.bazunia.data.DatabaseHelper;
 import com.example.bazunia.R;
-// ⭐️ ZMIANA 1: Import modelu Sensor (będzie potrzebny)
+
 import com.example.bazunia.data.Sensor;
+import com.example.bazunia.data.NotificationFrequencyManager;
 import com.example.bazunia.data.SensorModel;
 import com.example.bazunia.data.ThresholdManager;
 import com.example.bazunia.data.VpsClientService;
@@ -64,7 +66,7 @@ public class SensorDetailActivity extends AppCompatActivity {
     private ListView listSensorHistory;
     private DatabaseHelper dbHelper;
     private ThresholdManager thresholdManager;
-
+    private NotificationFrequencyManager notificationFrequencyManager;
     private long gatewayIdLong;
     private long sensorIdLong;
     private String gatewayIdString, sensorIdString;
@@ -87,6 +89,9 @@ public class SensorDetailActivity extends AppCompatActivity {
     // ⭐️ ZMIANA 3: Dodanie nowych pól dla przełącznika
     private SwitchMaterial switchReporting;
     private LinearLayout reportingContainer;
+    private com.google.android.material.textfield.TextInputEditText editSensorNotificationInterval;
+    private MaterialButton btnSaveNotificationInterval;
+    private LinearLayout notificationIntervalContainer;
 
     private final BroadcastReceiver dataUpdateReceiver = new BroadcastReceiver() {
         @Override
@@ -110,6 +115,7 @@ public class SensorDetailActivity extends AppCompatActivity {
 
         dbHelper = new DatabaseHelper(this);
         thresholdManager = new ThresholdManager(this);
+        notificationFrequencyManager = new NotificationFrequencyManager(this);
         httpClient = new OkHttpClient();
         authPrefs = getSharedPreferences(LoginActivity.AUTH_PREFS, Context.MODE_PRIVATE);
 
@@ -133,7 +139,11 @@ public class SensorDetailActivity extends AppCompatActivity {
         // ⭐️ ZMIANA 4: Wyszukiwanie nowych widoków
         switchReporting = findViewById(R.id.switchReporting);
         reportingContainer = findViewById(R.id.reportingContainer);
-
+        switchReporting = findViewById(R.id.switchReporting);
+        reportingContainer = findViewById(R.id.reportingContainer);
+        notificationIntervalContainer = findViewById(R.id.notificationIntervalContainer);
+        editSensorNotificationInterval = findViewById(R.id.editSensorNotificationInterval);
+        btnSaveNotificationInterval = findViewById(R.id.btnSaveNotificationInterval);
         // --- Skalowanie ---
         appearanceManager.applyIconScale(btnSettings);
         appearanceManager.applyIconScale(btnBack);
@@ -144,7 +154,7 @@ public class SensorDetailActivity extends AppCompatActivity {
         btnBack.setOnClickListener(v -> finish());
         btnFavorite.setOnClickListener(v -> toggleFavoriteStatus());
         btnSaveInterval.setOnClickListener(v -> saveSensorInterval());
-
+        btnSaveNotificationInterval.setOnClickListener(v -> saveSensorNotificationInterval());
         // ⭐️ ZMIANA 5: Dodanie listenera dla przełącznika
         // Używamy setOnClickListener, aby ręcznie kontrolować stan (zapobiega "mruganiu")
         switchReporting.setOnClickListener(v -> {
@@ -172,6 +182,7 @@ public class SensorDetailActivity extends AppCompatActivity {
 
         loadLatestDataAndHistory(); // To ustawi currentSensorType
         loadSensorMetadata(); // To ustawi stan przełącznika
+        loadSensorNotificationSettings();
         setupThresholdControls();
         checkFavoriteStatus();
     }
@@ -213,6 +224,7 @@ public class SensorDetailActivity extends AppCompatActivity {
         LocalBroadcastManager.getInstance(this).registerReceiver(dataUpdateReceiver, new IntentFilter(Constants.ACTION_DATA_UPDATED));
         loadLatestDataAndHistory();
         loadSensorMetadata();
+        loadSensorNotificationSettings();
         checkFavoriteStatus();
     }
 
@@ -455,6 +467,63 @@ public class SensorDetailActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * Wczytuje specyficzne dla czujnika ustawienia częstotliwości powiadomień.
+     */
+    private void loadSensorNotificationSettings() {
+        // Pokaż tylko dla czujników "aktywnych" (tak jak interwał)
+        if (currentSensorType.equalsIgnoreCase("contact") || currentSensorType.equalsIgnoreCase("button") || currentSensorType.equalsIgnoreCase("motion")) {
+            notificationIntervalContainer.setVisibility(View.GONE);
+        } else {
+            notificationIntervalContainer.setVisibility(View.VISIBLE);
+
+            // Używamy -1 jako "nieustawione"
+            int savedInterval = notificationFrequencyManager.getFrequency(sensorIdLong, -1);
+
+            if (savedInterval > 0) {
+                editSensorNotificationInterval.setText(String.valueOf(savedInterval));
+            } else {
+                editSensorNotificationInterval.setText("");
+                editSensorNotificationInterval.setHint(getString(R.string.sensor_detail_notification_interval_hint));
+            }
+        }
+    }
+
+    /**
+     * Zapisuje nowy interwał powiadomień dla tego konkretnego czujnika.
+     */
+    private void saveSensorNotificationInterval() {
+        String intervalStr = editSensorNotificationInterval.getText() != null ? editSensorNotificationInterval.getText().toString() : "";
+        int intervalToSave = 0; // 0 lub mniej oznacza "użyj globalnego"
+
+        if (!intervalStr.isEmpty()) {
+            try {
+                intervalToSave = Integer.parseInt(intervalStr);
+                if (intervalToSave <= 0) {
+                    intervalToSave = 0; // Zapiszemy 0, manager usunie klucz
+                }
+            } catch (NumberFormatException e) {
+                editSensorNotificationInterval.setError("Nieprawidłowa liczba");
+                return;
+            }
+        }
+
+        notificationFrequencyManager.saveFrequency(sensorIdLong, intervalToSave);
+        Toast.makeText(this, R.string.toast_notification_interval_saved, Toast.LENGTH_SHORT).show();
+
+        // 🔽🔽🔽 POPRAWIONY BLOK 🔽🔽🔽
+        // Ukryj klawiaturę
+        try {
+            // Używamy prostej nazwy klasy dzięki importowi
+            InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+            if (imm != null && getCurrentFocus() != null) {
+                imm.hideSoftInputFromWindow(getCurrentFocus().getWindowToken(), 0);
+            }
+        } catch (Exception e) {
+            // ignoruj
+        }
+        // 🔼🔼🔼 KONIEC POPRAWKI 🔼🔼🔼
+    }
     // ⭐️ ZMIANA 7: Dodanie nowej metody do przełączania stanu raportowania
     /**
      * Wywołuje endpoint API /toggle-reporting.

@@ -319,4 +319,20 @@
     <string name="menu_enable_folder_threshold_notifications">Unmute value alerts in folder</string>
     <string name="menu_disable_folder_battery_notifications">Mute battery alerts in folder</string>
     <string name="menu_enable_folder_battery_notifications">Unmute battery alerts in folder</string>
+
+
+
+    <string name="settings_notification_interval_title">Global notification frequency</string>
+    <string name="settings_notification_interval_desc">Sets the global notification interval (e.g., 60 min) for ALL sensors. Empty = no limit.</string>
+    <string name="settings_notification_interval_hint">Interval (minutes)</string>
+    <string name="settings_notification_interval_save_button">Save global interval</string>
+    <string name="toast_global_notification_interval_saved">Global notification frequency saved.</string>
+
+
+
+    <string name="sensor_detail_notification_interval_title">Individual notification frequency</string>
+    <string name="sensor_detail_notification_interval_label">Custom interval (in minutes)</string>
+    <string name="sensor_detail_notification_interval_hint">Leave empty to use global</string>
+    <string name="sensor_detail_save_notification_button">Save this interval</string>
+    <string name="toast_notification_interval_saved">Saved notification frequency for sensor.</string>
 </resources>

@@ -320,4 +320,19 @@
     <string name="menu_enable_folder_threshold_notifications">Włącz alerty wartości w folderze</string>
     <string name="menu_disable_folder_battery_notifications">Wycisz alerty baterii w folderze</string>
     <string name="menu_enable_folder_battery_notifications">Włącz alerty baterii w folderze</string>
+
+
+
+    <string name="settings_notification_interval_title">Globalna częstotliwość powiadomień</string>
+    <string name="settings_notification_interval_desc">Ustawia globalny odstęp między powiadomieniami (np. 60 min) dla WSZYSTKICH czujników. Puste = bez limitu.</string>
+    <string name="settings_notification_interval_hint">Odstęp (minuty)</string>
+    <string name="settings_notification_interval_save_button">Zapisz globalny odstęp</string>
+    <string name="toast_global_notification_interval_saved">Zapisano globalną częstotliwość powiadomień.</string>
+
+
+    <string name="sensor_detail_notification_interval_title">Indywidualna częstotliwość powiadomień</string>
+    <string name="sensor_detail_notification_interval_label">Własny odstęp (w minutach)</string>
+    <string name="sensor_detail_notification_interval_hint">Zostaw puste, by użyć globalnego</string>
+    <string name="sensor_detail_save_notification_button">Zapisz ten odstęp</string>
+    <string name="toast_notification_interval_saved">Zapisano częstotliwość powiadomień dla czujnika.</string>
 </resources>
