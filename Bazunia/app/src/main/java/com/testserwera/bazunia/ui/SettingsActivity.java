@@ -48,8 +48,7 @@ public class SettingsActivity extends AppCompatActivity {
     private RadioGroup radioGroupLanguage;
     private CleanupManager cleanupManager;
     private com.google.android.material.textfield.TextInputEditText editCleanupDays;
-
-    // ⭐️ NOWE POLA ⭐️
+    private com.google.android.material.textfield.TextInputEditText editCleanupSize;
     private TextInputEditText editGlobalInterval;
     private MaterialButton btnSaveGlobalInterval;
     private OkHttpClient httpClient;
@@ -116,6 +115,7 @@ public class SettingsActivity extends AppCompatActivity {
         radioGroupButtonScale = findViewById(R.id.radioGroupButtonScale);
         radioGroupLanguage = findViewById(R.id.radioGroupLanguage);
         editCleanupDays = findViewById(R.id.editCleanupDays);
+        editCleanupSize = findViewById(R.id.editCleanupSize);
         btnGatewayCleanupSettings = findViewById(R.id.btnGatewayCleanupSettings);
 
         // ⭐️ NOWE WIDOKI ⭐️
@@ -166,6 +166,12 @@ public class SettingsActivity extends AppCompatActivity {
         } else {
             editCleanupDays.setText("");
             editCleanupDays.setHint(getString(R.string.cleanup_disabled_hint));
+        }
+        int cleanupSize = cleanupManager.getCleanupSize();
+        if (cleanupSize > 0) {
+            editCleanupSize.setText(String.valueOf(cleanupSize));
+        } else {
+            editCleanupSize.setText("");
         }
     }
 
@@ -239,7 +245,17 @@ public class SettingsActivity extends AppCompatActivity {
             }
         }
         cleanupManager.saveCleanupDays(days);
+        String inputSize = editCleanupSize.getText() != null ? editCleanupSize.getText().toString() : "";
+        int size = 0;
+        if (!inputSize.isEmpty()) {
+            try {
+                size = Integer.parseInt(inputSize);
+                if (size < 0) size = 0;
+            } catch (NumberFormatException e) { /* ignoruj */ }
+        }
+        cleanupManager.saveCleanupSize(size);
     }
+
 
     private void showGatewayCleanupDialog() {
         new AlertDialog.Builder(this)

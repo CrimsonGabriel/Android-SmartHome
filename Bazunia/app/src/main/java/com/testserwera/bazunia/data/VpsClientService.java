@@ -379,6 +379,11 @@ public class VpsClientService extends Service {
             if (cleanupDays > 0) {
                 dbHelper.cleanOldSensorData(cleanupDays);
             }
+            int cleanupSize = cleanupManager.getCleanupSize();
+            if (cleanupSize > 0) {
+                // Zakładam, że dodałeś metodę cleanSensorDataBySize do DatabaseHelper w poprzednim kroku
+                dbHelper.cleanSensorDataBySize(cleanupSize);
+            }
             sendDataUpdateBroadcast();
         } catch (Exception e) {
             Log.e(TAG, "Nieoczekiwany blad przetwarzania odczytów: " + e.getMessage(), e);

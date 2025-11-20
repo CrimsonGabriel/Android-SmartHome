@@ -4,6 +4,8 @@ public class Constants {
     // Definiuje unikalną nazwę dla sygnału (broadcast)
     public static final String ACTION_DATA_UPDATED = "com.example.bazunia.DATA_UPDATED";
 
+    public static final String KEY_CLEANUP_SIZE = "cleanup_size_limit";
+    public static final int DEFAULT_CLEANUP_SIZE = 0;
     public static final String ACTION_SYNC_STATUS = "com.example.bazunia.ACTION_SYNC_STATUS";
 
     public static final String VPS_SERVER_IP = "https://testserwera.pl";

@@ -272,6 +272,39 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         }
         return deletedRows;
     }
+    /**
+     * Usuwa najstarsze rekordy, aby zachować w bazie tylko określoną liczbę najnowszych wpisów.
+     * @param maxRecords Maksymalna liczba rekordów do zachowania (np. 10000). Jeśli <= 0, nic nie robi.
+     * @return Liczba usuniętych rekordów.
+     */
+    public int cleanSensorDataBySize(int maxRecords) {
+        if (maxRecords <= 0) return 0;
+        SQLiteDatabase db = this.getWritableDatabase();
+        int deletedRows = 0;
+
+        try {
+            // Logika: Usuń wszystko, co NIE jest w grupie X najnowszych rekordów.
+            // Sortujemy po ID malejąco (najnowsze na górze) i bierzemy LIMIT.
+            // Wszystko co ma ID mniejsze niż najmniejsze ID z tej grupy - wylatuje.
+
+            // SQL: DELETE FROM readings WHERE id NOT IN (SELECT id FROM readings ORDER BY timestamp DESC LIMIT ?)
+
+            String whereClause = COLUMN_ID + " NOT IN (" +
+                    "SELECT " + COLUMN_ID + " FROM " + TABLE_READINGS +
+                    " ORDER BY " + COLUMN_TIMESTAMP + " DESC " +
+                    " LIMIT " + maxRecords + ")";
+
+            deletedRows = db.delete(TABLE_READINGS, whereClause, null);
+
+            if (deletedRows > 0) {
+                Log.d("DB_CLEAN", String.format(Locale.getDefault(),
+                        context.getString(R.string.log_info_data_cleaned_size), deletedRows, maxRecords));
+            }
+        } catch (SQLException e) {
+            Log.e("DB_CLEAN", "Błąd czyszczenia wg rozmiaru: " + e.getMessage());
+        }
+        return deletedRows;
+    }
 
 
     // --- METODY ZARZĄDZANIA METADANYMI ---

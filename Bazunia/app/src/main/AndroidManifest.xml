@@ -24,13 +24,6 @@
         android:theme="@style/Theme.Bazunia"
         android:networkSecurityConfig="@xml/network_security_config">
 
-        <!-- Serwis Socket.IO (obecnie nieaktywny, ale zdefiniowany z typem) -->
-        <service
-            android:name=".services.SensorMonitoringService"
-            android:enabled="true"
-            android:exported="false"
-            android:foregroundServiceType="dataSync" />
-
         <!-- Serwis Klienta VPS (Polling/REST). Ustawiony typ na dataSync. -->
         <service android:name=".data.VpsClientService"
             android:enabled="true"

@@ -351,4 +351,7 @@
     <string name="_0">0%</string>
     <string name="toast_update_postponed_generic">Update postponed.</string>
     <string name="toast_update_postponed_timer">Update postponed for 5 minutes.</string>
+    <string name="cleanup_size_label">Size limit (Record count)</string>
+    <string name="cleanup_size_hint">Max records (0 = unlimited)</string>
+    <string name="log_info_data_cleaned_size">Deleted %d excess records (Limit: %d).</string>
 </resources>

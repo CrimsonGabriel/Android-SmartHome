@@ -351,4 +351,7 @@
     <string name="_0">0%</string>
     <string name="toast_update_postponed_generic">Odłożono aktualizację.</string>
     <string name="toast_update_postponed_timer">Aktualizacja odłożona o 5 minut.</string>
+    <string name="cleanup_size_label">Limit rozmiaru (Ilość rekordów)</string>
+    <string name="cleanup_size_hint">Max rekordów (0 = bez limitu)</string>
+    <string name="log_info_data_cleaned_size">Usunięto %d nadmiarowych rekordów (Limit: %d).</string>
 </resources>
