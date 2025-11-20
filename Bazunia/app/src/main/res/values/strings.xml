@@ -354,4 +354,18 @@
     <string name="cleanup_size_label">Limit rozmiaru (Ilość rekordów)</string>
     <string name="cleanup_size_hint">Max rekordów (0 = bez limitu)</string>
     <string name="log_info_data_cleaned_size">Usunięto %d nadmiarowych rekordów (Limit: %d).</string>
+
+    <string name="cleanup_request_dialog_title">Propozycja Retencji</string>
+    <string name="cleanup_request_dialog_message">Zaproponuj administratorowi nowe zasady czyszczenia historii na serwerze. \n\nObecnie proces uruchamia się codziennie o 3:00.</string>
+    <string name="cleanup_request_days_label">Usuwaj starsze niż (dni):</string>
+    <string name="cleanup_request_size_label">Limit rekordów:</string>
+    <string name="cleanup_request_send_button">Wyślij wniosek</string>
+    <string name="cleanup_request_sent_toast">Wniosek wysłany! Oczekuj na decyzję admina.</string>
+    <string name="cleanup_request_status_pending">Status: Oczekiwanie na Admina…</string>
+    <string name="cleanup_current_settings">Obecnie na serwerze: %1$s dni, %2$s rekordów.</string>
+
+    <string name="notif_retention_title">Zmiana Ustawień Historii</string>
+    <string name="notif_retention_accepted">Admin zaakceptował Twój wniosek! Nowe limity zostały ustawione.</string>
+    <string name="notif_retention_rejected">Admin odrzucił Twój wniosek o zmianę retencji.</string>
+    <string name="dots3">…</string>
 </resources>

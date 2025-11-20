@@ -321,14 +321,23 @@
                 android:text="@string/cleanup_gateway_label"
                 android:textAppearance="@style/TextAppearance.Material3.TitleMedium" />
 
+            <TextView
+                android:id="@+id/txtCurrentServerSettings"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:text="@string/dots3"
+                android:layout_marginBottom="16dp"
+                android:textColor="?android:attr/textColorSecondary" />
+
             <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnGatewayCleanupSettings"
+                android:id="@+id/btnRequestRetentionChange"
                 style="@style/Widget.Material3.Button.OutlinedButton"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center_horizontal"
                 android:layout_marginBottom="32dp"
-                android:text="@string/cleanup_gateway_button"
+                android:text="@string/cleanup_request_send_button"
                 app:icon="@drawable/ic_settings_server" />
 
         </LinearLayout>

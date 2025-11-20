@@ -239,5 +239,29 @@ public class NotificationHelper {
         showNotification(title, errorMessage, notificationId); // Użyj generycznej metody
     }
 
+    /**
+     * Powiadomienie o decyzji Admina ws. retencji danych.
+     */
+    public void showRetentionStatusNotification(boolean accepted) {
+        String title = context.getString(R.string.notif_retention_title);
+        String message = accepted
+                ? context.getString(R.string.notif_retention_accepted)
+                : context.getString(R.string.notif_retention_rejected);
+
+        // ID powiadomienia (stałe, żeby nadpisywać)
+        int notificationId = 999;
+
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(context, CHANNEL_ID_UPDATES) // Używamy kanału Updates (ważne, rzadkie)
+                .setSmallIcon(accepted ? R.drawable.ic_check : R.drawable.ic_close) // Zakładam, że masz te ikony
+                .setContentTitle(title)
+                .setContentText(message)
+                .setStyle(new NotificationCompat.BigTextStyle().bigText(message))
+                .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+                .setAutoCancel(true);
+
+        if (notificationManager != null) {
+            notificationManager.notify(notificationId, builder.build());
+        }
+    }
 
 }

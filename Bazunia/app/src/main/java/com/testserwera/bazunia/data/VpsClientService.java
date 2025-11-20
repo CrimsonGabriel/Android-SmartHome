@@ -69,6 +69,8 @@ public class VpsClientService extends Service {
     private Gson gson;
     private SharedPreferences mutePrefs;
     private static final String UPDATE_PREFS = "UpdatePrefs";
+    private static final int POLLING_INTERVAL_RETENTION_SECONDS = 300;
+    private SharedPreferences retentionPrefs;
     @Override
     public void onCreate() {
         super.onCreate();
@@ -86,7 +88,7 @@ public class VpsClientService extends Service {
         batteryPrefs = getSharedPreferences(BATTERY_PREFS, Context.MODE_PRIVATE);
         mutePrefs = getSharedPreferences("NotificationMutePrefs", Context.MODE_PRIVATE);
         executorService = Executors.newSingleThreadScheduledExecutor();
-
+        retentionPrefs = getSharedPreferences("RetentionPrefs", Context.MODE_PRIVATE);
         registerAndroidIp();
 
         executorService.scheduleWithFixedDelay(() -> fetchSensorData(false), 0, POLLING_INTERVAL_READINGS_SECONDS, TimeUnit.SECONDS);
@@ -94,7 +96,11 @@ public class VpsClientService extends Service {
         executorService.scheduleWithFixedDelay(() -> syncFoldersAndFavorites(false), 2, POLLING_INTERVAL_FOLDERS_SECONDS, TimeUnit.SECONDS);
         executorService.scheduleWithFixedDelay(this::fetchUpdateStatus, 5, POLLING_INTERVAL_GATEWAYS_SECONDS, TimeUnit.SECONDS);
         executorService.scheduleWithFixedDelay(this::fetchSensorErrorStatus, 10, 60, TimeUnit.SECONDS);
-        SharedPreferences updatePrefs = getSharedPreferences(UPDATE_PREFS, Context.MODE_PRIVATE);
+        executorService.scheduleWithFixedDelay(this::checkRetentionStatus, 15, POLLING_INTERVAL_RETENTION_SECONDS, TimeUnit.SECONDS);
+
+
+
+
     }
 
     private Notification createNotification() {
@@ -647,6 +653,51 @@ public class VpsClientService extends Service {
                 } catch (Exception e) {
                     // Np. błąd parsowania JSON
                     Log.e(TAG, "KRYTYCZNY BLAD w onResponse (Status Błędów): " + e.getMessage());
+                }
+            }
+        });
+    }
+    // ⭐️⭐️⭐️ ZADANIE 6: RETENCJA (To czego brakowało) ⭐️⭐️⭐️
+    private void checkRetentionStatus() {
+        String jwtToken = getJwtToken();
+        if (jwtToken == null) return;
+
+        // UWAGA: Upewnij się, że w Constants.java masz VPS_SERVER_IP
+        // Jeśli nie, użyj swojego adresu IP na sztywno do testów
+        String url = Constants.VPS_SERVER_IP + "/api/retention/status";
+
+        Request request = new Request.Builder()
+                .url(url)
+                .addHeader("Authorization", "Bearer " + jwtToken)
+                .get().build();
+
+        httpClient.newCall(request).enqueue(new Callback() {
+            @Override
+            public void onFailure(@NonNull Call call, @NonNull IOException e) { /* ignoruj błędy sieci */ }
+
+            @Override
+            public void onResponse(@NonNull Call call, @NonNull Response response) {
+                try (Response resp = response) {
+                    if (resp.isSuccessful() && resp.body() != null) {
+                        JSONObject json = new JSONObject(resp.body().string());
+                        String serverStatus = json.optString("status", "NONE");
+
+                        // Odczytaj ostatnio znany status
+                        String localStatus = retentionPrefs.getString("last_status", "NONE");
+
+                        // Jeśli status się zmienił i jest decyzją końcową
+                        if (!serverStatus.equals(localStatus)) {
+                            if ("ACCEPTED".equals(serverStatus)) {
+                                notificationHelper.showRetentionStatusNotification(true);
+                            } else if ("REJECTED".equals(serverStatus)) {
+                                notificationHelper.showRetentionStatusNotification(false);
+                            }
+                            // Zapisz, żeby nie spamować powiadomieniami
+                            retentionPrefs.edit().putString("last_status", serverStatus).apply();
+                        }
+                    }
+                } catch (Exception e) {
+                    Log.e(TAG, "Error checking retention: " + e.getMessage());
                 }
             }
         });

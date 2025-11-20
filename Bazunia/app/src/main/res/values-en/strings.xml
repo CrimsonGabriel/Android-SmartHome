@@ -354,4 +354,18 @@
     <string name="cleanup_size_label">Size limit (Record count)</string>
     <string name="cleanup_size_hint">Max records (0 = unlimited)</string>
     <string name="log_info_data_cleaned_size">Deleted %d excess records (Limit: %d).</string>
+
+    <string name="cleanup_request_dialog_title">Retention Proposal</string>
+    <string name="cleanup_request_dialog_message">Propose new server history cleanup rules to the administrator. \n\nThe process runs daily at 3:00 AM.</string>
+    <string name="cleanup_request_days_label">Delete older than (days):</string>
+    <string name="cleanup_request_size_label">Record limit:</string>
+    <string name="cleanup_request_send_button">Send Request</string>
+    <string name="cleanup_request_sent_toast">Request sent! Waiting for admin approval.</string>
+    <string name="cleanup_request_status_pending">Status: Waiting for Admin…</string>
+    <string name="cleanup_current_settings">Server settings: %1$s days, %2$s records.</string>
+
+    <string name="notif_retention_title">Retention Policy Update</string>
+    <string name="notif_retention_accepted">Admin accepted your request! New limits have been set.</string>
+    <string name="notif_retention_rejected">Admin rejected your retention request.</string>
+    <string name="dots3">…</string>
 </resources>
