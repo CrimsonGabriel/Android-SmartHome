@@ -29,28 +29,18 @@ public class Constants {
     public static final String SETUP_2FA_ENDPOINT = VPS_SERVER_IP + "/api/auth/2fa/setup";
     public static final String VERIFY_2FA_ENDPOINT = VPS_SERVER_IP + "/api/auth/2fa/verify";
     public static final String DISABLE_2FA_ENDPOINT = VPS_SERVER_IP + "/api/auth/2fa/disable";
-
-
-
-
     public static final String UPDATE_STATUS_ENDPOINT = VPS_SERVER_IP + "/api/update/status";
-
-
     public static final String UPDATE_DECISION_ENDPOINT = VPS_SERVER_IP + "/api/update/decision";
     public static final String REGISTER_ANDROID_ENDPOINT = VPS_SERVER_IP + "/api/auth/android/register";
     public static final String LOGIN_EMAIL_ENDPOINT = VPS_SERVER_IP + "/api/auth/login";
-
     public static final String LOGIN_EMAIL_2FA_VERIFY_ENDPOINT = VPS_SERVER_IP + "/api/auth/2fa/email-verify";
     public static final String SET_PASSWORD_ENDPOINT = VPS_SERVER_IP + "/api/user/set-password";
-
     public static final String CHANGE_PASSWORD_ENDPOINT = VPS_SERVER_IP + "/api/user/change-password";
     public static final String REQUEST_PASSWORD_RESET_ENDPOINT = VPS_SERVER_IP + "/api/auth/request-password-reset";
-
     public static final String FOLDERS_ENDPOINT = VPS_SERVER_IP + "/api/folders";
     public static final String FAVORITE_GATEWAYS_ENDPOINT = VPS_SERVER_IP + "/api/favorites/gateways";
     public static final String FAVORITE_SENSORS_ENDPOINT = VPS_SERVER_IP + "/api/favorites/sensors";
-
     public static final String SENSOR_STATUS_ENDPOINT = VPS_SERVER_IP + "/api/sensors/status";
-
-
+    public static final String MY_UPDATES_ENDPOINT = VPS_SERVER_IP + "/api/my-updates";
+    public static final String UPDATE_BASE_ENDPOINT = VPS_SERVER_IP + "/api/updates";
 }

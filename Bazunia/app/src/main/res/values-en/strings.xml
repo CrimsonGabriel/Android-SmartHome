@@ -338,4 +338,17 @@
     <string name="alert_title_sensor_comms_error">Communication Error</string>
 
     <string name="test_connection_desc">Test Connection with server</string>
+
+    <string name="update_status_downloading">Downloading package…</string>
+    <string name="update_status_installing">Installing…</string>
+    <string name="update_status_verifying">Verifying…</string>
+    <string name="update_status_finalizing">Finalizing…</string>
+    <string name="update_success">Updated successfully!</string>
+    <string name="update_error_connection">Connection error!</string>
+    <string name="update_error_server">Server error: %1$d</string>
+    <string name="update_btn_close">Close</string>
+    <string name="update_prepare">Preparing…</string>
+    <string name="_0">0%</string>
+    <string name="toast_update_postponed_generic">Update postponed.</string>
+    <string name="toast_update_postponed_timer">Update postponed for 5 minutes.</string>
 </resources>

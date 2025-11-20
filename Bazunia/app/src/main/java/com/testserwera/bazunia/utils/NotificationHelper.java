@@ -75,40 +75,77 @@ public class NotificationHelper {
         }
     }
 
-    // Metoda dla aktualizacji (bez zmian)
-    public void showUpdateNotification(String updateKey, String status) {
-        // Używamy replace() zamiast String.format()
-        String title = context.getString(R.string.notification_update_title);
-        String message = context.getString(R.string.notification_update_available)
-                .replace("[KLUCZ]", updateKey)
-                .replace("[STATUS]", status);
+    /**
+     * NOWA METODA DLA AKTUALIZACJI SYSTEMOWYCH
+     */
+    public void showUpdateNotification(long assignmentId, String title, String version, String urgency) {
+        String notifTitle = "Aktualizacja: " + title + " (" + version + ")";
+        String notifBody = "Dostępna nowa aktualizacja. Status: " + urgency;
 
-        int notificationId = updateKey.hashCode();
+        if ("REQUIRED".equals(urgency)) {
+            notifBody += " (Wymagana!)";
+        }
 
+        // --- NOWA LOGIKA: Sprawdzamy licznik odroczeń ---
+        // Musimy odczytać ten sam plik SharedPreferences co w DeferUpdateActivity ("UpdatePrefs")
+        android.content.SharedPreferences prefs = context.getSharedPreferences("UpdatePrefs", Context.MODE_PRIVATE);
+        int deferCount = prefs.getInt("defer_count_" + assignmentId, 0);
+
+        // Decyzja: Czy pokazać przycisk "Odłóż"?
+        // Pokaż JEŚLI: (To NIE jest REQUIRED) LUB (To jest REQUIRED, ale licznik jest 0)
+        boolean showDeferButton = !"REQUIRED".equals(urgency) || deferCount == 0;
+        // -----------------------------------------------
+
+        int notificationId = (int) assignmentId;
+
+        // Intent dla Akceptacji (Zainstaluj)
         Intent acceptIntent = new Intent(context, AcceptUpdateActivity.class);
-        acceptIntent.putExtra("UPDATE_KEY", updateKey);
+        acceptIntent.putExtra("ASSIGNMENT_ID", assignmentId);
+        acceptIntent.putExtra("URGENCY", urgency);
         acceptIntent.putExtra("NOTIFICATION_ID", notificationId);
-        PendingIntent acceptPendingIntent = PendingIntent.getActivity(context, notificationId * 2, acceptIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        PendingIntent acceptPendingIntent = PendingIntent.getActivity(
+                context,
+                notificationId * 10,
+                acceptIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+        );
 
-        Intent deferIntent = new Intent(context, DeferUpdateActivity.class);
-        deferIntent.putExtra("UPDATE_KEY", updateKey);
-        deferIntent.putExtra("NOTIFICATION_ID", notificationId);
-        PendingIntent deferPendingIntent = PendingIntent.getActivity(context, notificationId * 2 + 1, deferIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-
+        // Budowanie powiadomienia
         NotificationCompat.Builder builder = new NotificationCompat.Builder(context, CHANNEL_ID_UPDATES)
                 .setSmallIcon(R.drawable.ic_notification_update)
-                .setContentTitle(title)
-                .setContentText(message)
-                .setStyle(new NotificationCompat.BigTextStyle().bigText(message))
-                // <<< POPRAWKA: Literówka 'NotificationJpcompat' -> 'NotificationCompat'
-                .setPriority(NotificationCompat.PRIORITY_DEFAULT)
-                .setAutoCancel(true)
-                .addAction(R.drawable.ic_check, context.getString(R.string.action_accept_update), acceptPendingIntent)
-                .addAction(R.drawable.ic_close, context.getString(R.string.action_defer_update), deferPendingIntent);
+                .setContentTitle(notifTitle)
+                .setContentText(notifBody)
+                .setStyle(new NotificationCompat.BigTextStyle().bigText(notifBody))
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setOnlyAlertOnce(true)
+                .setAutoCancel(false) // Wymaga akcji użytkownika
+                .setOngoing("REQUIRED".equals(urgency)) // Nie da się usunąć palcem jeśli wymagana
+
+                // Guzik "Zainstaluj" - ZAWSZE widoczny
+                .addAction(R.drawable.ic_check, context.getString(R.string.action_accept_update), acceptPendingIntent);
+
+        // Guzik "Odłóż" - WARUNKOWO widoczny
+        if (showDeferButton) {
+            // Intent dla Odroczenia (tworzymy go tylko jeśli potrzebny)
+            Intent deferIntent = new Intent(context, DeferUpdateActivity.class);
+            deferIntent.putExtra("ASSIGNMENT_ID", assignmentId);
+            deferIntent.putExtra("URGENCY", urgency);
+            deferIntent.putExtra("NOTIFICATION_ID", notificationId);
+            PendingIntent deferPendingIntent = PendingIntent.getActivity(
+                    context,
+                    notificationId * 10 + 1,
+                    deferIntent,
+                    PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+            );
+
+            builder.addAction(R.drawable.ic_close, context.getString(R.string.action_defer_update), deferPendingIntent);
+        } else if ("REQUIRED".equals(urgency)) {
+            // Opcjonalnie: Zmień tekst, żeby użytkownik wiedział, że to ostatnia szansa
+            builder.setContentText(notifBody + "\nOstatnie ostrzeżenie: Instalacja wymagana.");
+        }
 
         if (notificationManager != null) {
             notificationManager.notify(notificationId, builder.build());
-            Log.i(TAG, "Wyslano powiadomienie o aktualizacji: " + updateKey);
         }
     }
 

@@ -68,6 +68,7 @@ public class VpsClientService extends Service {
     private SharedPreferences batteryPrefs;
     private Gson gson;
     private SharedPreferences mutePrefs;
+    private static final String UPDATE_PREFS = "UpdatePrefs";
     @Override
     public void onCreate() {
         super.onCreate();
@@ -93,6 +94,7 @@ public class VpsClientService extends Service {
         executorService.scheduleWithFixedDelay(() -> syncFoldersAndFavorites(false), 2, POLLING_INTERVAL_FOLDERS_SECONDS, TimeUnit.SECONDS);
         executorService.scheduleWithFixedDelay(this::fetchUpdateStatus, 5, POLLING_INTERVAL_GATEWAYS_SECONDS, TimeUnit.SECONDS);
         executorService.scheduleWithFixedDelay(this::fetchSensorErrorStatus, 10, 60, TimeUnit.SECONDS);
+        SharedPreferences updatePrefs = getSharedPreferences(UPDATE_PREFS, Context.MODE_PRIVATE);
     }
 
     private Notification createNotification() {
@@ -282,57 +284,79 @@ public class VpsClientService extends Service {
 
 
     /**
-     * Zadanie 4: Pobiera status aktualizacji (stara logika)
+     * Zadanie 4: Pobiera status aktualizacji (NOWA LOGIKA)
+     * Odpytuje /api/my-updates i sprawdza lokalne wyciszenie.
      */
     private void fetchUpdateStatus() {
-        // ... (bez zmian)
         String jwtToken = getJwtToken();
         if (jwtToken == null) return;
+
         Request request = new Request.Builder()
-                .url(Constants.UPDATE_STATUS_ENDPOINT)
+                .url(Constants.MY_UPDATES_ENDPOINT) //
                 .addHeader("Authorization", "Bearer " + jwtToken)
                 .get()
                 .build();
+
         httpClient.newCall(request).enqueue(new Callback() {
             @Override
             public void onFailure(@NonNull Call call, @NonNull IOException e) {
-                Log.e(TAG, "BLAD POBIERANIA (Update Status): " + e.getMessage());
+                Log.e(TAG, "BLAD POBIERANIA (Update List): " + e.getMessage());
             }
 
             @Override
             public void onResponse(@NonNull Call call, @NonNull Response response) {
                 try (Response resp = response) {
                     if (resp.isSuccessful() && resp.body() != null) {
-                        processUpdateStatus(resp.body().string());
+                        String json = resp.body().string();
+                        processUpdateList(json);
                     } else {
-                        Log.w(TAG, String.format(Locale.getDefault(),
-                                getString(R.string.log_warn_update_status_failed), resp.code()));
+                        Log.w(TAG, "Update check failed: " + resp.code());
                     }
                 } catch (Exception e) {
-                    Log.e(TAG, "KRYTYCZNY BLAD w onResponse (Update Status): " + e.getMessage());
+                    Log.e(TAG, "Error processing updates: " + e.getMessage());
                 }
             }
         });
     }
 
-    // --- Reszta metod ---
-
-    private void processUpdateStatus(String json) {
-        // ... (bez zmian)
+    private void processUpdateList(String json) {
         try {
-            JSONObject root = new JSONObject(json);
-            Iterator<String> keys = root.keys();
-            while (keys.hasNext()) {
-                String key = keys.next();
-                String status = root.getString(key);
-                if ("available".equalsIgnoreCase(status)) {
-                    notificationHelper.showUpdateNotification(key, status);
+            // Oczekujemy tablicy JSON obiektów ClientUpdateResponse
+            JSONArray updatesArray = new JSONArray(json);
+            SharedPreferences updatePrefs = getSharedPreferences(UPDATE_PREFS, Context.MODE_PRIVATE);
+            long now = System.currentTimeMillis();
+
+            for (int i = 0; i < updatesArray.length(); i++) {
+                JSONObject update = updatesArray.getJSONObject(i);
+
+                long assignmentId = update.getLong("assignmentId");
+                String title = update.getString("title");
+                String urgency = update.getString("urgency"); // REQUIRED, OPTIONAL, CUSTOM
+                String version = update.getString("version");
+
+                // Sprawdź, czy ta aktualizacja nie jest wyciszona lokalnie (Snooze 5 min)
+                long snoozeUntil = updatePrefs.getLong("snooze_" + assignmentId, 0);
+                if (now < snoozeUntil) {
+                    Log.d(TAG, "Aktualizacja " + assignmentId + " jest wyciszona do " + new java.util.Date(snoozeUntil));
+                    continue;
                 }
+
+                // Pobierz deferCount (ilość odroczeń z backendu, jeśli jest w JSON,
+                // jeśli nie ma - przyjmij 0. Backend w AssignmentDto to wysyła, w ClientResponse może nie być,
+                // ale załóżmy że dodaliśmy to do DTO backendu lub klient musi śledzić.
+                // Wg backendu wysłanego wcześniej: ClientUpdateResponse nie ma pola deferCount,
+                // ale logika "tylko raz" jest walidowana przez backend.
+                // Tutaj po prostu wyświetlamy powiadomienie).
+
+                // Wyświetl powiadomienie
+                notificationHelper.showUpdateNotification(assignmentId, title, version, urgency);
             }
         } catch (JSONException e) {
-            Log.e(TAG, "Blad parsowania JSON z /api/update/status: " + e.getMessage());
+            Log.e(TAG, "JSON Error updates: " + e.getMessage());
         }
     }
+
+    // --- Reszta metod ---
 
     private void processSensorData(String json) {
         // ... (bez zmian)

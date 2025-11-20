@@ -1,73 +1,88 @@
 package com.testserwera.bazunia.ui;
 
+import com.testserwera.bazunia.R;
 import android.app.NotificationManager;
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.util.Log;
 import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
-import com.testserwera.bazunia.R;
 import com.testserwera.bazunia.utils.Constants;
-
-import android.content.SharedPreferences;
 import okhttp3.*;
-import java.io.IOException;
-import java.util.Locale;
 import org.json.JSONObject;
+import java.io.IOException;
 
 
 public class DeferUpdateActivity extends AppCompatActivity {
 
     private static final String TAG = "DeferUpdateActivity";
+    private static final String UPDATE_PREFS = "UpdatePrefs";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        // Uwaga: Nie ustawiamy setContentView, ponieważ ta aktywność działa w tle
+        // Bez UI - działamy w tle
 
-        final String updateKey = getIntent().getStringExtra("UPDATE_KEY");
-        final int notificationId = getIntent().getIntExtra("NOTIFICATION_ID", 0);
+        long assignmentId = getIntent().getLongExtra("ASSIGNMENT_ID", -1);
+        String urgency = getIntent().getStringExtra("URGENCY");
+        int notificationId = getIntent().getIntExtra("NOTIFICATION_ID", 0);
 
-        if (updateKey != null) {
-            sendUpdateDecisionToVps(updateKey, "DEFERRED");
-            Toast.makeText(this, getString(R.string.toast_update_deferred, updateKey), Toast.LENGTH_SHORT).show();
+        if (assignmentId != -1) {
+            handleDefer(assignmentId, urgency, notificationId);
         } else {
-            Log.e(TAG, "Brak klucza aktualizacji.");
+            finish();
         }
-
-        // Zawsze usuń powiadomienie po akcji
-        NotificationManager manager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-        if (manager != null && notificationId != 0) {
-            manager.cancel(notificationId);
-        }
-
-        // Aktywność musi się natychmiast zamknąć
-        finish();
     }
 
-    // Metoda do wysłania decyzji do VPS
-    private void sendUpdateDecisionToVps(String key, String decision) {
+    private void handleDefer(long id, String urgency, int notifId) {
+        SharedPreferences prefs = getSharedPreferences(UPDATE_PREFS, Context.MODE_PRIVATE);
+
+        // 1. Zwiększamy licznik odroczeń dla tego konkretnego ID
+        String countKey = "defer_count_" + id;
+        int currentCount = prefs.getInt(countKey, 0);
+        prefs.edit().putInt(countKey, currentCount + 1).apply();
+
+        // 2. Logika Snooze (5 minut)
+        long snoozeTime = 5 * 60 * 1000;
+        prefs.edit().putLong("snooze_" + id, System.currentTimeMillis() + snoozeTime).apply();
+
+        // 3. Usuń powiadomienie
+        NotificationManager manager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+        if (manager != null) manager.cancel(notifId);
+
+        // 4. Komunikaty (Twoja poprzednia logika)
+        if ("REQUIRED".equals(urgency)) {
+            // Jeśli to było pierwsze (i ostatnie) odłożenie
+            if (currentCount == 0) {
+                Toast.makeText(this, R.string.toast_update_postponed_timer, Toast.LENGTH_SHORT).show();
+            } else {
+                // Teoretycznie tu nie wejdzie, bo przycisk zniknie, ale dla bezpieczeństwa:
+                Toast.makeText(this, "Tej aktualizacji nie można już odłożyć!", Toast.LENGTH_SHORT).show();
+            }
+        } else {
+            Toast.makeText(this, R.string.toast_update_postponed_generic, Toast.LENGTH_SHORT).show();
+        }
+
+        sendUpdateStatus(id, "DEFERRED");
+    }
+
+    private void sendUpdateStatus(long id, String status) {
         SharedPreferences authPrefs = getSharedPreferences(LoginActivity.AUTH_PREFS, Context.MODE_PRIVATE);
         String jwtToken = authPrefs.getString(LoginActivity.KEY_JWT_TOKEN, null);
 
-        if (jwtToken == null) {
-            Log.e(TAG, getString(R.string.log_error_no_token));
-            return;
-        }
-
         OkHttpClient client = new OkHttpClient();
-
         JSONObject json = new JSONObject();
         try {
-            json.put("key", key);
-            json.put("decision", decision);
-        } catch (Exception e) { /* ... */ }
+            json.put("status", status);
+        } catch (Exception e) {}
 
-        RequestBody body = RequestBody.create(json.toString(), MediaType.get("application/json; charset=utf-8"));
+        RequestBody body = RequestBody.create(json.toString(), MediaType.get("application/json"));
+        String url = Constants.UPDATE_BASE_ENDPOINT + "/" + id + "/status"; //
 
         Request request = new Request.Builder()
-                .url(Constants.UPDATE_DECISION_ENDPOINT)
+                .url(url)
                 .addHeader("Authorization", "Bearer " + jwtToken)
                 .post(body)
                 .build();
@@ -75,16 +90,20 @@ public class DeferUpdateActivity extends AppCompatActivity {
         client.newCall(request).enqueue(new Callback() {
             @Override
             public void onFailure(@NonNull Call call, @NonNull IOException e) {
-                Log.e(TAG, "BLAD DECYZJI: " + e.getMessage());
+                Log.e(TAG, "Nie udało się wysłać statusu DEFERRED");
+                finish();
             }
 
             @Override
             public void onResponse(@NonNull Call call, @NonNull Response response) {
-                if (response.isSuccessful()) {
-                    Log.i(TAG, "SUKCES: Decyzja '" + decision + "' dla " + key + " wysłana do VPS.");
+                if (!response.isSuccessful()) {
+                    // Jeśli backend zwróci błąd (np. nie można już odłożyć REQUIRED),
+                    // użytkownik dostanie powiadomienie znowu za 60 sekund (bo polling service).
+                    Log.w(TAG, "Backend odrzucił DEFERRED: " + response.code());
                 } else {
-                    Log.w(TAG, String.format(Locale.getDefault(), "DECYZJA NIEUDANA, kod: %d", response.code()));
+                    Log.i(TAG, "Status DEFERRED zapisany w backendzie.");
                 }
+                finish();
             }
         });
     }

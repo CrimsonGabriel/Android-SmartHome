@@ -338,4 +338,17 @@
     <string name="alert_title_sensor_comms_error">Błąd Komunikacji</string>
 
     <string name="test_connection_desc">Testuj połączenie z serwerem</string>
+
+    <string name="update_status_downloading">Pobieranie pakietu…</string>
+    <string name="update_status_installing">Instalowanie…</string>
+    <string name="update_status_verifying">Weryfikacja…</string>
+    <string name="update_status_finalizing">Finalizowanie…</string>
+    <string name="update_success">Zaktualizowano pomyślnie!</string>
+    <string name="update_error_connection">Błąd połączenia!</string>
+    <string name="update_error_server">Błąd serwera: %1$d</string>
+    <string name="update_btn_close">Zamknij</string>
+    <string name="update_prepare">Przygotowanie…</string>
+    <string name="_0">0%</string>
+    <string name="toast_update_postponed_generic">Odłożono aktualizację.</string>
+    <string name="toast_update_postponed_timer">Aktualizacja odłożona o 5 minut.</string>
 </resources>

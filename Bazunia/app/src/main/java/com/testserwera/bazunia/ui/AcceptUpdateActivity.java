@@ -2,77 +2,104 @@ package com.testserwera.bazunia.ui;
 
 import android.app.NotificationManager;
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
+import android.view.View;
+import android.widget.Button;
+import android.widget.ProgressBar;
+import android.widget.TextView;
 import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import com.testserwera.bazunia.R;
 import com.testserwera.bazunia.utils.Constants;
-import android.content.SharedPreferences;
 import okhttp3.*;
-import java.io.IOException;
-import java.util.Locale;
 import org.json.JSONObject;
-
+import java.io.IOException;
 
 public class AcceptUpdateActivity extends AppCompatActivity {
 
     private static final String TAG = "AcceptUpdateActivity";
+    private ProgressBar progressBar;
+    private TextView tvStatus, tvPercent;
+    private Button btnClose;
+    private long assignmentId;
+    private int notificationId;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_accept_update);
 
-        final String updateKey = getIntent().getStringExtra("UPDATE_KEY");
-        final int notificationId = getIntent().getIntExtra("NOTIFICATION_ID", 0);
+        progressBar = findViewById(R.id.progressBar);
+        tvStatus = findViewById(R.id.tvStatus);
+        tvPercent = findViewById(R.id.tvProgressPercent);
+        btnClose = findViewById(R.id.btnClose);
 
-        if (updateKey != null) {
-            sendUpdateDecisionToVps(updateKey, "ACCEPTED");
+        assignmentId = getIntent().getLongExtra("ASSIGNMENT_ID", -1);
+        notificationId = getIntent().getIntExtra("NOTIFICATION_ID", 0);
 
-            // W zależności od klucza (App/GW-01), wywołaj odpowiednią akcję
-            if ("App".equals(updateKey)) {
-                Toast.makeText(this, getString(R.string.toast_update_app_starting), Toast.LENGTH_LONG).show();
-                // W realnym świecie: otwórz Google Play Store lub rozpocznij pobieranie APK
-            } else {
-                Toast.makeText(this, getString(R.string.toast_update_gateway_starting, updateKey), Toast.LENGTH_LONG).show();
-                // W realnym świecie: wyślij polecenie do bramki
-            }
-        } else {
-            Log.e(TAG, "Brak klucza aktualizacji.");
-        }
-
-        // Zawsze usuń powiadomienie po akcji
-        NotificationManager manager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-        if (manager != null && notificationId != 0) {
-            manager.cancel(notificationId);
-        }
-
-        finish();
-    }
-
-    // Metoda do wysłania decyzji do VPS (taka sama jak w DeferUpdateActivity)
-    private void sendUpdateDecisionToVps(String key, String decision) {
-        SharedPreferences authPrefs = getSharedPreferences(LoginActivity.AUTH_PREFS, Context.MODE_PRIVATE);
-        String jwtToken = authPrefs.getString(LoginActivity.KEY_JWT_TOKEN, null);
-
-        if (jwtToken == null) {
-            Log.e(TAG, getString(R.string.log_error_no_token));
+        if (assignmentId == -1) {
+            Toast.makeText(this, "Błąd ID aktualizacji", Toast.LENGTH_SHORT).show();
+            finish();
             return;
         }
 
-        OkHttpClient client = new OkHttpClient();
+        // Usuń powiadomienie
+        NotificationManager manager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+        if (manager != null) manager.cancel(notificationId);
 
+        btnClose.setOnClickListener(v -> finish());
+
+        // Rozpocznij symulację instalacji
+        startInstallationProcess();
+    }
+
+    private void startInstallationProcess() {
+        tvStatus.setText(getString(R.string.update_status_downloading));
+
+        // Symulacja postępu w nowym wątku
+        new Thread(() -> {
+            for (int i = 0; i <= 100; i += 2) {
+                try {
+                    Thread.sleep(50); // Szybkość paska
+                } catch (InterruptedException e) { e.printStackTrace(); }
+
+                int progress = i;
+                runOnUiThread(() -> {
+                    progressBar.setProgress(progress);
+                    tvPercent.setText(progress + "%");
+                    if (progress == 50) tvStatus.setText(getString(R.string.update_status_installing));
+                    if (progress == 80) tvStatus.setText(getString(R.string.update_status_verifying));
+                });
+            }
+
+            // Po zakończeniu paska, wyślij request do backendu
+            runOnUiThread(() -> sendUpdateStatus(assignmentId, "COMPLETED"));
+        }).start();
+    }
+
+    private void sendUpdateStatus(long id, String status) {
+        tvStatus.setText(getString(R.string.update_status_finalizing));
+        SharedPreferences authPrefs = getSharedPreferences(LoginActivity.AUTH_PREFS, Context.MODE_PRIVATE);
+        String jwtToken = authPrefs.getString(LoginActivity.KEY_JWT_TOKEN, null);
+
+        OkHttpClient client = new OkHttpClient();
         JSONObject json = new JSONObject();
         try {
-            json.put("key", key);
-            json.put("decision", decision);
-        } catch (Exception e) { /* ... */ }
+            json.put("status", status);
+        } catch (Exception e) {}
 
-        RequestBody body = RequestBody.create(json.toString(), MediaType.get("application/json; charset=utf-8"));
+        RequestBody body = RequestBody.create(json.toString(), MediaType.get("application/json"));
+
+        // Używamy nowego endpointu: /api/updates/{id}/status
+        String url = Constants.UPDATE_BASE_ENDPOINT + "/" + id + "/status";
 
         Request request = new Request.Builder()
-                .url(Constants.UPDATE_DECISION_ENDPOINT)
+                .url(url)
                 .addHeader("Authorization", "Bearer " + jwtToken)
                 .post(body)
                 .build();
@@ -80,16 +107,26 @@ public class AcceptUpdateActivity extends AppCompatActivity {
         client.newCall(request).enqueue(new Callback() {
             @Override
             public void onFailure(@NonNull Call call, @NonNull IOException e) {
-                Log.e(TAG, "BLAD DECYZJI: " + e.getMessage());
+                runOnUiThread(() -> {
+                    tvStatus.setText("Błąd połączenia!");
+                    Toast.makeText(AcceptUpdateActivity.this, "Błąd: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                    btnClose.setVisibility(View.VISIBLE);
+                });
             }
 
             @Override
             public void onResponse(@NonNull Call call, @NonNull Response response) {
-                if (response.isSuccessful()) {
-                    Log.i(TAG, "SUKCES: Decyzja '" + decision + "' dla " + key + " wysłana do VPS.");
-                } else {
-                    Log.w(TAG, String.format(Locale.getDefault(), "DECYZJA NIEUDANA, kod: %d", response.code()));
-                }
+                runOnUiThread(() -> {
+                    if (response.isSuccessful()) {
+                        tvStatus.setText(getString(R.string.update_success));
+                        progressBar.setProgress(100);
+                        // Opcjonalnie zamknij sam po chwili
+                        new Handler(Looper.getMainLooper()).postDelayed(() -> finish(), 2000);
+                    } else {
+                        tvStatus.setText(getString(R.string.update_error_server, response.code()));
+                        btnClose.setVisibility(View.VISIBLE);
+                    }
+                });
             }
         });
     }
