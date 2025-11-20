@@ -3,11 +3,11 @@ plugins {
 }
 
 android {
-    namespace = "com.example.bazunia"
+    namespace = "com.testserwera.bazunia"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.example.bazunia"
+        applicationId = "com.testserwera.bazunia"
         minSdk = 26
         targetSdk = 35
         versionCode = 1
