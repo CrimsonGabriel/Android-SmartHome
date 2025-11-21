@@ -236,6 +236,7 @@
                 android:layout_height="1dp"
                 android:background="?android:attr/listDivider"
                 android:layout_marginBottom="32dp"/>
+
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -251,6 +252,29 @@
                 android:layout_gravity="center_horizontal"
                 android:text="@string/settings_account_button"
                 app:icon="@drawable/ic_security" />
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="?android:attr/listDivider"
+                android:layout_marginBottom="32dp"
+                android:layout_marginTop="32dp"/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                android:text="@string/settings_sharing_title"
+                android:textAppearance="@style/TextAppearance.Material3.TitleLarge" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnSharingSettings"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:text="@string/btn_sharing_settings"
+                app:icon="@drawable/ic_user_add" />
 
             <View
                 android:layout_width="match_parent"

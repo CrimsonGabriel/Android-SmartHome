@@ -14,6 +14,7 @@ public class Gateway {
     String folder;
     String description;
     String lastSeen;
+    Long ownerId;
     List<Sensor> sensors; // Zagnieżdżona lista czujników
 
     // Gettery są potrzebne dla adaptera
@@ -23,5 +24,12 @@ public class Gateway {
     public String getFolder() { return folder; }
     public String getDescription() { return description; }
     public String getLastSeen() { return lastSeen; }
+    public Long getOwnerId() { return ownerId; }
     public List<Sensor> getSensors() { return sensors; }
+
+
+    @Override
+    public String toString() {
+        return name + " (ID: " + id + ")";
+    }
 }

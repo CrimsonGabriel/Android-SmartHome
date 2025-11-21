@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:padding="12dp"
+    android:gravity="center_vertical"
+    android:background="?android:attr/selectableItemBackground">
+
+    <ImageView
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:src="@drawable/ic_launcher_foreground"
+        android:layout_marginEnd="12dp"
+        app:tint="@color/colorPrimary"
+        android:contentDescription="@string/app_logo_description"/>
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/txtUserEmail"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            tools:text="@string/preview_user_email"
+            android:textSize="16sp"
+            android:textStyle="bold"/>
+
+        <TextView
+            android:id="@+id/txtPermission"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            tools:text="@string/preview_permission_status"
+            android:textSize="12sp"
+            android:textColor="?android:attr/textColorSecondary"/>
+    </LinearLayout>
+
+    <ImageButton
+        android:id="@+id/btnDeleteShare"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:src="@drawable/ic_delete"
+        android:background="?android:attr/selectableItemBackgroundBorderless"
+        android:contentDescription="@string/menu_delete"
+        app:tint="@color/colorDelete"/>
+
+</LinearLayout>

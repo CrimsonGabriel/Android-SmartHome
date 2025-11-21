@@ -387,11 +387,30 @@
     <string name="home_safe_desc">Wszystkie czujniki w normie. Możesz wychodzić.</string>
     <string name="home_risk_title">Uwaga! Wykryto problemy</string>
     <string name="home_risk_desc">Znaleziono %1$d potencjalnych zagrożeń:</string>
-    <string name="risk_status_check">Sprawdzam stan domu...</string>
+    <string name="risk_status_check">Sprawdzam stan domu…</string>
     <string name="risk_network_error">Błąd połączenia z serwerem</string>
     <string name="btn_close">Zamknij</string>
     <string name="risk_icon_desc">Ikona ostrzeżenia</string>
     <string name="preview_sensor_name">Okno Kuchnia</string>
     <string name="preview_risk_issue">Otwarte</string>
-    <string name="please_wait">Proszę czekać...</string>
+    <string name="please_wait">Proszę czekać…</string>
+    <string name="settings_sharing_title">Udostępnianie Bramek</string>
+    <string name="btn_sharing_settings">Zarządzaj udostępnianiem</string>
+    <string name="sharing_activity_title">Udostępnij Bramkę</string>
+    <string name="sharing_select_gateway_label">Wybierz swoją bramkę:</string>
+    <string name="sharing_select_user_label">Wybierz użytkownika:</string>
+    <string name="sharing_permission_label">Poziom uprawnień:</string>
+    <string name="perm_view">Tylko podgląd (VIEW)</string>
+    <string name="perm_full">Pełny dostęp (FULL_ACCESS)</string>
+    <string name="btn_share_add">Udostępnij</string>
+    <string name="sharing_list_title">Osoby z dostępem do tej bramki:</string>
+    <string name="sharing_no_users">Brak współużytkowników.</string>
+    <string name="sharing_confirm_delete">Odebrać dostęp użytkownikowi %1$s?</string>
+    <string name="toast_share_success">Pomyślnie udostępniono bramkę.</string>
+    <string name="toast_share_removed">Dostęp odebrany.</string>
+    <string name="error_no_owned_gateways">Nie posiadasz żadnych bramek na własność.</string>
+    <string name="sharing_loading">Ładowanie danych…</string>
+
+    <string name="preview_user_email">jan@przyklad.pl</string>
+    <string name="preview_permission_status">PODGLĄD</string>
 </resources>

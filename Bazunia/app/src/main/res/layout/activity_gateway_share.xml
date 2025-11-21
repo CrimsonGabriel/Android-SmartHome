@@ -1,0 +1,163 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="16dp">
+
+    <TextView
+        android:id="@+id/titleShare"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:text="@string/sharing_activity_title"
+        android:textAppearance="@style/TextAppearance.Material3.HeadlineMedium"
+        android:textStyle="bold"
+        android:layout_marginBottom="24dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"/>
+
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/layoutGatewaySpinner"
+        style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="24dp"
+        android:hint="@string/sharing_select_gateway_label"
+        app:startIconDrawable="@drawable/ic_gateway"
+        app:layout_constraintTop_toBottomOf="@id/titleShare"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <AutoCompleteTextView
+            android:id="@+id/spinnerGateways"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="none"
+            tools:text="Bramka w Salonie" />
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/layoutUserSpinner"
+        style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:hint="@string/sharing_select_user_label"
+        app:startIconDrawable="@drawable/ic_search"
+        app:layout_constraintTop_toBottomOf="@id/layoutGatewaySpinner"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <AutoCompleteTextView
+            android:id="@+id/spinnerUsers"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="none"
+            tools:text="jan.kowalski@example.com"/>
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <TextView
+        android:id="@+id/lblPerm"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/sharing_permission_label"
+        android:layout_marginTop="24dp"
+        android:textAppearance="@style/TextAppearance.Material3.LabelLarge"
+        app:layout_constraintTop_toBottomOf="@id/layoutUserSpinner"
+        app:layout_constraintStart_toStartOf="parent"/>
+
+    <RadioGroup
+        android:id="@+id/radioGroupPerm"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="8dp"
+        app:layout_constraintTop_toBottomOf="@id/lblPerm"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <RadioButton
+            android:id="@+id/radioView"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/perm_view"
+            android:checked="true"/>
+
+        <RadioButton
+            android:id="@+id/radioFull"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/perm_full"/>
+    </RadioGroup>
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnShare"
+        android:layout_width="0dp"
+        android:layout_height="56dp"
+        android:text="@string/btn_share_add"
+        android:layout_marginTop="24dp"
+        app:icon="@drawable/ic_check"
+        app:iconGravity="textStart"
+        app:layout_constraintTop_toBottomOf="@id/radioGroupPerm"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"/>
+
+    <View
+        android:id="@+id/divider2"
+        android:layout_width="0dp"
+        android:layout_height="1dp"
+        android:background="?android:attr/listDivider"
+        android:layout_marginTop="24dp"
+        app:layout_constraintTop_toBottomOf="@id/btnShare"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"/>
+
+    <TextView
+        android:id="@+id/lblList"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:text="@string/sharing_list_title"
+        android:layout_marginTop="16dp"
+        android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
+        app:layout_constraintTop_toBottomOf="@id/divider2"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"/>
+
+    <TextView
+        android:id="@+id/txtEmptyList"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/sharing_no_users"
+        android:visibility="gone"
+        android:layout_marginTop="32dp"
+        android:textColor="?android:attr/textColorSecondary"
+        app:layout_constraintTop_toBottomOf="@id/lblList"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"/>
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/recyclerShares"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_marginTop="8dp"
+        app:layout_constraintTop_toBottomOf="@id/lblList"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"/>
+
+    <ProgressBar
+        android:id="@+id/progressBar"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:visibility="gone"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"/>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

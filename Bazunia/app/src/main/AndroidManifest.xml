@@ -65,6 +65,11 @@
             android:exported="true"
             android:theme="@style/Theme.AppCompat.DayNight.NoActionBar"/>
 
+        <activity
+            android:name=".ui.GatewayShareActivity"
+            android:label="@string/sharing_activity_title"
+            android:exported="false"
+            android:parentActivityName=".ui.SettingsActivity" />
 
     </application>
 </manifest>

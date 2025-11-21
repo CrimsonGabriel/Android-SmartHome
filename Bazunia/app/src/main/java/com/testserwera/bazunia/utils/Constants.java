@@ -47,4 +47,8 @@ public class Constants {
     public static final String UPDATE_BASE_ENDPOINT = VPS_SERVER_IP + "/api/updates";
 
     public static final String RISK_REPORT_ENDPOINT = VPS_SERVER_IP + "/api/status/risk-report";
+    public static final String USER_ME_ENDPOINT = VPS_SERVER_IP + "/api/user/me";
+    public static final String USERS_AVAILABLE_SHARE_ENDPOINT = VPS_SERVER_IP + "/api/users/available-for-share";
+    public static final String GATEWAY_SHARE_ENDPOINT = VPS_SERVER_IP + "/api/gateways/share";
+    public static final String GATEWAY_SHARES_BASE = VPS_SERVER_IP + "/api/gateways";
 }

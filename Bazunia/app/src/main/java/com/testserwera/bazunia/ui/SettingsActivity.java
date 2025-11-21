@@ -5,7 +5,6 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.util.Log;
-import android.view.View;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.LinearLayout;
 import android.widget.RadioGroup;
@@ -141,6 +140,15 @@ public class SettingsActivity extends AppCompatActivity {
         if (btnAccountSettings != null) {
             btnAccountSettings.setOnClickListener(v -> {
                 Intent intent = new Intent(SettingsActivity.this, AccountSettingsActivity.class);
+                startActivity(intent);
+            });
+        }
+
+        MaterialButton btnSharingSettings = findViewById(R.id.btnSharingSettings);
+        if (btnSharingSettings != null) {
+            btnSharingSettings.setOnClickListener(v -> {
+                // Przechodzimy do nowego ekranu udostępniania
+                Intent intent = new Intent(SettingsActivity.this, GatewayShareActivity.class);
                 startActivity(intent);
             });
         }

@@ -387,12 +387,31 @@
     <string name="home_safe_desc">All sensors are normal. You can leave.</string>
     <string name="home_risk_title">Warning! Issues detected</string>
     <string name="home_risk_desc">Found %1$d potential risks:</string>
-    <string name="risk_status_check">Checking home status...</string>
+    <string name="risk_status_check">Checking home status…</string>
     <string name="risk_network_error">Server connection error</string>
     <string name="btn_close">Close</string>
 
     <string name="risk_icon_desc">Warning icon</string>
     <string name="preview_sensor_name">Kitchen Window</string>
     <string name="preview_risk_issue">Open</string>
-    <string name="please_wait">Please wait...</string>
+    <string name="please_wait">Please wait…</string>
+    <string name="settings_sharing_title">Gateway Sharing</string>
+    <string name="btn_sharing_settings">Manage Sharing</string>
+    <string name="sharing_activity_title">Share Gateway</string>
+    <string name="sharing_select_gateway_label">Select your gateway:</string>
+    <string name="sharing_select_user_label">Select user:</string>
+    <string name="sharing_permission_label">Permission level:</string>
+    <string name="perm_view">View Only (VIEW)</string>
+    <string name="perm_full">Full Access (FULL_ACCESS)</string>
+    <string name="btn_share_add">Share Gateway</string>
+    <string name="sharing_list_title">Users with access:</string>
+    <string name="sharing_no_users">No shared users.</string>
+    <string name="sharing_confirm_delete">Revoke access for user %1$s?</string>
+    <string name="toast_share_success">Gateway shared successfully.</string>
+    <string name="toast_share_removed">Access revoked.</string>
+    <string name="error_no_owned_gateways">You do not own any gateways.</string>
+    <string name="sharing_loading">Loading data…</string>
+
+    <string name="preview_user_email">user@example.com</string>
+    <string name="preview_permission_status">VIEW</string>
 </resources>
