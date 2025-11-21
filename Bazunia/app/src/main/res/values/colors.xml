@@ -15,4 +15,6 @@
     <color name="colorOnSurface">#191C1E</color>
     <color name="colorSurfaceVariant">#DDE3EA</color>
     <color name="colorOnSurfaceVariant">#41484D</color>
+
+    <color name="colorSafe">#4CAF50</color> <color name="colorRisk">#F44336</color> <color name="colorWarning">#FF9800</color>
 </resources>

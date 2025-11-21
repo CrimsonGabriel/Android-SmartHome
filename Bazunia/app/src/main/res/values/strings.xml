@@ -381,4 +381,17 @@
     <string name="toast_thresholds_disabled">Wyłączono powiadomienia progowe</string>
     <string name="toast_battery_enabled">Włączono powiadomienia o baterii</string>
     <string name="toast_battery_disabled">Wyłączono powiadomienia o baterii</string>
+
+    <string name="check_home_security">Sprawdź dom</string>
+    <string name="home_safe_title">Dom jest bezpieczny</string>
+    <string name="home_safe_desc">Wszystkie czujniki w normie. Możesz wychodzić.</string>
+    <string name="home_risk_title">Uwaga! Wykryto problemy</string>
+    <string name="home_risk_desc">Znaleziono %1$d potencjalnych zagrożeń:</string>
+    <string name="risk_status_check">Sprawdzam stan domu...</string>
+    <string name="risk_network_error">Błąd połączenia z serwerem</string>
+    <string name="btn_close">Zamknij</string>
+    <string name="risk_icon_desc">Ikona ostrzeżenia</string>
+    <string name="preview_sensor_name">Okno Kuchnia</string>
+    <string name="preview_risk_issue">Otwarte</string>
+    <string name="please_wait">Proszę czekać...</string>
 </resources>

@@ -381,4 +381,18 @@
     <string name="toast_thresholds_disabled">Threshold notifications disabled</string>
     <string name="toast_battery_enabled">Battery notifications enabled</string>
     <string name="toast_battery_disabled">Battery notifications disabled</string>
+
+    <string name="check_home_security">Check home</string>
+    <string name="home_safe_title">House is safe</string>
+    <string name="home_safe_desc">All sensors are normal. You can leave.</string>
+    <string name="home_risk_title">Warning! Issues detected</string>
+    <string name="home_risk_desc">Found %1$d potential risks:</string>
+    <string name="risk_status_check">Checking home status...</string>
+    <string name="risk_network_error">Server connection error</string>
+    <string name="btn_close">Close</string>
+
+    <string name="risk_icon_desc">Warning icon</string>
+    <string name="preview_sensor_name">Kitchen Window</string>
+    <string name="preview_risk_issue">Open</string>
+    <string name="please_wait">Please wait...</string>
 </resources>

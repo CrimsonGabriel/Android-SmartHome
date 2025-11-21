@@ -45,4 +45,6 @@ public class Constants {
     public static final String SENSOR_STATUS_ENDPOINT = VPS_SERVER_IP + "/api/sensors/status";
     public static final String MY_UPDATES_ENDPOINT = VPS_SERVER_IP + "/api/my-updates";
     public static final String UPDATE_BASE_ENDPOINT = VPS_SERVER_IP + "/api/updates";
+
+    public static final String RISK_REPORT_ENDPOINT = VPS_SERVER_IP + "/api/status/risk-report";
 }
