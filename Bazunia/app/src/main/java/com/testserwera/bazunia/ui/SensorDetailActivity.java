@@ -448,7 +448,6 @@ public class SensorDetailActivity extends AppCompatActivity {
                     editSensorInterval.setText(String.valueOf(interval));
                 } else {
                     editSensorInterval.setText(""); // Puste, jeśli null lub 0
-                    editSensorInterval.setHint(getString(R.string.sensor_detail_interval_hint));
                 }
 
                 // 2. Ustaw stan przełącznika raportowania
@@ -484,7 +483,6 @@ public class SensorDetailActivity extends AppCompatActivity {
                 editSensorNotificationInterval.setText(String.valueOf(savedInterval));
             } else {
                 editSensorNotificationInterval.setText("");
-                editSensorNotificationInterval.setHint(getString(R.string.sensor_detail_notification_interval_hint));
             }
         }
     }

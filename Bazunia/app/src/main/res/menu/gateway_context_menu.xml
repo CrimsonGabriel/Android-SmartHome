@@ -6,11 +6,9 @@
     <item
         android:id="@+id/menu_add_to_folder"
         android:title="@string/menu_add_to_folder" />
-
     <item
         android:id="@+id/menu_remove_gateway_from_folder"
         android:title="@string/menu_remove_from_folder" />
-
     <item
         android:id="@+id/menu_add_gateway_to_favorites"
         android:title="@string/menu_add_to_favorites" />
@@ -26,16 +24,11 @@
     <item
         android:id="@+id/action_check_battery"
         android:title="@string/action_check_battery" />
+
     <item
-        android:id="@+id/menu_disable_gateway_threshold_notifications"
-        android:title="@string/menu_disable_gateway_threshold_notifications" />
+        android:id="@+id/menu_toggle_gateway_threshold_notifications"
+        android:title="@string/menu_toggle_thresholds_title" />
     <item
-        android:id="@+id/menu_enable_gateway_threshold_notifications"
-        android:title="@string/menu_enable_gateway_threshold_notifications" />
-    <item
-        android:id="@+id/menu_disable_gateway_battery_notifications"
-        android:title="@string/menu_disable_gateway_battery_notifications" />
-    <item
-        android:id="@+id/menu_enable_gateway_battery_notifications"
-        android:title="@string/menu_enable_gateway_battery_notifications" />
+        android:id="@+id/menu_toggle_gateway_battery_notifications"
+        android:title="@string/menu_toggle_battery_title" />
 </menu>

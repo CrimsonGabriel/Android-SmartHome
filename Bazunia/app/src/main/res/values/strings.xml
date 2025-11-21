@@ -305,7 +305,7 @@
     <string name="action_check_battery">Sprawdź stan baterii</string>
     <string name="toast_battery_check_started">Rozpoczęto sprawdzanie baterii…</string>
 
-    <string name="menu_disable_threshold_notifications">Wyłącz alerty wartości (temp/drzwi)</string>
+    <string name="menu_disable_threshold_notifications">Wyłącz alerty wartości</string>
     <string name="menu_enable_threshold_notifications">Włącz alerty wartości</string>
     <string name="menu_disable_battery_notifications">Wyłącz alerty baterii</string>
     <string name="menu_enable_battery_notifications">Włącz alerty baterii</string>
@@ -368,4 +368,17 @@
     <string name="notif_retention_accepted">Admin zaakceptował Twój wniosek! Nowe limity zostały ustawione.</string>
     <string name="notif_retention_rejected">Admin odrzucił Twój wniosek o zmianę retencji.</string>
     <string name="dots3">…</string>
+
+    <string name="menu_toggle_thresholds_title">Powiadomienia progowe</string>
+    <string name="menu_toggle_battery_title">Powiadomienia baterii</string>
+
+    <string name="action_enable_thresholds">Włącz powiadomienia progowe</string>
+    <string name="action_disable_thresholds">Wyłącz powiadomienia progowe</string>
+    <string name="action_enable_battery">Włącz powiadomienia o baterii</string>
+    <string name="action_disable_battery">Wyłącz powiadomienia o baterii</string>
+
+    <string name="toast_thresholds_enabled">Włączono powiadomienia progowe</string>
+    <string name="toast_thresholds_disabled">Wyłączono powiadomienia progowe</string>
+    <string name="toast_battery_enabled">Włączono powiadomienia o baterii</string>
+    <string name="toast_battery_disabled">Wyłączono powiadomienia o baterii</string>
 </resources>

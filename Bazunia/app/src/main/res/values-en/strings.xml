@@ -368,4 +368,17 @@
     <string name="notif_retention_accepted">Admin accepted your request! New limits have been set.</string>
     <string name="notif_retention_rejected">Admin rejected your retention request.</string>
     <string name="dots3">…</string>
+
+    <string name="menu_toggle_thresholds_title">Threshold notifications</string>
+    <string name="menu_toggle_battery_title">Battery notifications</string>
+
+    <string name="action_enable_thresholds">Enable threshold notifications</string>
+    <string name="action_disable_thresholds">Disable threshold notifications</string>
+    <string name="action_enable_battery">Enable battery notifications</string>
+    <string name="action_disable_battery">Disable battery notifications</string>
+
+    <string name="toast_thresholds_enabled">Threshold notifications enabled</string>
+    <string name="toast_thresholds_disabled">Threshold notifications disabled</string>
+    <string name="toast_battery_enabled">Battery notifications enabled</string>
+    <string name="toast_battery_disabled">Battery notifications disabled</string>
 </resources>

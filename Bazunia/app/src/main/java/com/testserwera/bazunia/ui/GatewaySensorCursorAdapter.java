@@ -1,6 +1,7 @@
 package com.testserwera.bazunia.ui;
 
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.graphics.Color;
 import android.view.LayoutInflater;
@@ -16,8 +17,9 @@ import com.testserwera.bazunia.data.DatabaseHelper;
 public class GatewaySensorCursorAdapter extends CursorTreeAdapter {
 
     private final LayoutInflater inflater;
-    private final DatabaseHelper dbHelper; // Pole już tu jest
-    private final Context context; // Pole już tu jest
+    private final DatabaseHelper dbHelper;
+    private final Context context;
+    private final SharedPreferences mutePrefs;
 
     // <<< ⭐️⭐️⭐️ POPRAWKA KONSTRUKTORA ⭐️⭐️⭐️ >>>
     // Zmieniamy konstruktor, aby pasował do wywołania z DataActivity (3 argumenty)
@@ -26,7 +28,8 @@ public class GatewaySensorCursorAdapter extends CursorTreeAdapter {
         super(cursor, context);
         this.context = context;
         this.inflater = LayoutInflater.from(context);
-        this.dbHelper = dbHelper; // <<< Używamy dbHelper przekazanego z DataActivity
+        this.dbHelper = dbHelper;
+        this.mutePrefs = context.getSharedPreferences("NotificationMutePrefs", Context.MODE_PRIVATE);
     }
 
     @Override
@@ -73,8 +76,11 @@ public class GatewaySensorCursorAdapter extends CursorTreeAdapter {
         TextView textSensorName = view.findViewById(R.id.sensor_name_text);
         TextView textBatteryLevel = view.findViewById(R.id.battery_text);
         ImageView iconBattery = view.findViewById(R.id.battery_icon);
+        ImageView iconMuteThresh = view.findViewById(R.id.icon_mute_threshold);
+        ImageView iconMuteBatt = view.findViewById(R.id.icon_mute_battery);
 
         // 2. Pobierz dane z kursora
+        long sensorId = cursor.getLong(cursor.getColumnIndexOrThrow("_id")); // Potrzebne ID do sprawdzenia prefs
         String name = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.S_COLUMN_NAME));
         String type = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.S_COLUMN_TYPE));
         int batteryLevel = cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseHelper.S_COLUMN_BATTERY));
@@ -84,7 +90,16 @@ public class GatewaySensorCursorAdapter extends CursorTreeAdapter {
         textSensorName.setText(name);
         textSensorName.setCompoundDrawablesWithIntrinsicBounds(getIcon(type, keyword, null), 0, 0, 0);
 
-        // 4. Ustaw stan baterii (ikona + tekst)
+        // 4. OBSŁUGA IKON WYCISZENIA (Logic Check)
+        // Sprawdzamy w prefs czy dany sensor jest wyciszony
+        boolean isThreshMuted = mutePrefs.getBoolean("thresh_sensor_" + sensorId, false);
+        boolean isBattMuted = mutePrefs.getBoolean("batt_sensor_" + sensorId, false);
+
+        // Ustawiamy widoczność
+        iconMuteThresh.setVisibility(isThreshMuted ? View.VISIBLE : View.GONE);
+        iconMuteBatt.setVisibility(isBattMuted ? View.VISIBLE : View.GONE);
+
+        // 5. Ustaw stan baterii (ikona + tekst)
         if (batteryLevel > 0) {
             textBatteryLevel.setText(batteryLevel + "%");
             textBatteryLevel.setVisibility(View.VISIBLE);

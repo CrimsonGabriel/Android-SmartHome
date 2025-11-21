@@ -1,6 +1,7 @@
 package com.testserwera.bazunia.ui;
 
 import android.content.Context;
+import android.content.SharedPreferences; // ⭐️ Import SharedPreferences
 import android.database.Cursor;
 import android.graphics.Color;
 import android.view.LayoutInflater;
@@ -27,6 +28,7 @@ public class FolderAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
     private final Context context;
     private final List<Object> displayItems;
     private final FolderCallback callback;
+    private final SharedPreferences mutePrefs; // ⭐️ Pole dla ustawień
 
     public interface FolderCallback {
         void onFolderClicked(FolderItem folder);
@@ -44,14 +46,12 @@ public class FolderAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
         public SectionHeader(String title) { this.title = title; }
     }
 
-    // ⭐️ ZMIANA: Dodano drugi konstruktor dla "Niezgrupowane" ⭐️
     public static class FolderItem {
         final long id;
         final String name;
-        final String color; // Będzie null dla "Niezgrupowane"
+        final String color;
         boolean isExpanded;
 
-        // Istniejący konstruktor
         public FolderItem(Cursor cursor, boolean isExpanded) {
             this.id = cursor.getLong(cursor.getColumnIndexOrThrow("_id"));
             this.name = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.F_COLUMN_NAME));
@@ -59,11 +59,10 @@ public class FolderAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
             this.isExpanded = isExpanded;
         }
 
-        // ⭐️ NOWY KONSTRUKTOR (dla "Niezgrupowane") ⭐️
         public FolderItem(long id, String name, boolean isExpanded) {
             this.id = id;
             this.name = name;
-            this.color = null; // Specjalny folder nie ma koloru
+            this.color = null;
             this.isExpanded = isExpanded;
         }
     }
@@ -110,13 +109,14 @@ public class FolderAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
         }
     }
 
-    // --- Koniec Modeli Widoków ---
-
+    // --- Konstruktor ---
 
     public FolderAdapter(Context context, List<Object> displayItems, FolderCallback callback) {
         this.context = context;
         this.displayItems = displayItems;
         this.callback = callback;
+        // ⭐️ Inicjalizacja SharedPreferences (musi być ta sama nazwa co w DataActivity)
+        this.mutePrefs = context.getSharedPreferences("NotificationMutePrefs", Context.MODE_PRIVATE);
     }
 
     @Override
@@ -144,7 +144,6 @@ public class FolderAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
                 View gatewayView = inflater.inflate(R.layout.list_group, parent, false);
                 return new GatewayViewHolder(gatewayView);
             case VIEW_TYPE_SENSOR:
-                // Używamy tego samego layoutu co GatewaySensorCursorAdapter
                 View sensorView = inflater.inflate(R.layout.list_item, parent, false);
                 return new SensorViewHolder(sensorView);
             default:
@@ -190,7 +189,6 @@ public class FolderAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
         }
     }
 
-    // ⭐️ ZMIANA: Logika w `bind` do ukrywania koloru ⭐️
     class FolderViewHolder extends RecyclerView.ViewHolder {
         View colorIndicator;
         ImageView iconFolder, iconExpansion;
@@ -205,7 +203,6 @@ public class FolderAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
         void bind(FolderItem item) {
             textName.setText(item.name);
 
-            // ⭐️ ZMIANA: Obsługa braku koloru ⭐️
             if (item.color != null) {
                 try {
                     colorIndicator.setBackgroundColor(Color.parseColor(item.color));
@@ -215,19 +212,14 @@ public class FolderAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
                     colorIndicator.setVisibility(View.VISIBLE);
                 }
             } else {
-                // To jest nasz folder "Niezgrupowane", ukryj wskaźnik koloru
                 colorIndicator.setVisibility(View.GONE);
             }
 
-            // Ikona folderu (można by też ją zmienić, ale zostawmy)
             iconFolder.setImageResource(R.drawable.ic_folder);
-
-            // Strzałka (działa tak samo)
             iconExpansion.setImageResource(item.isExpanded ?
                     android.R.drawable.arrow_up_float :
                     android.R.drawable.arrow_down_float);
 
-            // Kliknięcie (działa tak samo)
             itemView.setOnClickListener(v -> callback.onFolderClicked(item));
             itemView.setOnLongClickListener(v -> {
                 callback.onFolderLongClicked(item, v);
@@ -277,72 +269,77 @@ public class FolderAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
         }
     }
 
-    // ###############################################################
-    // ###                        POCZĄTEK POPRAWKI                  ###
-    // ###############################################################
+    // ⭐️ ZMODYFIKOWANY SensorViewHolder
     class SensorViewHolder extends RecyclerView.ViewHolder {
 
-        // 1. Zdefiniuj wszystkie widoki z list_item.xml
         TextView textSensorName;
         TextView textBatteryLevel;
         ImageView iconBattery;
+        // ⭐️ Pola dla ikon wyciszenia
+        ImageView iconMuteThresh;
+        ImageView iconMuteBatt;
 
         SensorViewHolder(View view) {
             super(view);
-
-            // 2. Znajdź widoki za pomocą findViewById (TO BYŁ BŁĄD)
             textSensorName = view.findViewById(R.id.sensor_name_text);
             textBatteryLevel = view.findViewById(R.id.battery_text);
             iconBattery = view.findViewById(R.id.battery_icon);
+            // ⭐️ Szukamy ikon w layoucie (który zmodyfikowałeś wcześniej)
+            iconMuteThresh = view.findViewById(R.id.icon_mute_threshold);
+            iconMuteBatt = view.findViewById(R.id.icon_mute_battery);
         }
 
         void bind(SensorItem item) {
-
-            // 3. Ustaw ikonę i nazwę sensora
             textSensorName.setCompoundDrawablesWithIntrinsicBounds(getIcon(item.type, item.keyword, null), 0, 0, 0);
 
             String displayText = item.name;
-            // Dodaj nazwę bramki (dla listy ulubionych/folderów)
             if (item.gatewayName != null) {
                 displayText += " (" + item.gatewayName + ")";
             }
             textSensorName.setText(displayText);
 
-            // 4. Ustaw stan baterii (logika skopiowana z GatewaySensorCursorAdapter)
+            // ⭐️ OBSŁUGA WIDOCZNOŚCI IKON WYCISZENIA
+            boolean isThreshMuted = mutePrefs.getBoolean("thresh_sensor_" + item.id, false);
+            boolean isBattMuted = mutePrefs.getBoolean("batt_sensor_" + item.id, false);
+
+            // Sprawdzamy null na wypadek starego XMLa, ale powinny być
+            if (iconMuteThresh != null) {
+                iconMuteThresh.setVisibility(isThreshMuted ? View.VISIBLE : View.GONE);
+            }
+            if (iconMuteBatt != null) {
+                iconMuteBatt.setVisibility(isBattMuted ? View.VISIBLE : View.GONE);
+            }
+
+            // Obsługa baterii (bez zmian)
             if (item.batteryLevel > 0) {
                 textBatteryLevel.setText(item.batteryLevel + "%");
                 textBatteryLevel.setVisibility(View.VISIBLE);
                 iconBattery.setVisibility(View.VISIBLE);
 
-                // Ustaw odpowiednią ikonę (musisz dodać te drawable)
                 if (item.batteryLevel > 75) {
                     iconBattery.setImageResource(R.drawable.ic_battery_full);
                 } else if (item.batteryLevel > 50) {
                     iconBattery.setImageResource(R.drawable.ic_battery_good);
-                } else if (item.batteryLevel > 20) { // Zmieniony próg z 25 na 20
+                } else if (item.batteryLevel > 20) {
                     iconBattery.setImageResource(R.drawable.ic_battery_medium);
-                } else if (item.batteryLevel > 1) { // Nowy próg dla "low"
+                } else if (item.batteryLevel > 1) {
                     iconBattery.setImageResource(R.drawable.ic_battery_low);
                 } else {
-                    // Poziom 1% lub 0
-                    iconBattery.setImageResource(R.drawable.ic_battery_empty); // <-- NOWA IKONA
+                    iconBattery.setImageResource(R.drawable.ic_battery_empty);
                 }
 
-                // Zmiana koloru tekstu NAZWY
                 if (item.batteryLevel <= 20) {
-                    textSensorName.setTextColor(Color.parseColor("#FF990000")); // Czerwony
+                    textSensorName.setTextColor(Color.parseColor("#FF990000"));
                 } else {
-                    textSensorName.setTextColor(getDefaultTextColor()); // Domyślny
+                    textSensorName.setTextColor(getDefaultTextColor());
                 }
 
             } else {
-                // Jeśli bateria = 0 lub null, ukryj elementy baterii
                 textBatteryLevel.setVisibility(View.GONE);
                 iconBattery.setVisibility(View.GONE);
-                textSensorName.setTextColor(getDefaultTextColor()); // Domyślny kolor
+                textSensorName.setTextColor(getDefaultTextColor());
             }
 
-            // 5. Ustaw listenery
             itemView.setOnClickListener(v -> callback.onSensorClicked(item));
             itemView.setOnLongClickListener(v -> {
                 callback.onSensorLongClicked(item, v);
@@ -350,17 +347,11 @@ public class FolderAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
             });
         }
     }
-    // ###############################################################
-    // ###                         KONIEC POPRAWKI                 ###
-    // ###############################################################
 
-
-    // Metoda pomocnicza do pobierania domyślnego koloru tekstu
     private int getDefaultTextColor() {
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
             return this.context.getColor(android.R.color.tab_indicator_text);
         } else {
-            //noinspection deprecation
             return this.context.getResources().getColor(android.R.color.tab_indicator_text);
         }
     }

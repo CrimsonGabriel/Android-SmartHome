@@ -324,12 +324,24 @@ public class DataActivity extends AppCompatActivity implements FolderAdapter.Fol
             menu.findItem(R.id.menu_edit_folder).setVisible(!isSpecialFolder);
             menu.findItem(R.id.menu_delete_folder).setVisible(!isSpecialFolder);
 
-            // 🔽🔽🔽 NOWA LOGIKA UKRYWANIA DLA FOLDERÓW SPECJALNYCH 🔽🔽🔽
-            menu.findItem(R.id.menu_disable_folder_threshold_notifications).setVisible(!isSpecialFolder);
-            menu.findItem(R.id.menu_enable_folder_threshold_notifications).setVisible(!isSpecialFolder);
-            menu.findItem(R.id.menu_disable_folder_battery_notifications).setVisible(!isSpecialFolder);
-            menu.findItem(R.id.menu_enable_folder_battery_notifications).setVisible(!isSpecialFolder);
+            // 🔽🔽🔽 NOWA LOGIKA INTELIGENTNA DLA FOLDERÓW 🔽🔽🔽
+            MenuItem threshItem = menu.findItem(R.id.menu_toggle_folder_threshold_notifications);
+            MenuItem battItem = menu.findItem(R.id.menu_toggle_folder_battery_notifications);
 
+            if (isSpecialFolder) {
+                // Ukrywamy opcje grupowe dla specjalnych folderów (chyba że chcesz inaczej)
+                if (threshItem != null) threshItem.setVisible(false);
+                if (battItem != null) battItem.setVisible(false);
+            } else {
+                if (threshItem != null) {
+                    boolean isThreshMuted = isFolderFullyMuted(folderId, "thresh_sensor_");
+                    threshItem.setTitle(isThreshMuted ? R.string.action_enable_thresholds : R.string.action_disable_thresholds);
+                }
+                if (battItem != null) {
+                    boolean isBattMuted = isFolderFullyMuted(folderId, "batt_sensor_");
+                    battItem.setTitle(isBattMuted ? R.string.action_enable_battery : R.string.action_disable_battery);
+                }
+            }
         } else if (currentContextMenuItem instanceof FolderAdapter.GatewayItem) {
             inflater.inflate(R.menu.gateway_context_menu, menu);
             FolderAdapter.GatewayItem gateway = (FolderAdapter.GatewayItem) currentContextMenuItem;
@@ -343,11 +355,28 @@ public class DataActivity extends AppCompatActivity implements FolderAdapter.Fol
             boolean showAddToFolder = (gateway.parentFolderId != PARENT_ID_FAVORITE);
             menu.findItem(R.id.menu_add_to_folder).setVisible(showAddToFolder);
 
-            // 🔽🔽🔽 NOWA LOGIKA POKAZYWANIA DLA BRAMEK (zawsze widoczne) 🔽🔽🔽
-            menu.findItem(R.id.menu_disable_gateway_threshold_notifications).setVisible(true);
-            menu.findItem(R.id.menu_enable_gateway_threshold_notifications).setVisible(true);
-            menu.findItem(R.id.menu_disable_gateway_battery_notifications).setVisible(true);
-            menu.findItem(R.id.menu_enable_gateway_battery_notifications).setVisible(true);
+            // 🔽🔽🔽 NOWA LOGIKA DYNAMICZNYCH NAZW DLA BRAMEK 🔽🔽🔽
+
+            // 1. Sprawdź stan dla PROGOWYCH
+            // Jeśli jest w pełni wyciszona -> proponujemy "Włącz" (enable)
+            // Jeśli działa (choć jeden czujnik) -> proponujemy "Wyłącz" (disable)
+            boolean isThreshFullyMuted = isGatewayFullyMuted(gateway.id, "thresh_sensor_");
+            MenuItem threshItem = menu.findItem(R.id.menu_toggle_gateway_threshold_notifications);
+            if (isThreshFullyMuted) {
+                threshItem.setTitle(R.string.action_enable_thresholds); // "Włącz..."
+            } else {
+                threshItem.setTitle(R.string.action_disable_thresholds); // "Wyłącz..."
+            }
+
+            // 2. Sprawdź stan dla BATERII
+            boolean isBattFullyMuted = isGatewayFullyMuted(gateway.id, "batt_sensor_");
+            MenuItem battItem = menu.findItem(R.id.menu_toggle_gateway_battery_notifications);
+            if (isBattFullyMuted) {
+                battItem.setTitle(R.string.action_enable_battery); // "Włącz..."
+            } else {
+                battItem.setTitle(R.string.action_disable_battery); // "Wyłącz..."
+            }
+
 
 
         } else if (currentContextMenuItem instanceof FolderAdapter.SensorItem) {
@@ -394,22 +423,32 @@ public class DataActivity extends AppCompatActivity implements FolderAdapter.Fol
             } else if (itemId == R.id.action_check_battery) {
                 forceBatteryCheck(); return true;
 
-                // 🔽🔽🔽 NOWA LOGIKA DLA FOLDERU 🔽🔽🔽
-            } else if (itemId == R.id.menu_disable_folder_threshold_notifications) {
-                setFolderMuteState(folder, "thresh_sensor_", true);
-                Toast.makeText(this, R.string.menu_disable_folder_threshold_notifications, Toast.LENGTH_SHORT).show();
+                // 🔽🔽🔽 NOWA OBSŁUGA INTELIGENTNYCH PRZEŁĄCZNIKÓW 🔽🔽🔽
+
+            } else if (itemId == R.id.menu_toggle_folder_threshold_notifications) {
+                // 1. Sprawdź obecny stan
+                boolean isCurrentlyMuted = isFolderFullyMuted(folder.id, "thresh_sensor_");
+                // 2. Odwróć stan (jeśli wyciszone -> włącz, jeśli włączone -> wycisz)
+                boolean newMuteState = !isCurrentlyMuted;
+
+                // 3. Zapisz
+                setFolderMuteState(folder, "thresh_sensor_", newMuteState);
+
+                // 4. Pokaż komunikat
+                int msgId = newMuteState ? R.string.toast_thresholds_disabled : R.string.toast_thresholds_enabled;
+                Toast.makeText(this, msgId, Toast.LENGTH_SHORT).show();
+                adapter.notifyDataSetChanged();
                 return true;
-            } else if (itemId == R.id.menu_enable_folder_threshold_notifications) {
-                setFolderMuteState(folder, "thresh_sensor_", false);
-                Toast.makeText(this, R.string.menu_enable_folder_threshold_notifications, Toast.LENGTH_SHORT).show();
-                return true;
-            } else if (itemId == R.id.menu_disable_folder_battery_notifications) {
-                setFolderMuteState(folder, "batt_sensor_", true);
-                Toast.makeText(this, R.string.menu_disable_folder_battery_notifications, Toast.LENGTH_SHORT).show();
-                return true;
-            } else if (itemId == R.id.menu_enable_folder_battery_notifications) {
-                setFolderMuteState(folder, "batt_sensor_", false);
-                Toast.makeText(this, R.string.menu_enable_folder_battery_notifications, Toast.LENGTH_SHORT).show();
+
+            } else if (itemId == R.id.menu_toggle_folder_battery_notifications) {
+                boolean isCurrentlyMuted = isFolderFullyMuted(folder.id, "batt_sensor_");
+                boolean newMuteState = !isCurrentlyMuted;
+
+                setFolderMuteState(folder, "batt_sensor_", newMuteState);
+
+                int msgId = newMuteState ? R.string.toast_battery_disabled : R.string.toast_battery_enabled;
+                Toast.makeText(this, msgId, Toast.LENGTH_SHORT).show();
+                adapter.notifyDataSetChanged();
                 return true;
             }
         }
@@ -436,21 +475,26 @@ public class DataActivity extends AppCompatActivity implements FolderAdapter.Fol
                 forceBatteryCheck(); return true;
 
                 // 🔽🔽🔽 NOWA LOGIKA DLA BRAMKI 🔽🔽🔽
-            } else if (itemId == R.id.menu_disable_gateway_threshold_notifications) {
-                setGatewayMuteState(gateway, "thresh_sensor_", true);
-                Toast.makeText(this, R.string.menu_disable_gateway_threshold_notifications, Toast.LENGTH_SHORT).show();
+            } else if (itemId == R.id.menu_toggle_gateway_threshold_notifications) {
+                boolean isCurrentlyMuted = isGatewayFullyMuted(gateway.id, "thresh_sensor_");
+                boolean newMuteState = !isCurrentlyMuted; // Odwracamy stan
+
+                setGatewayMuteState(gateway, "thresh_sensor_", newMuteState);
+
+                int messageResId = newMuteState ? R.string.toast_thresholds_disabled : R.string.toast_thresholds_enabled;
+                Toast.makeText(this, messageResId, Toast.LENGTH_SHORT).show();
+                adapter.notifyDataSetChanged();
                 return true;
-            } else if (itemId == R.id.menu_enable_gateway_threshold_notifications) {
-                setGatewayMuteState(gateway, "thresh_sensor_", false);
-                Toast.makeText(this, R.string.menu_enable_gateway_threshold_notifications, Toast.LENGTH_SHORT).show();
-                return true;
-            } else if (itemId == R.id.menu_disable_gateway_battery_notifications) {
-                setGatewayMuteState(gateway, "batt_sensor_", true);
-                Toast.makeText(this, R.string.menu_disable_gateway_battery_notifications, Toast.LENGTH_SHORT).show();
-                return true;
-            } else if (itemId == R.id.menu_enable_gateway_battery_notifications) {
-                setGatewayMuteState(gateway, "batt_sensor_", false);
-                Toast.makeText(this, R.string.menu_enable_gateway_battery_notifications, Toast.LENGTH_SHORT).show();
+
+            } else if (itemId == R.id.menu_toggle_gateway_battery_notifications) {
+                boolean isCurrentlyMuted = isGatewayFullyMuted(gateway.id, "batt_sensor_");
+                boolean newMuteState = !isCurrentlyMuted;
+
+                setGatewayMuteState(gateway, "batt_sensor_", newMuteState);
+
+                int messageResId = newMuteState ? R.string.toast_battery_disabled : R.string.toast_battery_enabled;
+                Toast.makeText(this, messageResId, Toast.LENGTH_SHORT).show();
+                adapter.notifyDataSetChanged();
                 return true;
             }
         }
@@ -998,6 +1042,69 @@ public class DataActivity extends AppCompatActivity implements FolderAdapter.Fol
         }
         editor.apply();
     }
+    /**
+     * Sprawdza, czy WSZYSTKIE czujniki w danej bramce są wyciszone dla danego typu powiadomień.
+     * @return true jeśli wszystkie są wyciszone (lub brak czujników), false jeśli choć jeden jest aktywny.
+     */
+    private boolean isGatewayFullyMuted(long gatewayId, String prefKeyPrefix) {
+        boolean allMuted = true;
+        boolean hasSensors = false;
+
+        try (Cursor c = dbHelper.getSensorsForGateway(gatewayId)) {
+            while (c.moveToNext()) {
+                hasSensors = true;
+                long sensorId = c.getLong(c.getColumnIndexOrThrow("_id"));
+                // Domyślnie (brak wpisu) jest false (niewyciszony)
+                boolean isMuted = mutePrefs.getBoolean(prefKeyPrefix + sensorId, false);
+
+                if (!isMuted) {
+                    // Znaleźliśmy czujnik, który NIE jest wyciszony.
+                    // Zatem bramka jako całość "działa".
+                    allMuted = false;
+                    break;
+                }
+            }
+        }
+        // Jeśli nie ma czujników, traktujemy jako "wyciszoną" (nie ma czego wyłączać)
+        return !hasSensors || allMuted;
+    }
+    /**
+     * Sprawdza, czy WSZYSTKIE czujniki w folderze (i jego bramkach) są wyciszone.
+     */
+    private boolean isFolderFullyMuted(long folderId, String prefKeyPrefix) {
+        boolean allMuted = true;
+        boolean hasSensors = false;
+
+        // 1. Sprawdź czujniki bezpośrednio w folderze
+        try (Cursor c = dbHelper.getSensorsForFolderCursor(folderId)) {
+            while (c.moveToNext()) {
+                hasSensors = true;
+                long sensorId = c.getLong(c.getColumnIndexOrThrow("_id"));
+                if (!mutePrefs.getBoolean(prefKeyPrefix + sensorId, false)) {
+                    allMuted = false;
+                    break; // Znaleziono niewyciszony
+                }
+            }
+        }
+
+        // 2. Jeśli nadal allMuted == true, sprawdź bramki w folderze
+        if (allMuted) {
+            try (Cursor gateways = dbHelper.getGatewaysForFolderCursor(folderId)) {
+                while (gateways.moveToNext()) {
+                    long gatewayId = gateways.getLong(gateways.getColumnIndexOrThrow("_id"));
+                    // Używamy istniejącej metody dla bramki
+                    if (!isGatewayFullyMuted(gatewayId, prefKeyPrefix)) {
+                        allMuted = false;
+                        hasSensors = true;
+                        break;
+                    }
+                }
+            }
+        }
+
+        // Jeśli brak czujników, uznajemy za wyciszone (true)
+        return !hasSensors || allMuted;
+    }
 
     /**
      * 🔽🔽🔽 NOWA METODA POMOCNICZA 🔽🔽🔽
@@ -1111,4 +1218,5 @@ public class DataActivity extends AppCompatActivity implements FolderAdapter.Fol
             }
         });
     }
+
 }
