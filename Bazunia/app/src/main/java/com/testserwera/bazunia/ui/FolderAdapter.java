@@ -219,9 +219,9 @@ public class FolderAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
             }
 
             iconFolder.setImageResource(R.drawable.ic_folder);
-            iconExpansion.setImageResource(item.isExpanded ?
-                    android.R.drawable.arrow_up_float :
-                    android.R.drawable.arrow_down_float);
+
+            iconExpansion.setImageResource(R.drawable.ic_expand_arrow);
+            iconExpansion.setRotation(item.isExpanded ? 180f : 0f);
 
             itemView.setOnClickListener(v -> callback.onFolderClicked(item));
             itemView.setOnLongClickListener(v -> {
@@ -257,9 +257,10 @@ public class FolderAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
 
             if (item.isSensorParent) {
                 iconExpansion.setVisibility(View.VISIBLE);
-                iconExpansion.setImageResource(item.isExpanded ?
-                        android.R.drawable.arrow_up_float :
-                        android.R.drawable.arrow_down_float);
+
+                iconExpansion.setImageResource(R.drawable.ic_expand_arrow);
+                iconExpansion.setRotation(item.isExpanded ? 180f : 0f);
+
             } else {
                 iconExpansion.setVisibility(View.INVISIBLE);
             }

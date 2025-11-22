@@ -86,14 +86,15 @@ public class GatewayShareActivity extends AppCompatActivity {
     }
 
     private void initViews() {
+        MaterialButton btnBack = findViewById(R.id.btnBack);
+        btnBack.setOnClickListener(v -> finish());
+
         spinnerGateways = findViewById(R.id.spinnerGateways);
         spinnerUsers = findViewById(R.id.spinnerUsers);
 
-        // radioView usunięte (nie było używane)
         radioFull = findViewById(R.id.radioFull);
         btnShare = findViewById(R.id.btnShare);
 
-        // 2. POPRAWKA: Recycler jako zmienna lokalna
         RecyclerView recyclerShares = findViewById(R.id.recyclerShares);
 
         progressBar = findViewById(R.id.progressBar);
@@ -105,7 +106,6 @@ public class GatewayShareActivity extends AppCompatActivity {
 
         btnShare.setOnClickListener(v -> performShare());
 
-        // Obsługa kliknięcia w dropdown (AutoCompleteTextView)
         spinnerGateways.setOnItemClickListener((parent, view, position, id) -> {
             selectedGateway = myGateways.get(position);
             Log.d(TAG, "Wybrano bramkę: " + selectedGateway.getName());

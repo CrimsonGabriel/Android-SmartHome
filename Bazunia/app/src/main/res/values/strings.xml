@@ -437,5 +437,6 @@
     <string name="error_connection">Błąd połączenia!</string>
     <string name="error_with_message">Błąd: %s</string>
     <string name="progress_percent_format">%d%%</string>
+    <string name="status_live_label">Status: NA ŻYWO</string>
 
 </resources>

@@ -75,9 +75,16 @@
         android:id="@+id/recyclerView"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:padding="8dp"
+        android:paddingStart="8dp"
+        android:paddingTop="8dp"
+        android:paddingEnd="8dp"
+        android:paddingBottom="100dp"
+        android:clipToPadding="false"
+        android:scrollbarStyle="outsideOverlay"
         app:layout_behavior="@string/appbar_scrolling_view_behavior"
-        tools:listitem="@layout/list_group" /> <com.google.android.material.floatingactionbutton.FloatingActionButton
+        tools:listitem="@layout/list_group" />
+
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
     android:id="@+id/fab_add_folder"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
