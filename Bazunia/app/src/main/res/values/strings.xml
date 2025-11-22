@@ -413,4 +413,17 @@
 
     <string name="preview_user_email">jan@przyklad.pl</string>
     <string name="preview_permission_status">PODGLĄD</string>
+    <string name="sharing_subtitle">Zarządzaj dostępem użytkowników do tej bramki</string>
+    <string name="section_header_text">Nagłówek Sekcji</string>
+    <string name="desc_mute_threshold">Wyciszony alarm progu</string>
+    <string name="desc_mute_battery">Wyciszony alarm baterii</string>
+    <string name="desc_battery_level">Ikona baterii</string>
+    <string name="tools_sensor_name">Nazwa sensora</string>
+    <string name="tools_battery_level">100%</string>
+
+    <string name="desc_folder_icon">Ikona folderu</string>
+    <string name="desc_expand_icon">Ikona rozwijania/zwijania</string>
+    <string name="tools_folder_name">Nazwa Folderu</string>
+    <string name="Hash">#</string>
+
 </resources>

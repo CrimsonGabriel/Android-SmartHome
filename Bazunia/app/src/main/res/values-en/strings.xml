@@ -414,4 +414,17 @@
 
     <string name="preview_user_email">user@example.com</string>
     <string name="preview_permission_status">VIEW</string>
+
+    <string name="sharing_subtitle">Manage user access to this gateway</string>
+
+    <string name="section_header_text">Section Header</string>
+    <string name="desc_mute_threshold">Threshold alarm muted</string>
+    <string name="desc_mute_battery">Battery alarm muted</string>
+    <string name="desc_battery_level">Battery icon</string>
+    <string name="tools_sensor_name">Sensor Name</string>
+    <string name="tools_battery_level">100%</string>
+    <string name="desc_folder_icon">Folder icon</string>
+    <string name="desc_expand_icon">Expand/Collapse icon</string>
+    <string name="tools_folder_name">Folder Name</string>
+    <string name="Hash">#</string>
 </resources>

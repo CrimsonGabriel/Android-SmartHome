@@ -7,7 +7,7 @@
     android:paddingEnd="16dp"
     android:paddingTop="16dp"
     android:paddingBottom="8dp"
-    android:text="Nagłówek Sekcji"
+    android:text="@string/section_header_text"
     android:textAppearance="?attr/textAppearanceTitleMedium"
     android:textColor="?attr/colorPrimary"
     android:textStyle="bold" />

@@ -20,7 +20,7 @@
         android:drawablePadding="16dp"
         android:textSize="16sp"
         android:textColor="?android:attr/textColorPrimary"
-        tools:text="Nazwa sensora"
+        tools:text="@string/tools_sensor_name"
         tools:drawableStart="@drawable/ic_sensor" />
 
     <LinearLayout
@@ -39,6 +39,7 @@
             android:layout_marginEnd="6dp"
             android:src="@drawable/ic_notif_off"
             android:visibility="gone"
+            android:contentDescription="@string/desc_mute_threshold"
             tools:visibility="visible" />
 
         <ImageView
@@ -48,6 +49,7 @@
             android:layout_marginEnd="6dp"
             android:src="@drawable/ic_battery_off"
             android:visibility="gone"
+            android:contentDescription="@string/desc_mute_battery"
             tools:visibility="visible" />
 
         <ImageView
@@ -55,6 +57,7 @@
             android:layout_width="24dp"
             android:layout_height="24dp"
             android:layout_marginEnd="4dp"
+            android:contentDescription="@string/desc_battery_level"
             tools:src="@drawable/ic_battery_full" />
 
         <TextView
@@ -63,7 +66,7 @@
             android:layout_height="wrap_content"
             android:textSize="14sp"
             android:textColor="?android:attr/textColorSecondary"
-            tools:text="100%" />
+            tools:text="@string/tools_battery_level" />
     </LinearLayout>
 
 </RelativeLayout>

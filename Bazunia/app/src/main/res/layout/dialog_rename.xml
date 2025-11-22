@@ -8,7 +8,6 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="@string/dialog_rename_name_hint"
-        android:labelFor="@+id/edit_name"
         style="?android:attr/textAppearanceSmall" />
 
     <EditText
@@ -17,6 +16,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
         android:inputType="textCapSentences"
+        android:importantForAutofill="no"
         android:hint="@string/dialog_rename_name_hint" />
 
     <TextView
@@ -24,7 +24,6 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
         android:text="@string/dialog_rename_description_hint"
-        android:labelFor="@+id/edit_description"
         style="?android:attr/textAppearanceSmall" />
 
     <EditText
@@ -33,6 +32,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
         android:inputType="textCapSentences"
+        android:importantForAutofill="no"
         android:hint="@string/dialog_rename_description_hint" />
 
 </LinearLayout>

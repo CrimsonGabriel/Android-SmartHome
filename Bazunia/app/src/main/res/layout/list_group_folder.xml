@@ -21,17 +21,23 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginEnd="16dp"
-        app:srcCompat="@drawable/ic_folder" /> <TextView
-    android:id="@+id/textFolderName"
-    android:layout_width="0dp"
-    android:layout_height="wrap_content"
-    android:layout_weight="1"
-    android:text="Nazwa Folderu"
-    android:textAppearance="?attr/textAppearanceListItem"
-    android:textSize="18sp" />
+        android:contentDescription="@string/desc_folder_icon"
+        app:srcCompat="@drawable/ic_folder" />
+
+    <TextView
+        android:id="@+id/textFolderName"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        tools:text="@string/tools_folder_name"
+        android:textAppearance="?attr/textAppearanceListItem"
+        android:textSize="18sp" />
 
     <ImageView
         android:id="@+id/iconExpansionIndicator"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        app:srcCompat="@drawable/ic_arrow_back" /> </LinearLayout>
+        android:contentDescription="@string/desc_expand_icon"
+        app:srcCompat="@drawable/ic_arrow_back" />
+
+</LinearLayout>
