@@ -7,11 +7,10 @@ public class CleanupManager {
 
     private static final String PREFS_NAME = "CleanupPrefs";
     private static final String KEY_CLEANUP_DAYS = "cleanup_days";
-    // Używamy klucza z Constants lub definiujemy lokalnie, jeśli wolisz
     private static final String KEY_CLEANUP_SIZE = "cleanup_size_records";
 
     public static final int DEFAULT_CLEANUP_DAYS = 30;
-    public static final int DEFAULT_CLEANUP_SIZE = 0; // 0 = wyłączone
+    public static final int DEFAULT_CLEANUP_SIZE = 0;
 
     private final SharedPreferences sharedPreferences;
 
@@ -27,8 +26,6 @@ public class CleanupManager {
     public int getCleanupDays() {
         return sharedPreferences.getInt(KEY_CLEANUP_DAYS, DEFAULT_CLEANUP_DAYS);
     }
-
-    // ⭐️ NOWE METODY DO OBSŁUGI ROZMIARU ⭐️
 
     /**
      * Zapisuje limit rekordów. 0 oznacza brak limitu.

@@ -427,4 +427,13 @@
     <string name="desc_expand_icon">Expand/Collapse icon</string>
     <string name="tools_folder_name">Folder Name</string>
     <string name="Hash">#</string>
+    <string name="error_invalid_number">Invalid number</string>
+    <string name="toast_api_error_with_reason">API Error: %s</string>
+    <string name="status_pending_suffix">\n(%s)</string>
+    <string name="sensor_name_with_gateway_format">%1$s (%2$s)</string>
+    <string name="battery_percentage_format">%d%%</string>
+    <string name="error_update_id">Update ID Error</string>
+    <string name="error_connection">Connection Error!</string>
+    <string name="error_with_message">Error: %s</string>
+    <string name="progress_percent_format">%d%%</string>
 </resources>

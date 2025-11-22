@@ -17,10 +17,13 @@ import com.google.android.material.button.MaterialButton;
 import com.google.android.material.card.MaterialCardView;
 import androidx.appcompat.app.AlertDialog;
 import com.testserwera.bazunia.utils.LocaleManager;
-// Importy dla Google Sign Out
-import com.google.android.gms.auth.api.signin.GoogleSignIn;
-import com.google.android.gms.auth.api.signin.GoogleSignInClient;
-import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
+
+// --- STARE IMPORTY USUNIĘTE (GoogleSignIn) ---
+// Zamiast nich używamy Credential Manager:
+import androidx.credentials.CredentialManager;
+import androidx.credentials.ClearCredentialStateRequest;
+import android.os.CancellationSignal;
+
 import android.content.pm.PackageManager;
 import android.os.Build;
 import androidx.activity.result.ActivityResultLauncher;
@@ -28,6 +31,9 @@ import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.core.content.ContextCompat;
 import java.util.List;
 import java.util.Locale;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
+
 import okhttp3.*;
 import com.testserwera.bazunia.utils.Constants;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
@@ -40,6 +46,7 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 import android.widget.Toast;
+
 public class MainActivity extends AppCompatActivity {
 
     private DatabaseHelper dbHelper;
@@ -52,8 +59,8 @@ public class MainActivity extends AppCompatActivity {
     private MaterialCardView cardAlerts;
     private TextView textAlertSummary;
 
-    // [NOWA ZMIENNA] Klient Google potrzebny do wylogowania
-    private GoogleSignInClient mGoogleSignInClient;
+    // [NOWA ZMIENNA] Zamiast GoogleSignInClient używamy CredentialManager
+    private CredentialManager credentialManager;
 
     private final ActivityResultLauncher<String> requestPermissionLauncher =
             registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
@@ -66,7 +73,6 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void attachBaseContext(Context newBase) {
-        // [POPRAWNE WYWOŁANIE] Zapewnia, że kontekst z nowym językiem jest ustawiony ZAWSZE przed onCreate.
         LocaleManager localeManager = new LocaleManager(newBase);
         super.attachBaseContext(localeManager.setLocale(newBase));
     }
@@ -93,17 +99,9 @@ public class MainActivity extends AppCompatActivity {
         appearanceManager.applyIconScale(btnSettings);
         appearanceManager.applyIconScale(btnLogout);
 
-        // [NOWY KOD] Inicjalizuj klienta Google (tak samo jak w LoginActivity)
-        // WAŻNE: Użyj tego samego WEB Client ID, co w LoginActivity i na serwerze!
-        String webClientId = "79063316759-iva8uesd0vlj3in6eaeralk2kdkgv5or.apps.googleusercontent.com"; // Upewnij się, że to WEB ID!
-
-        // <<< POPRAWKA: Użyj .requestIdToken() i webClientId >>>
-        GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-                .requestIdToken(webClientId)
-                .requestEmail()
-                .build();
-
-        mGoogleSignInClient = GoogleSignIn.getClient(this, gso);
+        // [NOWY KOD] Inicjalizacja CredentialManager
+        // To jest nowoczesny odpowiednik starego klienta
+        credentialManager = CredentialManager.create(this);
 
         btnSettings.setOnClickListener(v -> startActivity(new Intent(this, SettingsActivity.class)));
 
@@ -111,11 +109,9 @@ public class MainActivity extends AppCompatActivity {
 
         cardAllSensors.setOnClickListener(v -> startActivity(new Intent(MainActivity.this, DataActivity.class)));
 
-        // Znajdź FAB
         com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton fabCheck
                 = findViewById(R.id.fabCheckHome);
 
-        // Obsługa kliknięcia
         fabCheck.setOnClickListener(v -> performHomeCheck());
     }
 
@@ -124,49 +120,59 @@ public class MainActivity extends AppCompatActivity {
                 .setTitle(getString(R.string.logout_confirmation_title))
                 .setMessage(getString(R.string.logout_confirmation_message))
                 .setIcon(R.drawable.ic_logout)
-                .setPositiveButton(getString(R.string.logout_positive_button), (dialog, which) -> {
-
-                    // [NOWA LOGIKA] Wyloguj się z Google NAJPIERW!
-                    if (mGoogleSignInClient != null) {
-                        mGoogleSignInClient.signOut().addOnCompleteListener(this, task -> {
-                            Log.d("MainActivity", "Google Sign Out completed.");
-                            // Dopiero PO wylogowaniu z Google, zatrzymaj serwis i wróć do logowania
-                            stopServiceAndGoToLogin();
-                        });
-                    } else {
-                        // Na wszelki wypadek, gdyby klient nie był zainicjowany
-                        Log.w("MainActivity", "GoogleSignInClient nie został zainicjowany przed wylogowaniem.");
-                        stopServiceAndGoToLogin();
-                    }
-                })
+                .setPositiveButton(getString(R.string.logout_positive_button), (dialog, which) -> performCredentialManagerLogout())
                 .setNegativeButton(getString(R.string.dialog_cancel_button), null)
                 .show();
     }
 
-    // [NOWA METODA POMOCNICZA] Wydzielona logika po wylogowaniu z Google
+    // [NOWA METODA] Wylogowanie za pomocą Credential Manager
+    private void performCredentialManagerLogout() {
+        // Nowoczesne wylogowanie (czyści stan zapamiętanych poświadczeń)
+        ClearCredentialStateRequest request = new ClearCredentialStateRequest();
+
+        CancellationSignal cancellationSignal = new CancellationSignal();
+        Executor executor = Executors.newSingleThreadExecutor();
+
+        credentialManager.clearCredentialStateAsync(
+                request,
+                cancellationSignal,
+                executor,
+                new androidx.credentials.CredentialManagerCallback<>() {
+                    @Override
+                    public void onResult(Void result) {
+                        Log.d("MainActivity", "Credential Manager: Stan wyczyszczony pomyślnie.");
+                        // Musimy wrócić na wątek główny, żeby dotknąć UI (startActivity)
+                        runOnUiThread(() -> stopServiceAndGoToLogin());
+                    }
+
+                    @Override
+                    public void onError(@androidx.annotation.NonNull androidx.credentials.exceptions.ClearCredentialException e) {
+                        Log.e("MainActivity", "Credential Manager: Błąd czyszczenia stanu", e);
+                        // Nawet jak wystąpi błąd (np. brak sieci), i tak wylogowujemy z apki lokalnie
+                        runOnUiThread(() -> stopServiceAndGoToLogin());
+                    }
+                }
+        );
+    }
+
     private void stopServiceAndGoToLogin() {
         Log.d("MainActivity", "Zatrzymywanie serwisu i powrót do LoginActivity...");
-        // Zatrzymuje serwis
         Intent serviceIntent = new Intent(this, VpsClientService.class);
         stopService(serviceIntent);
 
-        // Wraca do LoginActivity
         Intent intent = new Intent(this, LoginActivity.class);
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
         startActivity(intent);
-        finish(); // Zakończ MainActivity
+        finish();
     }
-
 
     @Override
     protected void onResume() {
         super.onResume();
-
-        /// [NOWA POPRAWKA: Wymuszenie przeładowania dla zmiany języka]
         if (LocaleManager.languageChanged) {
-            LocaleManager.languageChanged = false; // Resetowanie flagi po użyciu
-            recreate(); // Wymuszenie ponownego stworzenia Aktywności z nowym kontekstem
-            return; // Ważne, aby zakończyć, zanim przejdziemy do dalszych sprawdzeń lub ładowania danych
+            LocaleManager.languageChanged = false;
+            recreate();
+            return;
         }
 
         if (appearanceManager != null && (!currentTextScale.equals(appearanceManager.getTextScale()) ||
@@ -223,7 +229,6 @@ public class MainActivity extends AppCompatActivity {
 
     private String getPolishSensorSuffix(int count) {
         if (count == 1) return getString(R.string.sensor_suffix_one);
-        // Poprawka dla polskich przypadków: 2,3,4 to "czujniki", reszta "czujników"
         int lastDigit = count % 10;
         int lastTwoDigits = count % 100;
         if (count > 1 && lastDigit >= 2 && lastDigit <= 4 && (lastTwoDigits < 12 || lastTwoDigits > 14) ) {
@@ -232,28 +237,19 @@ public class MainActivity extends AppCompatActivity {
         return getString(R.string.sensor_suffix_many);
     }
 
-    // [NOWA METODA] Pyta o zgodę na powiadomienia na Androidzie 13+
     private void askNotificationPermission() {
-        // Sprawdzamy, czy działamy na Androidzie 13 (API 33) lub nowszym
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-
-            // Sprawdzamy, czy zgoda NIE JEST jeszcze przyznana
             if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.POST_NOTIFICATIONS) !=
                     PackageManager.PERMISSION_GRANTED) {
-
-                // Wyświetl systemowe okno dialogowe z prośbą o zgodę
                 Log.d("MainActivity", "Pytam o zgodę na powiadomienia...");
                 requestPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS);
             } else {
-                // Zgoda jest już przyznana
                 Log.d("MainActivity", "Zgoda na powiadomienia jest już przyznana.");
             }
         }
-        // Na starszych wersjach Androida (poniżej 13) zgoda jest domyślnie przyznana
     }
-    // 1. Metoda wywołująca API
+
     private void performHomeCheck() {
-        // 1. Pokaż stan ładowania
         showRiskBottomSheet(null);
 
         String jwtToken = getSharedPreferences(LoginActivity.AUTH_PREFS, MODE_PRIVATE)
@@ -274,22 +270,18 @@ public class MainActivity extends AppCompatActivity {
         client.newCall(request).enqueue(new Callback() {
             @Override
             public void onFailure(@androidx.annotation.NonNull Call call, @androidx.annotation.NonNull java.io.IOException e) {
-                // 2. BŁĄD SIECI (np. serwer wyłączony, złe IP)
                 runOnUiThread(() -> {
                     Log.e("RiskCheck", "Błąd sieci: " + e.getMessage());
                     Toast.makeText(MainActivity.this, "Błąd połączenia: " + e.getMessage(), Toast.LENGTH_LONG).show();
-                    // Tutaj moglibyśmy zamknąć sheet albo zmienić tekst na "Błąd"
                 });
             }
 
             @Override
             public void onResponse(@androidx.annotation.NonNull Call call, @androidx.annotation.NonNull Response response) throws java.io.IOException {
                 if (response.isSuccessful() && response.body() != null) {
-                    // 3. SUKCES - parsujemy JSON
                     String json = response.body().string();
-                    runOnUiThread(() -> showRiskBottomSheet(json)); // To otworzy NOWY sheet z danymi (lub zaktualizuje obecny jeśli przerobisz logikę)
+                    runOnUiThread(() -> showRiskBottomSheet(json));
                 } else {
-                    // 4. BŁĄD SERWERA (np. 403 Forbidden, 500 Error)
                     String errorBody = response.body() != null ? response.body().string() : "";
                     runOnUiThread(() -> {
                         Log.e("RiskCheck", "Błąd serwera: " + response.code() + " " + errorBody);
@@ -300,50 +292,40 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    // 2. Metoda wyświetlająca BottomSheet
-
     private void showRiskBottomSheet(String jsonResponse) {
-        // 1. Jeśli dialog nie istnieje, stwórz go i załaduj layout
         if (riskSheetDialog == null) {
             riskSheetDialog = new BottomSheetDialog(this);
-            View view = getLayoutInflater().inflate(R.layout.bottom_sheet_risk, null);
+            ViewGroup root = findViewById(android.R.id.content);
+            View view = getLayoutInflater().inflate(R.layout.bottom_sheet_risk, root, false);
             riskSheetDialog.setContentView(view);
-
-            // Ważne: Jak użytkownik zamknie palcem/swipe'm, czyścimy zmienną
             riskSheetDialog.setOnDismissListener(dialog -> riskSheetDialog = null);
         }
 
-        // 2. Pobierz widoki z istniejącego dialogu (nie tworzymy nowych!)
-        // Używamy findViewById na obiekcie dialogu, a nie view
         ImageView imgStatus = riskSheetDialog.findViewById(R.id.imgMainStatus);
         TextView tvTitle = riskSheetDialog.findViewById(R.id.tvMainTitle);
         TextView tvDesc = riskSheetDialog.findViewById(R.id.tvMainDesc);
         RecyclerView recycler = riskSheetDialog.findViewById(R.id.recyclerRisks);
         MaterialButton btnClose = riskSheetDialog.findViewById(R.id.btnCloseSheet);
 
-        // Obsługa przycisku Zamknij
         if (btnClose != null) {
             btnClose.setOnClickListener(v -> {
-                riskSheetDialog.dismiss(); // Zamyka okno
-                riskSheetDialog = null;    // Czyści zmienną
+                riskSheetDialog.dismiss();
+                riskSheetDialog = null;
             });
         }
 
         if (jsonResponse == null) {
-            // --- STAN ŁADOWANIA ---
             if (tvTitle != null) tvTitle.setText(R.string.risk_status_check);
             if (tvDesc != null) tvDesc.setText(R.string.please_wait);
-            if (imgStatus != null) imgStatus.setImageResource(R.drawable.ic_search); // Ikona lupy/ładowania
+            if (imgStatus != null) imgStatus.setImageResource(R.drawable.ic_search);
             if (recycler != null) recycler.setVisibility(View.GONE);
         } else {
-            // --- STAN WYNIKÓW ---
             try {
                 JSONObject root = new JSONObject(jsonResponse);
                 boolean isSafe = root.getBoolean("isSafe");
                 int count = root.getInt("riskCount");
 
                 if (isSafe) {
-                    // STAN OK (ZIELONY)
                     if (imgStatus != null) {
                         imgStatus.setImageResource(R.drawable.ic_check);
                         imgStatus.setColorFilter(ContextCompat.getColor(this, R.color.colorSafe));
@@ -352,7 +334,6 @@ public class MainActivity extends AppCompatActivity {
                     if (tvDesc != null) tvDesc.setText(R.string.home_safe_desc);
                     if (recycler != null) recycler.setVisibility(View.GONE);
                 } else {
-                    // STAN ZAGROŻENIA (CZERWONY)
                     if (imgStatus != null) {
                         imgStatus.setImageResource(R.drawable.ic_warning);
                         imgStatus.setColorFilter(ContextCompat.getColor(this, R.color.colorRisk));
@@ -360,7 +341,6 @@ public class MainActivity extends AppCompatActivity {
                     if (tvTitle != null) tvTitle.setText(R.string.home_risk_title);
                     if (tvDesc != null) tvDesc.setText(getString(R.string.home_risk_desc, count));
 
-                    // Parsowanie listy
                     if (recycler != null) {
                         JSONArray risksArray = root.getJSONArray("risks");
                         recycler.setVisibility(View.VISIBLE);
@@ -374,13 +354,11 @@ public class MainActivity extends AppCompatActivity {
             }
         }
 
-        // 3. Pokaż okno, jeśli jeszcze nie jest widoczne
         if (!riskSheetDialog.isShowing()) {
             riskSheetDialog.show();
         }
     }
 
-    // 3. Prosty Adapter wewnętrzny do listy (Inner Class w MainActivity)
     private class RiskAdapter extends RecyclerView.Adapter<RiskAdapter.RiskViewHolder> {
         private final JSONArray data;
 
@@ -402,16 +380,17 @@ public class MainActivity extends AppCompatActivity {
                 holder.name.setText(item.getString("sensorName"));
                 holder.issue.setText(item.getString("issue"));
 
-                // Prosta logika ikon (możesz rozbudować)
                 String iconType = item.optString("iconType", "warning");
                 int iconRes = R.drawable.ic_warning;
-                if (iconType.equals("window")) iconRes = R.drawable.ic_open; // Upewnij się że masz ic_open lub ic_window
+                if (iconType.equals("window")) iconRes = R.drawable.ic_open;
                 if (iconType.equals("light")) iconRes = R.drawable.ic_light;
 
                 holder.icon.setImageResource(iconRes);
                 holder.icon.setColorFilter(ContextCompat.getColor(MainActivity.this, R.color.colorRisk));
 
-            } catch (JSONException e) { e.printStackTrace(); }
+            } catch (JSONException e) {
+                Log.e("RiskAdapter", "Błąd parsowania JSON w liście ryzyka", e);
+            }
         }
 
         @Override

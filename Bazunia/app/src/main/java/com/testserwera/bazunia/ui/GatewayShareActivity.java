@@ -1,5 +1,6 @@
 package com.testserwera.bazunia.ui;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.Bundle;
@@ -51,13 +52,15 @@ public class GatewayShareActivity extends AppCompatActivity {
     private OkHttpClient httpClient;
     private Gson gson;
 
-    // Zmiana na AutoCompleteTextView dla Material Design
+    // UI Components
     private AutoCompleteTextView spinnerGateways;
     private AutoCompleteTextView spinnerUsers;
 
-    private RadioButton radioView, radioFull;
+    // 1. POPRAWKA: radioView usunięte (nieużywane), radioFull zostaje (używane w performShare)
+    private RadioButton radioFull;
     private MaterialButton btnShare;
-    private RecyclerView recyclerShares;
+
+    // 2. POPRAWKA: recyclerShares zmieniony na zmienną lokalną
     private ProgressBar progressBar;
     private TextView txtEmptyList;
 
@@ -85,10 +88,14 @@ public class GatewayShareActivity extends AppCompatActivity {
     private void initViews() {
         spinnerGateways = findViewById(R.id.spinnerGateways);
         spinnerUsers = findViewById(R.id.spinnerUsers);
-        radioView = findViewById(R.id.radioView);
+
+        // radioView usunięte (nie było używane)
         radioFull = findViewById(R.id.radioFull);
         btnShare = findViewById(R.id.btnShare);
-        recyclerShares = findViewById(R.id.recyclerShares);
+
+        // 2. POPRAWKA: Recycler jako zmienna lokalna
+        RecyclerView recyclerShares = findViewById(R.id.recyclerShares);
+
         progressBar = findViewById(R.id.progressBar);
         txtEmptyList = findViewById(R.id.txtEmptyList);
 
@@ -105,9 +112,7 @@ public class GatewayShareActivity extends AppCompatActivity {
             fetchSharesForGateway(selectedGateway.getId());
         });
 
-        spinnerUsers.setOnItemClickListener((parent, view, position, id) -> {
-            selectedUser = availableUsers.get(position);
-        });
+        spinnerUsers.setOnItemClickListener((parent, view, position, id) -> selectedUser = availableUsers.get(position));
     }
 
     // --- KROK 1: Pobierz ID Usera ---
@@ -131,7 +136,8 @@ public class GatewayShareActivity extends AppCompatActivity {
                 showError("Błąd sieci (User): " + e.getMessage());
             }
 
-            @Override public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
+            // 3. POPRAWKA: Usunięto "throws IOException", bo wyjątek jest łapany w bloku try-catch
+            @Override public void onResponse(@NonNull Call call, @NonNull Response response) {
                 if (response.isSuccessful() && response.body() != null) {
                     try {
                         JSONObject json = new JSONObject(response.body().string());
@@ -378,8 +384,12 @@ public class GatewayShareActivity extends AppCompatActivity {
     private static class UserPickDto {
         long id;
         String email;
+
+        // 4. POPRAWKA: Dodano @NonNull
+        @NonNull
         @Override public String toString() { return email; }
     }
+
     private static class SharedUserDto {
         long userId;
         String email;
@@ -398,6 +408,8 @@ public class GatewayShareActivity extends AppCompatActivity {
             this.listener = listener;
         }
 
+        // 5. POPRAWKA: Ignorowanie ostrzeżenia, bo wymieniamy całą listę
+        @SuppressLint("NotifyDataSetChanged")
         void updateData(List<SharedUserDto> newList) {
             this.list = newList;
             notifyDataSetChanged();

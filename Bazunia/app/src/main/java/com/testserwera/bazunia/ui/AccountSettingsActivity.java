@@ -3,6 +3,7 @@ package com.testserwera.bazunia.ui;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.os.Bundle;
@@ -14,19 +15,18 @@ import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
-import android.content.Intent;
-import com.testserwera.bazunia.utils.LocaleManager;
+
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
-
-import com.testserwera.bazunia.utils.AppearanceManager;
-import com.testserwera.bazunia.utils.Constants;
-import com.testserwera.bazunia.R;
 
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.button.MaterialButton;
 import com.google.zxing.BarcodeFormat;
 import com.journeyapps.barcodescanner.BarcodeEncoder;
+import com.testserwera.bazunia.R;
+import com.testserwera.bazunia.utils.AppearanceManager;
+import com.testserwera.bazunia.utils.Constants;
+import com.testserwera.bazunia.utils.LocaleManager;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -61,7 +61,9 @@ public class AccountSettingsActivity extends AppCompatActivity {
     private MaterialButton btnConfirmDisable2FA;
     private ProgressBar progressBar2FA;
 
-    private MaterialButton btnChangePassword;
+    // Zmieniono na zmienną lokalną w onCreate (pole usunięte)
+    // private MaterialButton btnChangePassword;
+
     private String currentJwtToken;
     private String currentSecretKey;
 
@@ -95,7 +97,9 @@ public class AccountSettingsActivity extends AppCompatActivity {
         editTextDisable2FA = findViewById(R.id.editTextDisable2FA);
         btnConfirmDisable2FA = findViewById(R.id.btnConfirmDisable2FA);
         progressBar2FA = findViewById(R.id.progressBar2FA);
-        btnChangePassword = findViewById(R.id.btnChangePassword);
+
+        // Zmienna lokalna
+        MaterialButton btnChangePassword = findViewById(R.id.btnChangePassword);
 
         setup2FAListeners();
 
@@ -181,9 +185,8 @@ public class AccountSettingsActivity extends AppCompatActivity {
         Log.d(TAG, "Rozpoczynanie konfiguracji 2FA...");
         if (currentJwtToken == null) { return; }
 
-        // ⭐️ POPRAWKA URL: Użycie poprawionej stałej URL ⭐️
         Request request = new Request.Builder()
-                .url(Constants.SETUP_2FA_ENDPOINT) // Używamy poprawionej stałej
+                .url(Constants.SETUP_2FA_ENDPOINT)
                 .header("Authorization", "Bearer " + currentJwtToken)
                 .post(RequestBody.create(new byte[0]))
                 .build();
@@ -200,7 +203,6 @@ public class AccountSettingsActivity extends AppCompatActivity {
     private void handleSetupResponse(Response response) throws IOException {
         final String responseBody = response.body() != null ? response.body().string() : "";
 
-        // ⭐️ POPRAWKA LOGA: Użycie poprawnej stałej w logu ⭐️
         String endpoint = Constants.SETUP_2FA_ENDPOINT.substring(Constants.VPS_SERVER_IP.length());
 
         if (response.isSuccessful()) {
@@ -237,9 +239,8 @@ public class AccountSettingsActivity extends AppCompatActivity {
         JSONObject jsonBody = createJsonPayload(code);
         RequestBody body = RequestBody.create(jsonBody.toString(), MediaType.get("application/json; charset=utf-8"));
 
-        // ⭐️ POPRAWKA URL: Użycie poprawionej stałej URL ⭐️
         Request request = new Request.Builder()
-                .url(Constants.VERIFY_2FA_ENDPOINT) // Używamy poprawionej stałej
+                .url(Constants.VERIFY_2FA_ENDPOINT)
                 .header("Authorization", "Bearer " + currentJwtToken)
                 .post(body)
                 .build();
@@ -277,9 +278,8 @@ public class AccountSettingsActivity extends AppCompatActivity {
         JSONObject jsonBody = createJsonPayload(code);
         RequestBody body = RequestBody.create(jsonBody.toString(), MediaType.get("application/json; charset=utf-8"));
 
-        // ⭐️ POPRAWKA URL: Użycie poprawionej stałej URL ⭐️
         Request request = new Request.Builder()
-                .url(Constants.DISABLE_2FA_ENDPOINT) // Używamy poprawionej stałej
+                .url(Constants.DISABLE_2FA_ENDPOINT)
                 .header("Authorization", "Bearer " + currentJwtToken)
                 .post(body)
                 .build();
@@ -411,7 +411,6 @@ public class AccountSettingsActivity extends AppCompatActivity {
                             handleApiError("Błąd parsowania statusu 2FA: " + e.getMessage());
                         }
                     } else {
-                        // ⭐️ POPRAWKA LOGA: Użycie substring w endpoint
                         String endpoint = Constants.CHECK_2FA_STATUS_ENDPOINT.substring(Constants.VPS_SERVER_IP.length());
                         handleApiErrorFromServer(resp.code(), responseBody, endpoint);
                         runOnUiThread(AccountSettingsActivity.this::update2FAUIState);

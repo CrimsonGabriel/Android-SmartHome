@@ -38,35 +38,24 @@ import okhttp3.RequestBody;
 import okhttp3.Response;
 
 public class SettingsActivity extends AppCompatActivity {
-
     private static final String TAG = "SettingsActivity";
     public static final String NOTIFICATION_PREFS = "NotificationSettings";
     public static final String KEY_GLOBAL_NOTIFICATION_INTERVAL = "global_notification_interval_minutes";
-
-    // --- Zmienne Wyglądu ---
     private AppearanceManager appearanceManager;
     private LocaleManager localeManager;
     private MaterialSwitch switchTheme;
     private RadioGroup radioGroupTextScale;
     private RadioGroup radioGroupButtonScale;
     private RadioGroup radioGroupLanguage;
-
-    // --- Zmienne Lokalne (Czyszczenie telefonu) ---
     private CleanupManager cleanupManager;
     private TextInputEditText editCleanupDays;
     private TextInputEditText editCleanupSize;
-
-    // --- Zmienne Zdalne (Serwer / Retencja) ---
     private MaterialButton btnRequestRetentionChange;
     private TextView txtCurrentServerSettings;
-
-    // --- Zmienne Globalne Interwały ---
     private TextInputEditText editGlobalInterval;
     private MaterialButton btnSaveGlobalInterval;
     private TextInputEditText editGlobalNotificationInterval;
     private MaterialButton btnSaveGlobalNotificationInterval;
-
-    // --- Inne ---
     private OkHttpClient httpClient;
     private SharedPreferences authPrefs;
     private SharedPreferences notificationPrefs;
@@ -92,11 +81,9 @@ public class SettingsActivity extends AppCompatActivity {
 
         setupViews();
 
-        // Ładowanie ustawień
         loadCurrentAppearanceSettings();
         loadCurrentNotificationSettings();
 
-        // ⭐️ Pobieranie statusu retencji z serwera ⭐️
         fetchCurrentRetentionStatus();
 
         setupAppearanceListeners();
@@ -104,21 +91,17 @@ public class SettingsActivity extends AppCompatActivity {
     }
 
     private void setupViews() {
-        // Wygląd
         switchTheme = findViewById(R.id.switchThemeSettings);
         radioGroupTextScale = findViewById(R.id.radioGroupTextScale);
         radioGroupButtonScale = findViewById(R.id.radioGroupButtonScale);
         radioGroupLanguage = findViewById(R.id.radioGroupLanguage);
 
-        // Lokalne czyszczenie
         editCleanupDays = findViewById(R.id.editCleanupDays);
         editCleanupSize = findViewById(R.id.editCleanupSize);
 
-        // Serwer - Retencja (Nowe pola)
         btnRequestRetentionChange = findViewById(R.id.btnRequestRetentionChange);
         txtCurrentServerSettings = findViewById(R.id.txtCurrentServerSettings);
 
-        // Interwały Globalne
         editGlobalInterval = findViewById(R.id.editGlobalInterval);
         btnSaveGlobalInterval = findViewById(R.id.btnSaveGlobalInterval);
         editGlobalNotificationInterval = findViewById(R.id.editGlobalNotificationInterval);
@@ -126,16 +109,13 @@ public class SettingsActivity extends AppCompatActivity {
     }
 
     private void setupClickListeners() {
-        // Obsługa przycisków zapisu interwałów
         btnSaveGlobalInterval.setOnClickListener(v -> saveGlobalInterval());
         btnSaveGlobalNotificationInterval.setOnClickListener(v -> saveGlobalNotificationInterval());
 
-        // Obsługa przycisku wniosku o retencję (NOWE)
         if (btnRequestRetentionChange != null) {
             btnRequestRetentionChange.setOnClickListener(v -> showRetentionRequestDialog());
         }
 
-        // Nawigacja
         MaterialButton btnAccountSettings = findViewById(R.id.btnAccountSettings);
         if (btnAccountSettings != null) {
             btnAccountSettings.setOnClickListener(v -> {
@@ -147,7 +127,6 @@ public class SettingsActivity extends AppCompatActivity {
         MaterialButton btnSharingSettings = findViewById(R.id.btnSharingSettings);
         if (btnSharingSettings != null) {
             btnSharingSettings.setOnClickListener(v -> {
-                // Przechodzimy do nowego ekranu udostępniania
                 Intent intent = new Intent(SettingsActivity.this, GatewayShareActivity.class);
                 startActivity(intent);
             });
@@ -160,7 +139,7 @@ public class SettingsActivity extends AppCompatActivity {
     }
 
     // ============================================================
-    // ⭐️ LOGIKA RETENCJI DANYCH (SERVER RETENTION POLICY) ⭐️
+    //  LOGIKA RETENCJI DANYCH (SERVER RETENTION POLICY)
     // ============================================================
 
     /**
@@ -170,7 +149,6 @@ public class SettingsActivity extends AppCompatActivity {
         String jwtToken = authPrefs.getString(LoginActivity.KEY_JWT_TOKEN, null);
         if (jwtToken == null) return;
 
-        // Adres endpointu
         String url = Constants.VPS_SERVER_IP + "/api/retention/status";
 
         Request request = new Request.Builder()
@@ -181,12 +159,12 @@ public class SettingsActivity extends AppCompatActivity {
         httpClient.newCall(request).enqueue(new Callback() {
             @Override
             public void onFailure(@NonNull Call call, @NonNull IOException e) {
-                // Błąd sieci - ignorujemy cicho lub logujemy
-                Log.e(TAG, "Błąd pobierania statusu retencji: " + e.getMessage());
+                Log.e(TAG, "Błąd pobierania statusu retencji", e);
             }
 
             @Override
-            public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
+            // USUNIĘTO "throws IOException" z końca tej linii:
+            public void onResponse(@NonNull Call call, @NonNull Response response) {
                 if (response.isSuccessful() && response.body() != null) {
                     try {
                         JSONObject json = new JSONObject(response.body().string());
@@ -194,20 +172,26 @@ public class SettingsActivity extends AppCompatActivity {
                         String size = json.optString("currentSize", "0");
                         String status = json.optString("status", "NONE");
 
-                        // Formatowanie tekstu
-                        // np. "Obecnie na serwerze: 30 dni, 50000 rekordów."
-                        final String displayText = String.format(getString(R.string.cleanup_current_settings), days, size);
 
-                        // Jeśli wniosek jest PENDING, dodaj dopisek
-                        final String statusText = "PENDING".equals(status) ? "\n(" + getString(R.string.cleanup_request_status_pending) + ")" : "";
+                        final String mainSettingsText = String.format(getString(R.string.cleanup_current_settings), days, size);
+
+
+                        final String fullText;
+                        if ("PENDING".equals(status)) {
+                            String pendingLabel = getString(R.string.cleanup_request_status_pending);
+                            String suffix = getString(R.string.status_pending_suffix, pendingLabel);
+                            fullText = mainSettingsText + suffix;
+                        } else {
+                            fullText = mainSettingsText;
+                        }
 
                         runOnUiThread(() -> {
                             if (txtCurrentServerSettings != null) {
-                                txtCurrentServerSettings.setText(displayText + statusText);
+                                txtCurrentServerSettings.setText(fullText);
                             }
                         });
                     } catch (Exception e) {
-                        e.printStackTrace();
+                        Log.e(TAG, "Błąd parsowania JSON statusu retencji", e);
                     }
                 }
             }
@@ -220,7 +204,6 @@ public class SettingsActivity extends AppCompatActivity {
     private void showRetentionRequestDialog() {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
 
-        // Tworzymy layout programowo (LinearLayout z dwoma polami)
         LinearLayout layout = new LinearLayout(this);
         layout.setOrientation(LinearLayout.VERTICAL);
         layout.setPadding(50, 40, 50, 10);
@@ -247,9 +230,6 @@ public class SettingsActivity extends AppCompatActivity {
                 .show();
     }
 
-    /**
-     * 3. Wysyła wniosek JSON do serwera.
-     */
     private void sendRetentionRequest(String days, String size) {
         String jwtToken = authPrefs.getString(LoginActivity.KEY_JWT_TOKEN, null);
         if (jwtToken == null) return;
@@ -294,28 +274,23 @@ public class SettingsActivity extends AppCompatActivity {
     // ============================================================
 
     private void loadCurrentAppearanceSettings() {
-        // --- Tryb Ciemny ---
         int currentTheme = appearanceManager.getTheme();
         switchTheme.setChecked(currentTheme == AppearanceManager.THEME_DARK);
 
-        // --- Rozmiar Tekstu ---
         String currentTextScale = appearanceManager.getTextScale();
         if (AppearanceManager.SCALE_SMALL.equals(currentTextScale)) radioGroupTextScale.check(R.id.radioTextSmall);
         else if (AppearanceManager.SCALE_LARGE.equals(currentTextScale)) radioGroupTextScale.check(R.id.radioTextLarge);
         else radioGroupTextScale.check(R.id.radioTextMedium);
 
-        // --- Rozmiar Przycisków ---
         String currentButtonScale = appearanceManager.getButtonScale();
         if (AppearanceManager.SCALE_SMALL.equals(currentButtonScale)) radioGroupButtonScale.check(R.id.radioButtonSmall);
         else if (AppearanceManager.SCALE_LARGE.equals(currentButtonScale)) radioGroupButtonScale.check(R.id.radioButtonLarge);
         else radioGroupButtonScale.check(R.id.radioButtonMedium);
 
-        // --- Język ---
         String currentLanguage = localeManager.getLanguage();
         if (LocaleManager.LANGUAGE_POLISH.equals(currentLanguage)) radioGroupLanguage.check(R.id.radioLanguagePolish);
         else radioGroupLanguage.check(R.id.radioLanguageEnglish);
 
-        // --- Czyszczenie Lokalne ---
         int cleanupDays = cleanupManager.getCleanupDays();
         if (cleanupDays > 0) editCleanupDays.setText(String.valueOf(cleanupDays));
         else {
@@ -410,7 +385,8 @@ public class SettingsActivity extends AppCompatActivity {
                 intervalToSave = Integer.parseInt(intervalStr);
                 if (intervalToSave <= 0) intervalToSave = 0;
             } catch (NumberFormatException e) {
-                editGlobalNotificationInterval.setError("Nieprawidłowa liczba");
+                // Używamy zasobu string zamiast tekstu "Nieprawidłowa liczba"
+                editGlobalNotificationInterval.setError(getString(R.string.error_invalid_number));
                 return;
             }
         }
@@ -427,16 +403,21 @@ public class SettingsActivity extends AppCompatActivity {
         }
         String intervalStr = editGlobalInterval.getText() != null ? editGlobalInterval.getText().toString() : "";
         int intervalToSend = 60;
+
         if (!intervalStr.isEmpty()) {
             try {
                 intervalToSend = Integer.parseInt(intervalStr);
-                if (intervalToSend <= 5) { intervalToSend = 5; editGlobalInterval.setText("5"); }
+                if (intervalToSend <= 5) {
+                    intervalToSend = 5;
+                    // Używamy String.valueOf, aby uniknąć warningów o hardcodowanym tekście
+                    editGlobalInterval.setText(String.valueOf(5));
+                }
             } catch (NumberFormatException e) {
-                editGlobalInterval.setError("Nieprawidłowa liczba");
+                editGlobalInterval.setError(getString(R.string.error_invalid_number));
                 return;
             }
         } else {
-            editGlobalInterval.setText("60");
+            editGlobalInterval.setText(String.valueOf(60));
         }
 
         Toast.makeText(this, R.string.toast_global_interval_updating, Toast.LENGTH_SHORT).show();
@@ -454,7 +435,10 @@ public class SettingsActivity extends AppCompatActivity {
         httpClient.newCall(request).enqueue(new Callback() {
             @Override
             public void onFailure(@NonNull Call call, @NonNull IOException e) {
-                runOnUiThread(() -> Toast.makeText(SettingsActivity.this, getString(R.string.toast_api_error) + ": " + e.getMessage(), Toast.LENGTH_LONG).show());
+                // Bezpieczniejsze łączenie stringów w Toast
+                runOnUiThread(() -> Toast.makeText(SettingsActivity.this,
+                        getString(R.string.toast_api_error_with_reason, e.getMessage()),
+                        Toast.LENGTH_LONG).show());
             }
             @Override
             public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
@@ -474,7 +458,9 @@ public class SettingsActivity extends AppCompatActivity {
                         startService(serviceIntent);
                     });
                 } else {
-                    runOnUiThread(() -> Toast.makeText(SettingsActivity.this, getString(R.string.toast_api_error) + ": " + responseBody, Toast.LENGTH_LONG).show());
+                    runOnUiThread(() -> Toast.makeText(SettingsActivity.this,
+                            getString(R.string.toast_api_error_with_reason, responseBody),
+                            Toast.LENGTH_LONG).show());
                 }
             }
         });

@@ -65,21 +65,31 @@ public class DeferUpdateActivity extends AppCompatActivity {
             Toast.makeText(this, R.string.toast_update_postponed_generic, Toast.LENGTH_SHORT).show();
         }
 
-        sendUpdateStatus(id, "DEFERRED");
+        sendUpdateStatus(id);
     }
 
-    private void sendUpdateStatus(long id, String status) {
+    private void sendUpdateStatus(long id) {
         SharedPreferences authPrefs = getSharedPreferences(LoginActivity.AUTH_PREFS, Context.MODE_PRIVATE);
         String jwtToken = authPrefs.getString(LoginActivity.KEY_JWT_TOKEN, null);
+
+        if (jwtToken == null) {
+            Log.e(TAG, "Brak tokena, nie można wysłać statusu.");
+            finish();
+            return;
+        }
 
         OkHttpClient client = new OkHttpClient();
         JSONObject json = new JSONObject();
         try {
-            json.put("status", status);
-        } catch (Exception e) {}
+            // Wpisujemy status na sztywno, co rozwiązuje warning
+            json.put("status", "DEFERRED");
+        } catch (Exception e) {
+            // Rozwiązanie problemu "Empty catch block"
+            Log.e(TAG, "Błąd tworzenia JSON statusu", e);
+        }
 
         RequestBody body = RequestBody.create(json.toString(), MediaType.get("application/json"));
-        String url = Constants.UPDATE_BASE_ENDPOINT + "/" + id + "/status"; //
+        String url = Constants.UPDATE_BASE_ENDPOINT + "/" + id + "/status";
 
         Request request = new Request.Builder()
                 .url(url)
@@ -90,20 +100,21 @@ public class DeferUpdateActivity extends AppCompatActivity {
         client.newCall(request).enqueue(new Callback() {
             @Override
             public void onFailure(@NonNull Call call, @NonNull IOException e) {
-                Log.e(TAG, "Nie udało się wysłać statusu DEFERRED");
+                Log.e(TAG, "Nie udało się wysłać statusu DEFERRED", e);
                 finish();
             }
 
             @Override
             public void onResponse(@NonNull Call call, @NonNull Response response) {
-                if (!response.isSuccessful()) {
-                    // Jeśli backend zwróci błąd (np. nie można już odłożyć REQUIRED),
-                    // użytkownik dostanie powiadomienie znowu za 60 sekund (bo polling service).
-                    Log.w(TAG, "Backend odrzucił DEFERRED: " + response.code());
-                } else {
-                    Log.i(TAG, "Status DEFERRED zapisany w backendzie.");
+                try (Response r = response) {
+                    if (!r.isSuccessful()) {
+                        Log.w(TAG, "Backend odrzucił DEFERRED: " + r.code());
+                    } else {
+                        Log.i(TAG, "Status DEFERRED zapisany w backendzie.");
+                    }
+                } finally {
+                    finish();
                 }
-                finish();
             }
         });
     }

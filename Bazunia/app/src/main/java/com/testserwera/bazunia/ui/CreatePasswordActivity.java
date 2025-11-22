@@ -125,19 +125,22 @@ public class CreatePasswordActivity extends AppCompatActivity {
             }
 
             @Override
-            public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
-                if (response.isSuccessful()) {
-                    Log.i(TAG, "Hasło pomyślnie ustawione na serwerze.");
-                    runOnUiThread(() -> {
-                        Toast.makeText(CreatePasswordActivity.this, R.string.toast_password_set_success, Toast.LENGTH_SHORT).show();
-                        startApp(); // Uruchom główną aplikację
-                    });
-                } else {
-                    Log.w(TAG, "Serwer odrzucił ustawienie hasła, kod: " + response.code());
-                    runOnUiThread(() -> {
-                        showLoading(false);
-                        Toast.makeText(CreatePasswordActivity.this, R.string.toast_password_set_error, Toast.LENGTH_LONG).show();
-                    });
+            public void onResponse(@NonNull Call call, @NonNull Response response) {
+
+                try (Response r = response) {
+                    if (r.isSuccessful()) {
+                        Log.i(TAG, "Hasło pomyślnie ustawione na serwerze.");
+                        runOnUiThread(() -> {
+                            Toast.makeText(CreatePasswordActivity.this, R.string.toast_password_set_success, Toast.LENGTH_SHORT).show();
+                            startApp(); // Uruchom główną aplikację
+                        });
+                    } else {
+                        Log.w(TAG, "Serwer odrzucił ustawienie hasła, kod: " + r.code());
+                        runOnUiThread(() -> {
+                            showLoading(false);
+                            Toast.makeText(CreatePasswordActivity.this, R.string.toast_password_set_error, Toast.LENGTH_LONG).show();
+                        });
+                    }
                 }
             }
         });

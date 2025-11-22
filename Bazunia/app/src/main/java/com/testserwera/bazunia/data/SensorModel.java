@@ -33,5 +33,4 @@ public class SensorModel implements Serializable {
         return sdf.format(new Date(timestamp));
     }
 
-    // <<< USUNIĘTO: Metoda getIconResourceId() została przeniesiona do GatewaySensorCursorAdapter >>>
 }

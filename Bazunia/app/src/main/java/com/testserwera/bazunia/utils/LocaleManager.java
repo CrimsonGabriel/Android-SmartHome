@@ -3,8 +3,6 @@ package com.testserwera.bazunia.utils;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.res.Configuration;
-import android.content.res.Resources;
-import android.os.Build;
 import java.util.Locale;
 
 public class LocaleManager {
@@ -44,24 +42,17 @@ public class LocaleManager {
 
     /**
      * Właściwa logika przełączania zasobów językowych.
+     * Dostosowana pod Android 8.0+ (API 26+).
      */
     private Context updateResources(Context context, String languageCode) {
         Locale locale = new Locale(languageCode);
         Locale.setDefault(locale);
 
-        Resources res = context.getResources();
-        Configuration config = res.getConfiguration();
+        Configuration config = context.getResources().getConfiguration();
+        config.setLocale(locale);
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            config.setLocale(locale);
-            // Tworzenie nowego kontekstu konfiguracji jest preferowanym sposobem od Androida 7.0
-            return context.createConfigurationContext(config);
-        } else {
-            // Starsze wersje
-            config.locale = locale;
-            // Wymaga deprecated metody dla starszych API
-            res.updateConfiguration(config, res.getDisplayMetrics());
-            return context;
-        }
+        config.setLayoutDirection(locale);
+
+        return context.createConfigurationContext(config);
     }
 }

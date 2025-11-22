@@ -82,7 +82,9 @@ public class NotificationHelper {
         String notifTitle = "Aktualizacja: " + title + " (" + version + ")";
         String notifBody = "Dostępna nowa aktualizacja. Status: " + urgency;
 
-        if ("REQUIRED".equals(urgency)) {
+        boolean isRequired = "REQUIRED".equals(urgency);
+
+        if (isRequired) {
             notifBody += " (Wymagana!)";
         }
 
@@ -93,7 +95,7 @@ public class NotificationHelper {
 
         // Decyzja: Czy pokazać przycisk "Odłóż"?
         // Pokaż JEŚLI: (To NIE jest REQUIRED) LUB (To jest REQUIRED, ale licznik jest 0)
-        boolean showDeferButton = !"REQUIRED".equals(urgency) || deferCount == 0;
+        boolean showDeferButton = !isRequired || deferCount == 0;
         // -----------------------------------------------
 
         int notificationId = (int) assignmentId;
@@ -119,7 +121,7 @@ public class NotificationHelper {
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
                 .setOnlyAlertOnce(true)
                 .setAutoCancel(false) // Wymaga akcji użytkownika
-                .setOngoing("REQUIRED".equals(urgency)) // Nie da się usunąć palcem jeśli wymagana
+                .setOngoing(isRequired) // Nie da się usunąć palcem jeśli wymagana
 
                 // Guzik "Zainstaluj" - ZAWSZE widoczny
                 .addAction(R.drawable.ic_check, context.getString(R.string.action_accept_update), acceptPendingIntent);
@@ -139,8 +141,9 @@ public class NotificationHelper {
             );
 
             builder.addAction(R.drawable.ic_close, context.getString(R.string.action_defer_update), deferPendingIntent);
-        } else if ("REQUIRED".equals(urgency)) {
-            // Opcjonalnie: Zmień tekst, żeby użytkownik wiedział, że to ostatnia szansa
+        } else {
+            // Skoro tu jesteśmy (showDeferButton == false), to znaczy, że aktualizacja JEST Wymagana
+            // i licznik odroczeń > 0. Warunek ("REQUIRED".equals(urgency)) był tutaj zawsze prawdą.
             builder.setContentText(notifBody + "\nOstatnie ostrzeżenie: Instalacja wymagana.");
         }
 

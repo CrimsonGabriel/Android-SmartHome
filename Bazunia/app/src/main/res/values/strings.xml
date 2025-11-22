@@ -425,5 +425,14 @@
     <string name="desc_expand_icon">Ikona rozwijania/zwijania</string>
     <string name="tools_folder_name">Nazwa Folderu</string>
     <string name="Hash">#</string>
+    <string name="error_invalid_number">Nieprawidłowa liczba</string>
+    <string name="toast_api_error_with_reason">Błąd API: %s</string>
+    <string name="status_pending_suffix">\n(%s)</string>
+    <string name="sensor_name_with_gateway_format">%1$s (%2$s)</string>
+    <string name="battery_percentage_format">%d%%</string>
+    <string name="error_update_id">Błąd ID aktualizacji</string>
+    <string name="error_connection">Błąd połączenia!</string>
+    <string name="error_with_message">Błąd: %s</string>
+    <string name="progress_percent_format">%d%%</string>
 
 </resources>

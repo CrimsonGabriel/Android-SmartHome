@@ -15,8 +15,7 @@ import java.util.Locale;
 public class DatabaseHelper extends SQLiteOpenHelper {
 
     private static final String DATABASE_NAME = "sensor_data.db";
-    // ⭐️ ZMIANA 1: Podniesienie wersji bazy danych
-    private static final int DATABASE_VERSION = 2; // Było 1
+    private static final int DATABASE_VERSION = 2;
 
     // Tabela 1: Odczyty
     public static final String TABLE_READINGS = "readings";
@@ -46,11 +45,13 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     public static final String S_COLUMN_BATTERY = "battery_level";
     public static final String S_COLUMN_KEYWORD = "keyword";
     public static final String S_COLUMN_INTERVAL = "interval_seconds";
-    // ⭐️ ZMIANA 2: Dodanie nowej stałej dla kolumny
     public static final String S_COLUMN_REPORTING_ENABLED = "reporting_enabled";
 
+    // ⭐️ DODAŁEM TĘ STAŁĄ (używaną w adapterze jako alias kolumny z podzapytania)
+    public static final String S_COLUMN_VALUE = "value";
 
-    // Tabele v3 (bez zmian)
+
+    // Tabele v3
     public static final String TABLE_FOLDERS = "folders";
     public static final String F_COLUMN_ID = "id";
     public static final String F_COLUMN_NAME = "name";
@@ -99,7 +100,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 G_COLUMN_LAST_SEEN + " TEXT)";
         db.execSQL(CREATE_TABLE_GATEWAYS);
 
-        // ⭐️ ZMIANA 3: Dodanie S_COLUMN_REPORTING_ENABLED do definicji tabeli (dla nowych instalacji)
         String CREATE_TABLE_SENSORS = "CREATE TABLE " + TABLE_SENSORS + " (" +
                 S_COLUMN_ID + " INTEGER PRIMARY KEY, " +
                 S_COLUMN_GATEWAY_ID + " INTEGER, " +
@@ -109,13 +109,12 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 S_COLUMN_BATTERY + " INTEGER, " +
                 S_COLUMN_KEYWORD + " TEXT, " +
                 S_COLUMN_INTERVAL + " INTEGER, " +
-                S_COLUMN_REPORTING_ENABLED + " INTEGER NOT NULL DEFAULT 1, " + // Nowa kolumna (1=true)
+                S_COLUMN_REPORTING_ENABLED + " INTEGER NOT NULL DEFAULT 1, " +
                 "FOREIGN KEY(" + S_COLUMN_GATEWAY_ID + ") REFERENCES " + TABLE_GATEWAYS + "(" + G_COLUMN_ID + ") ON DELETE CASCADE)";
         db.execSQL(CREATE_TABLE_SENSORS);
     }
 
     private void createFolderAndFavoriteTables(SQLiteDatabase db) {
-        // ... (bez zmian)
         String CREATE_TABLE_FOLDERS = "CREATE TABLE " + TABLE_FOLDERS + " (" +
                 F_COLUMN_ID + " INTEGER PRIMARY KEY, " +
                 F_COLUMN_NAME + " TEXT, " +
@@ -145,8 +144,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-
-        // ⭐️ ZMIANA 4: Dodanie migracji dla wersji 2 (dla istniejących użytkowników)
         if (oldVersion < 2) {
             try {
                 db.execSQL("ALTER TABLE " + TABLE_SENSORS + " ADD COLUMN " + S_COLUMN_REPORTING_ENABLED + " INTEGER NOT NULL DEFAULT 1");
@@ -154,13 +151,12 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 Log.e("DB_UPGRADE", "Nie udało się dodać kolumny reporting_enabled: " + e.getMessage());
             }
         }
-
-        // Istniejące migracje z Twojego pliku (są OK)
-        if (oldVersion < 2) { // To jest Twoja stara migracja v2
+        // ... (reszta migracji bez zmian)
+        if (oldVersion < 2) {
             try {
                 db.execSQL("ALTER TABLE sensors RENAME TO " + TABLE_READINGS);
             } catch (SQLException e) {
-                db.execSQL("DROP TABLE IF EXISTS " + TABLE_READINGS); // Stara nazwa
+                db.execSQL("DROP TABLE IF EXISTS " + TABLE_READINGS);
                 db.execSQL("DROP TABLE IF EXISTS " + TABLE_GATEWAYS);
                 db.execSQL("DROP TABLE IF EXISTS " + TABLE_SENSORS);
                 db.execSQL("DROP TABLE IF EXISTS " + TABLE_FOLDERS);
@@ -173,10 +169,10 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             }
             createGatewayAndSensorTables(db);
         }
-        if (oldVersion < 3) { // Twoja migracja v3
+        if (oldVersion < 3) {
             createFolderAndFavoriteTables(db);
         }
-        if (oldVersion < 4) { // Twoja migracja v4 (dla S_COLUMN_INTERVAL)
+        if (oldVersion < 4) {
             try {
                 db.execSQL("ALTER TABLE " + TABLE_SENSORS + " ADD COLUMN " + S_COLUMN_INTERVAL + " INTEGER");
             } catch (SQLException e) {
@@ -185,8 +181,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         }
     }
 
-    // --- METODY ODCZYTÓW ---
-    // ... (addSensorData, getLatestSensorData, getLatestUniqueSensorData, getSensorHistory, cleanOldSensorData bez zmian)
+    // --- METODY ODCZYTÓW (READINGS) ---
+
     public void addSensorData(SensorModel sensor) {
         SQLiteDatabase db = this.getWritableDatabase();
         ContentValues values = new ContentValues();
@@ -272,30 +268,17 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         }
         return deletedRows;
     }
-    /**
-     * Usuwa najstarsze rekordy, aby zachować w bazie tylko określoną liczbę najnowszych wpisów.
-     * @param maxRecords Maksymalna liczba rekordów do zachowania (np. 10000). Jeśli <= 0, nic nie robi.
-     * @return Liczba usuniętych rekordów.
-     */
+
     public int cleanSensorDataBySize(int maxRecords) {
         if (maxRecords <= 0) return 0;
         SQLiteDatabase db = this.getWritableDatabase();
         int deletedRows = 0;
-
         try {
-            // Logika: Usuń wszystko, co NIE jest w grupie X najnowszych rekordów.
-            // Sortujemy po ID malejąco (najnowsze na górze) i bierzemy LIMIT.
-            // Wszystko co ma ID mniejsze niż najmniejsze ID z tej grupy - wylatuje.
-
-            // SQL: DELETE FROM readings WHERE id NOT IN (SELECT id FROM readings ORDER BY timestamp DESC LIMIT ?)
-
             String whereClause = COLUMN_ID + " NOT IN (" +
                     "SELECT " + COLUMN_ID + " FROM " + TABLE_READINGS +
                     " ORDER BY " + COLUMN_TIMESTAMP + " DESC " +
                     " LIMIT " + maxRecords + ")";
-
             deletedRows = db.delete(TABLE_READINGS, whereClause, null);
-
             if (deletedRows > 0) {
                 Log.d("DB_CLEAN", String.format(Locale.getDefault(),
                         context.getString(R.string.log_info_data_cleaned_size), deletedRows, maxRecords));
@@ -305,7 +288,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         }
         return deletedRows;
     }
-
 
     // --- METODY ZARZĄDZANIA METADANYMI ---
 
@@ -318,7 +300,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
             for (Gateway gateway : gateways) {
                 ContentValues gwValues = new ContentValues();
-                // ... (gwValues.put... bez zmian)
                 gwValues.put(G_COLUMN_ID, gateway.getId());
                 gwValues.put(G_COLUMN_NAME, gateway.getName());
                 gwValues.put(G_COLUMN_STATUS, gateway.getStatus());
@@ -338,9 +319,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                         sValues.put(S_COLUMN_BATTERY, sensor.getBatteryLevel());
                         sValues.put(S_COLUMN_KEYWORD, sensor.getKeyword());
                         sValues.put(S_COLUMN_INTERVAL, sensor.getIntervalSeconds());
-                        // ⭐️ ZMIANA 5: Zapisywanie reportingEnabled podczas synchronizacji
                         sValues.put(S_COLUMN_REPORTING_ENABLED, sensor.isReportingEnabled() ? 1 : 0);
-
                         db.insert(TABLE_SENSORS, null, sValues);
                     }
                 }
@@ -356,13 +335,10 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         }
     }
 
-    // --- METODY FOLDERÓW I ULUBIONYCH (v3) ---
-    // ... (cała sekcja syncFoldersAndFavorites bez zmian)
     public void syncFoldersAndFavorites(List<Folder> folders, List<Gateway> favoriteGateways, List<Sensor> favoriteSensors) {
         SQLiteDatabase db = this.getWritableDatabase();
         try {
             db.beginTransaction();
-            // (Ta sekcja jest OK, bez zmian)
             db.delete(TABLE_FOLDERS, null, null);
             db.delete(TABLE_FOLDER_GATEWAYS, null, null);
             db.delete(TABLE_FOLDER_SENSORS, null, null);
@@ -425,6 +401,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         }
     }
 
+    // --- METODY ZARZĄDZANIA FOLDERAMI (LOKALNE) ---
+
     public void addGatewayToFolder(long gatewayId, long folderId) {
         SQLiteDatabase db = this.getWritableDatabase();
         ContentValues values = new ContentValues();
@@ -432,7 +410,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         values.put(FG_COLUMN_GATEWAY_ID, gatewayId);
         try {
             db.insertWithOnConflict(TABLE_FOLDER_GATEWAYS, null, values, SQLiteDatabase.CONFLICT_IGNORE);
-            Log.d("DB_UPDATE", "Lokalnie dodano bramkę " + gatewayId + " do folderu " + folderId);
         } catch (Exception e) {
             Log.e("DB_UPDATE", "Błąd dodawania bramki do folderu lokalnie: " + e.getMessage());
         }
@@ -468,6 +445,9 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             Log.e("DB_UPDATE", "Błąd usuwania czujnika z folderu lokalnie: " + e.getMessage());
         }
     }
+
+    // --- KURSORY DO WYŚWIETLANIA DANYCH ---
+
     public Cursor getFoldersCursor() {
         SQLiteDatabase db = this.getReadableDatabase();
         String query = "SELECT " + F_COLUMN_ID + " AS _id, " +
@@ -476,6 +456,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 " ORDER BY " + F_COLUMN_NAME + " ASC";
         return db.rawQuery(query, null);
     }
+
     public Cursor getGatewaysForFolderCursor(long folderId) {
         SQLiteDatabase db = this.getReadableDatabase();
         String query = "SELECT g." + G_COLUMN_ID + " AS _id, g.* FROM " + TABLE_GATEWAYS + " g " +
@@ -484,21 +465,30 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 "ORDER BY g." + G_COLUMN_NAME + " ASC";
         return db.rawQuery(query, new String[]{String.valueOf(folderId)});
     }
+
+    // ⭐️ POPRAWIONE ZAPYTANIA DLA SENSORÓW (DOŁĄCZANIE WARTOŚCI ODCZYTU)
+
     public Cursor getSensorsForGateway(long gatewayId) {
         SQLiteDatabase db = this.getReadableDatabase();
+        // Podzapytanie, aby pobrać ostatni odczyt dla czujnika
         String query = "SELECT " +
-                S_COLUMN_ID + " AS _id, " +
-                S_COLUMN_GATEWAY_ID + ", " +
-                S_COLUMN_NAME + ", " +
-                S_COLUMN_TYPE + ", " +
-                S_COLUMN_DESCRIPTION + ", " +
-                S_COLUMN_BATTERY + ", " +
-                S_COLUMN_KEYWORD +
-                " FROM " + TABLE_SENSORS +
-                " WHERE " + S_COLUMN_GATEWAY_ID + " = ? " +
-                " ORDER BY " + S_COLUMN_NAME + " ASC";
+                "s." + S_COLUMN_ID + " AS _id, " +
+                "s." + S_COLUMN_GATEWAY_ID + ", " +
+                "s." + S_COLUMN_NAME + ", " +
+                "s." + S_COLUMN_TYPE + ", " +
+                "s." + S_COLUMN_DESCRIPTION + ", " +
+                "s." + S_COLUMN_BATTERY + ", " +
+                "s." + S_COLUMN_KEYWORD + ", " +
+                // Pobierz wartość z tabeli readings
+                "(SELECT " + COLUMN_VALUE + " FROM " + TABLE_READINGS + " r " +
+                " WHERE r." + COLUMN_SENSOR_ID + " = CAST(s." + S_COLUMN_ID + " AS TEXT) " +
+                " ORDER BY r." + COLUMN_TIMESTAMP + " DESC LIMIT 1) AS " + S_COLUMN_VALUE +
+                " FROM " + TABLE_SENSORS + " s " +
+                " WHERE s." + S_COLUMN_GATEWAY_ID + " = ? " +
+                " ORDER BY s." + S_COLUMN_NAME + " ASC";
         return db.rawQuery(query, new String[]{String.valueOf(gatewayId)});
     }
+
     public Cursor getFavoriteGatewaysCursor() {
         SQLiteDatabase db = this.getReadableDatabase();
         String query = "SELECT g." + G_COLUMN_ID + " AS _id, g.* FROM " + TABLE_GATEWAYS + " g " +
@@ -506,27 +496,38 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 "ORDER BY g." + G_COLUMN_NAME + " ASC";
         return db.rawQuery(query, null);
     }
+
     public Cursor getFavoriteSensorsCursor() {
         SQLiteDatabase db = this.getReadableDatabase();
+        // Dołączamy też wartość
         String query = "SELECT s." + S_COLUMN_ID + " AS _id, s.*, " +
-                "g." + G_COLUMN_NAME + " AS gateway_name " +
-                "FROM " + TABLE_SENSORS + " s " +
-                "JOIN " + TABLE_FAVORITE_SENSORS + " fs ON s." + S_COLUMN_ID + " = fs." + FAV_S_SENSOR_ID + " " +
-                "LEFT JOIN " + TABLE_GATEWAYS + " g ON s." + S_COLUMN_GATEWAY_ID + " = g." + G_COLUMN_ID + " " +
-                "ORDER BY s." + S_COLUMN_NAME + " ASC";
+                "g." + G_COLUMN_NAME + " AS gateway_name, " +
+                "(SELECT " + COLUMN_VALUE + " FROM " + TABLE_READINGS + " r " +
+                " WHERE r." + COLUMN_SENSOR_ID + " = CAST(s." + S_COLUMN_ID + " AS TEXT) " +
+                " ORDER BY r." + COLUMN_TIMESTAMP + " DESC LIMIT 1) AS " + S_COLUMN_VALUE +
+                " FROM " + TABLE_SENSORS + " s " +
+                " JOIN " + TABLE_FAVORITE_SENSORS + " fs ON s." + S_COLUMN_ID + " = fs." + FAV_S_SENSOR_ID + " " +
+                " LEFT JOIN " + TABLE_GATEWAYS + " g ON s." + S_COLUMN_GATEWAY_ID + " = g." + G_COLUMN_ID + " " +
+                " ORDER BY s." + S_COLUMN_NAME + " ASC";
         return db.rawQuery(query, null);
     }
+
     public Cursor getSensorsForFolderCursor(long folderId) {
         SQLiteDatabase db = this.getReadableDatabase();
+        // Dołączamy też wartość
         String query = "SELECT s." + S_COLUMN_ID + " AS _id, s.*, " +
-                "g." + G_COLUMN_NAME + " AS gateway_name " +
-                "FROM " + TABLE_SENSORS + " s " +
-                "JOIN " + TABLE_FOLDER_SENSORS + " fs ON s." + S_COLUMN_ID + " = fs." + FS_COLUMN_SENSOR_ID + " " +
-                "LEFT JOIN " + TABLE_GATEWAYS + " g ON s." + S_COLUMN_GATEWAY_ID + " = g." + G_COLUMN_ID + " " +
-                "WHERE fs." + FS_COLUMN_FOLDER_ID + " = ? " +
-                "ORDER BY s." + S_COLUMN_NAME + " ASC";
+                "g." + G_COLUMN_NAME + " AS gateway_name, " +
+                "(SELECT " + COLUMN_VALUE + " FROM " + TABLE_READINGS + " r " +
+                " WHERE r." + COLUMN_SENSOR_ID + " = CAST(s." + S_COLUMN_ID + " AS TEXT) " +
+                " ORDER BY r." + COLUMN_TIMESTAMP + " DESC LIMIT 1) AS " + S_COLUMN_VALUE +
+                " FROM " + TABLE_SENSORS + " s " +
+                " JOIN " + TABLE_FOLDER_SENSORS + " fs ON s." + S_COLUMN_ID + " = fs." + FS_COLUMN_SENSOR_ID + " " +
+                " LEFT JOIN " + TABLE_GATEWAYS + " g ON s." + S_COLUMN_GATEWAY_ID + " = g." + G_COLUMN_ID + " " +
+                " WHERE fs." + FS_COLUMN_FOLDER_ID + " = ? " +
+                " ORDER BY s." + S_COLUMN_NAME + " ASC";
         return db.rawQuery(query, new String[]{String.valueOf(folderId)});
     }
+
     public Cursor getUncategorizedGatewaysCursor() {
         SQLiteDatabase db = this.getReadableDatabase();
         String query = "SELECT g." + G_COLUMN_ID + " AS _id, g.* FROM " + TABLE_GATEWAYS + " g " +
@@ -534,6 +535,9 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 " ORDER BY g." + G_COLUMN_NAME + " ASC";
         return db.rawQuery(query, null);
     }
+
+    // --- INNE POMOCNICZE ---
+
     public boolean isFavoriteSensor(long sensorId) {
         SQLiteDatabase db = this.getReadableDatabase();
         try (Cursor c = db.query(TABLE_FAVORITE_SENSORS, new String[]{FAV_S_SENSOR_ID}, FAV_S_SENSOR_ID + " = ?",
@@ -549,51 +553,34 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         }
     }
 
-    // ⭐️ ZMIANA 6: Usunięcie starej metody getSensorInterval
-    // public Integer getSensorInterval(long sensorId) { ... }
-
-
-    // ⭐️ ZMIANA 7: Dodanie nowej metody do pobierania metadanych (zastępuje getSensorInterval)
-    /**
-     * Pobiera metadane czujnika (interwał, stan raportowania) z bazy danych.
-     * Używa obiektu Sensor jako wygodnego kontenera na dane.
-     */
     public Sensor getSensorMetadata(long sensorId) {
         Sensor sensorData = null;
         SQLiteDatabase db = this.getReadableDatabase();
         try (Cursor cursor = db.query(TABLE_SENSORS,
-                new String[]{S_COLUMN_INTERVAL, S_COLUMN_REPORTING_ENABLED}, // Pola do pobrania
+                new String[]{S_COLUMN_INTERVAL, S_COLUMN_REPORTING_ENABLED},
                 S_COLUMN_ID + " = ?",
                 new String[]{String.valueOf(sensorId)},
                 null, null, null)) {
 
             if (cursor != null && cursor.moveToFirst()) {
-                sensorData = new Sensor(); // Używamy POJO jako kontenera
-
+                sensorData = new Sensor();
                 int intervalIndex = cursor.getColumnIndex(S_COLUMN_INTERVAL);
                 if (!cursor.isNull(intervalIndex)) {
                     sensorData.intervalSeconds = cursor.getInt(intervalIndex);
                 }
-
                 int reportingIndex = cursor.getColumnIndex(S_COLUMN_REPORTING_ENABLED);
-                // Domyślnie true (1), jeśli z jakiegoś powodu jest NULL (chociaż baza ma DEFAULT 1)
                 sensorData.reportingEnabled = cursor.getInt(reportingIndex) != 0;
             }
         } catch (Exception e) {
             Log.e("DatabaseHelper", "Błąd przy pobieraniu metadanych czujnika", e);
         }
-        return sensorData; // Zwróci obiekt Sensor lub null
+        return sensorData;
     }
 
-    // ⭐️ ZMIANA 8: Dodanie nowej metody do aktualizacji flagi raportowania
-    /**
-     * Aktualizuje tylko stan 'reporting_enabled' dla danego czujnika w lokalnej bazie.
-     */
     public void updateSensorReportingStatus(long sensorId, boolean isEnabled) {
         SQLiteDatabase db = this.getWritableDatabase();
         ContentValues values = new ContentValues();
         values.put(S_COLUMN_REPORTING_ENABLED, isEnabled ? 1 : 0);
-
         try {
             db.update(TABLE_SENSORS, values, S_COLUMN_ID + " = ?", new String[]{String.valueOf(sensorId)});
         } catch (Exception e) {
