@@ -7,6 +7,9 @@ import android.database.SQLException;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.util.Log;
+
+import androidx.annotation.NonNull;
+
 import com.testserwera.bazunia.R;
 import java.util.ArrayList;
 import java.util.List;
@@ -254,31 +257,30 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         return db.rawQuery(query, new String[]{gateId, sensorId});
     }
 
-    public int cleanOldSensorData(int days) {
-        if (days <= 0) return 0;
+    public void cleanOldSensorData(int days) {
+        if (days <= 0) return;
         SQLiteDatabase db = this.getWritableDatabase();
         long cutoffTime = System.currentTimeMillis() - (days * 24 * 60 * 60 * 1000L);
-        int deletedRows = 0;
+
         try {
-            deletedRows = db.delete(TABLE_READINGS, COLUMN_TIMESTAMP + " < ?", new String[]{String.valueOf(cutoffTime)});
+            int deletedRows = db.delete(TABLE_READINGS, COLUMN_TIMESTAMP + " < ?", new String[]{String.valueOf(cutoffTime)});
             Log.d("DB_CLEAN", String.format(Locale.getDefault(),
                     context.getString(R.string.log_info_data_cleaned), deletedRows, days));
         } catch (SQLException e) {
             Log.e("DB_CLEAN", "Błąd automatycznego czyszczenia: " + e.getMessage());
         }
-        return deletedRows;
     }
 
-    public int cleanSensorDataBySize(int maxRecords) {
-        if (maxRecords <= 0) return 0;
+    public void cleanSensorDataBySize(int maxRecords) {
+        if (maxRecords <= 0) return;
         SQLiteDatabase db = this.getWritableDatabase();
-        int deletedRows = 0;
+
         try {
             String whereClause = COLUMN_ID + " NOT IN (" +
                     "SELECT " + COLUMN_ID + " FROM " + TABLE_READINGS +
                     " ORDER BY " + COLUMN_TIMESTAMP + " DESC " +
                     " LIMIT " + maxRecords + ")";
-            deletedRows = db.delete(TABLE_READINGS, whereClause, null);
+            int deletedRows = db.delete(TABLE_READINGS, whereClause, null);
             if (deletedRows > 0) {
                 Log.d("DB_CLEAN", String.format(Locale.getDefault(),
                         context.getString(R.string.log_info_data_cleaned_size), deletedRows, maxRecords));
@@ -286,7 +288,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         } catch (SQLException e) {
             Log.e("DB_CLEAN", "Błąd czyszczenia wg rozmiaru: " + e.getMessage());
         }
-        return deletedRows;
     }
 
     // --- METODY ZARZĄDZANIA METADANYMI ---
@@ -310,16 +311,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
                 if (gateway.getSensors() != null) {
                     for (Sensor sensor : gateway.getSensors()) {
-                        ContentValues sValues = new ContentValues();
-                        sValues.put(S_COLUMN_ID, sensor.getId());
-                        sValues.put(S_COLUMN_GATEWAY_ID, gateway.getId());
-                        sValues.put(S_COLUMN_NAME, sensor.getName());
-                        sValues.put(S_COLUMN_TYPE, sensor.getType());
-                        sValues.put(S_COLUMN_DESCRIPTION, sensor.getDescription());
-                        sValues.put(S_COLUMN_BATTERY, sensor.getBatteryLevel());
-                        sValues.put(S_COLUMN_KEYWORD, sensor.getKeyword());
-                        sValues.put(S_COLUMN_INTERVAL, sensor.getIntervalSeconds());
-                        sValues.put(S_COLUMN_REPORTING_ENABLED, sensor.isReportingEnabled() ? 1 : 0);
+                        ContentValues sValues = getContentValues(gateway, sensor);
                         db.insert(TABLE_SENSORS, null, sValues);
                     }
                 }
@@ -333,6 +325,21 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 db.endTransaction();
             }
         }
+    }
+
+    @NonNull
+    private static ContentValues getContentValues(Gateway gateway, Sensor sensor) {
+        ContentValues sValues = new ContentValues();
+        sValues.put(S_COLUMN_ID, sensor.getId());
+        sValues.put(S_COLUMN_GATEWAY_ID, gateway.getId());
+        sValues.put(S_COLUMN_NAME, sensor.getName());
+        sValues.put(S_COLUMN_TYPE, sensor.getType());
+        sValues.put(S_COLUMN_DESCRIPTION, sensor.getDescription());
+        sValues.put(S_COLUMN_BATTERY, sensor.getBatteryLevel());
+        sValues.put(S_COLUMN_KEYWORD, sensor.getKeyword());
+        sValues.put(S_COLUMN_INTERVAL, sensor.getIntervalSeconds());
+        sValues.put(S_COLUMN_REPORTING_ENABLED, sensor.isReportingEnabled() ? 1 : 0);
+        return sValues;
     }
 
     public void syncFoldersAndFavorites(List<Folder> folders, List<Gateway> favoriteGateways, List<Sensor> favoriteSensors) {
@@ -562,7 +569,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 new String[]{String.valueOf(sensorId)},
                 null, null, null)) {
 
-            if (cursor != null && cursor.moveToFirst()) {
+            // Usunięto sprawdzenie "cursor != null", bo db.query zawsze zwraca obiekt Cursor
+            if (cursor.moveToFirst()) {
                 sensorData = new Sensor();
                 int intervalIndex = cursor.getColumnIndex(S_COLUMN_INTERVAL);
                 if (!cursor.isNull(intervalIndex)) {

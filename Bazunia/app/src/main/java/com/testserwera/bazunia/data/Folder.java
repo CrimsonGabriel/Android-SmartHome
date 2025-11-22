@@ -7,21 +7,20 @@ import java.util.Set;
 public class Folder {
 
     @SerializedName("id")
-    private Long id;
+    Long id;
 
     @SerializedName("name")
-    private String name;
+    String name;
 
     @SerializedName("color")
-    private String color;
+    String color;
 
     @SerializedName("gatewayIds")
-    private Set<Long> gatewayIds;
+    Set<Long> gatewayIds;
 
     @SerializedName("sensorIds")
-    private Set<Long> sensorIds;
+    Set<Long> sensorIds;
 
-    // Gettery
     public Long getId() { return id; }
     public String getName() { return name; }
     public String getColor() { return color; }

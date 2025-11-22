@@ -29,7 +29,6 @@ import org.json.JSONObject;
 
 import java.io.IOException;
 import java.lang.reflect.Type;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.Executors;
@@ -234,48 +233,68 @@ public class VpsClientService extends Service {
 
         try {
             // --- 1. Pobierz Foldery ---
+            List<Folder> folders;
             Request foldersRequest = new Request.Builder()
                     .url(Constants.FOLDERS_ENDPOINT)
                     .addHeader("Authorization", "Bearer " + jwtToken)
                     .get().build();
-            Response foldersResponse = httpClient.newCall(foldersRequest).execute();
-            if (!foldersResponse.isSuccessful())
-                throw new IOException("Błąd pobierania folderów: " + foldersResponse.code());
 
-            String foldersJson = foldersResponse.body().string();
-            Type folderListType = new TypeToken<List<Folder>>() {
-            }.getType();
-            List<Folder> folders = gson.fromJson(foldersJson, folderListType);
+            // Użycie try-with-resources zamyka Response automatycznie
+            try (Response foldersResponse = httpClient.newCall(foldersRequest).execute()) {
+                if (!foldersResponse.isSuccessful()) {
+                    throw new IOException("Błąd pobierania folderów: " + foldersResponse.code());
+                }
+                if (foldersResponse.body() == null) {
+                    throw new IOException("Pusta odpowiedź serwera (brak body) przy pobieraniu folderów");
+                }
+
+                String foldersJson = foldersResponse.body().string();
+                Type folderListType = new TypeToken<List<Folder>>() {}.getType();
+                folders = gson.fromJson(foldersJson, folderListType);
+            }
 
             // --- 2. Pobierz Ulubione Bramki ---
+            List<Gateway> favoriteGateways;
             Request favGatewaysRequest = new Request.Builder()
                     .url(Constants.FAVORITE_GATEWAYS_ENDPOINT)
                     .addHeader("Authorization", "Bearer " + jwtToken)
                     .get().build();
-            Response favGatewaysResponse = httpClient.newCall(favGatewaysRequest).execute();
-            if (!favGatewaysResponse.isSuccessful())
-                throw new IOException("Błąd pobierania ulubionych bramek: " + favGatewaysResponse.code());
 
-            String favGatewaysJson = favGatewaysResponse.body().string();
-            Type gatewayListType = new TypeToken<List<Gateway>>() {
-            }.getType();
-            List<Gateway> favoriteGateways = gson.fromJson(favGatewaysJson, gatewayListType);
+            try (Response favGatewaysResponse = httpClient.newCall(favGatewaysRequest).execute()) {
+                if (!favGatewaysResponse.isSuccessful()) {
+                    throw new IOException("Błąd pobierania ulubionych bramek: " + favGatewaysResponse.code());
+                }
+                if (favGatewaysResponse.body() == null) {
+                    throw new IOException("Pusta odpowiedź serwera przy pobieraniu ulubionych bramek");
+                }
+
+                String favGatewaysJson = favGatewaysResponse.body().string();
+                Type gatewayListType = new TypeToken<List<Gateway>>() {}.getType();
+                favoriteGateways = gson.fromJson(favGatewaysJson, gatewayListType);
+            }
 
             // --- 3. Pobierz Ulubione Czujniki ---
+            List<Sensor> favoriteSensors;
             Request favSensorsRequest = new Request.Builder()
                     .url(Constants.FAVORITE_SENSORS_ENDPOINT)
                     .addHeader("Authorization", "Bearer " + jwtToken)
                     .get().build();
-            Response favSensorsResponse = httpClient.newCall(favSensorsRequest).execute();
-            if (!favSensorsResponse.isSuccessful())
-                throw new IOException("Błąd pobierania ulubionych czujników: " + favSensorsResponse.code());
 
-            String favSensorsJson = favSensorsResponse.body().string();
-            Type sensorListType = new TypeToken<List<Sensor>>() {
-            }.getType();
-            List<Sensor> favoriteSensors = gson.fromJson(favSensorsJson, sensorListType);
+            try (Response favSensorsResponse = httpClient.newCall(favSensorsRequest).execute()) {
+                if (!favSensorsResponse.isSuccessful()) {
+                    throw new IOException("Błąd pobierania ulubionych czujników: " + favSensorsResponse.code());
+                }
+                if (favSensorsResponse.body() == null) {
+                    throw new IOException("Pusta odpowiedź serwera przy pobieraniu ulubionych czujników");
+                }
+
+                String favSensorsJson = favSensorsResponse.body().string();
+                Type sensorListType = new TypeToken<List<Sensor>>() {}.getType();
+                favoriteSensors = gson.fromJson(favSensorsJson, sensorListType);
+            }
 
             // --- 4. Zapisz wszystko do bazy w jednej transakcji ---
+            // Zmienne folders, favoriteGateways, favoriteSensors są wypełnione powyżej
             dbHelper.syncFoldersAndFavorites(folders, favoriteGateways, favoriteSensors);
 
             // 5. Powiadom UI (DataActivity), że dane się zmieniły

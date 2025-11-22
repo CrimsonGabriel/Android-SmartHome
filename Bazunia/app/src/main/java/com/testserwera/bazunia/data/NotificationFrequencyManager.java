@@ -32,8 +32,6 @@ public class NotificationFrequencyManager {
         String key = getSensorKey(sensorId);
 
         if (intervalInMinutes <= 0) {
-            // Jeśli użytkownik wpisał 0, puste, lub bzdurę, usuwamy klucz,
-            // co oznacza "użyj ustawienia globalnego".
             editor.remove(key);
         } else {
             editor.putInt(key, intervalInMinutes);

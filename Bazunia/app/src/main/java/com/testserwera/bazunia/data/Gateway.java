@@ -1,5 +1,6 @@
 package com.testserwera.bazunia.data;
 
+import androidx.annotation.NonNull;
 import java.util.List;
 
 /**
@@ -7,7 +8,6 @@ import java.util.List;
  * Używa Gson do deserializacji.
  */
 public class Gateway {
-    // Nazwy pól muszą pasować do JSON-a z serwera (z backendu Gateway.java)
     long id;
     String name;
     String status;
@@ -15,9 +15,9 @@ public class Gateway {
     String description;
     String lastSeen;
     Long ownerId;
-    List<Sensor> sensors; // Zagnieżdżona lista czujników
+    List<Sensor> sensors;
 
-    // Gettery są potrzebne dla adaptera
+
     public long getId() { return id; }
     public String getName() { return name; }
     public String getStatus() { return status; }
@@ -27,7 +27,7 @@ public class Gateway {
     public Long getOwnerId() { return ownerId; }
     public List<Sensor> getSensors() { return sensors; }
 
-
+    @NonNull
     @Override
     public String toString() {
         return name + " (ID: " + id + ")";

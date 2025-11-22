@@ -8,12 +8,9 @@ package com.testserwera.bazunia.data;
 public class SensorStatusErrorDto {
 
     public Long entityId;
-    public String entityType; // np. "GATEWAY" lub "SENSOR"
-    public String entityName; // np. "Bramka w Kuchni"
-    public String errorType; // np. "OFFLINE"
-    public String readableMessage; // np. "Bramka 'Kuchnia' jest offline od 30 minut."
-
-    // Konstruktor bezargumentowy jest potrzebny dla Gson
+    public String entityType;
+    public String entityName;
+    public String readableMessage;
     public SensorStatusErrorDto() {
     }
 }
