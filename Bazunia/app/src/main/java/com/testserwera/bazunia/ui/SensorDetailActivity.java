@@ -229,7 +229,7 @@ public class SensorDetailActivity extends AppCompatActivity {
     }
 
     // ==========================================
-    // NOWA METODA: OBSŁUGA BOTTOM SHEET (USTAWIENIA)
+    // OBSŁUGA BOTTOM SHEET (USTAWIENIA)
     // ==========================================
 
     private void openSettingsSheet() {
@@ -284,9 +284,8 @@ public class SensorDetailActivity extends AppCompatActivity {
         loadSensorNotificationSettings();
         setupThresholdControls();
 
-        // Wyczyszczenie referencji po zamknięciu okna (opcjonalne, dla czystości)
+
         bottomSheetDialog.setOnDismissListener(dialog -> {
-            // Można tu zresetować zmienne na null, ale nie jest to krytyczne
             hideKeyboard();
         });
 
@@ -315,12 +314,11 @@ public class SensorDetailActivity extends AppCompatActivity {
 
         textSensorDetails.setText(displayData);
 
-        // Kolorowanie tekstu alertów
+
         TypedValue typedValue = new TypedValue();
         getTheme().resolveAttribute(com.google.android.material.R.attr.colorOnSurface, typedValue, true);
         int defaultColor = typedValue.data;
 
-        // Logika kolorów niezależna od widoków UI (pobieramy progi z bazy/preferencji)
         if (getString(R.string.sensor_type_door_contact).equalsIgnoreCase(model.type)) {
             textSensorDetails.setTextColor(getString(R.string.door_contact_open_value).equals(model.value) ? Color.RED : defaultColor);
         } else {
@@ -371,7 +369,7 @@ public class SensorDetailActivity extends AppCompatActivity {
     // ==========================================
 
     private void setupThresholdControls() {
-        // Jeśli panel nie jest otwarty (widoki są null), nie robimy nic
+
         if (seekBarThresholdMin == null || seekBarThresholdMax == null) return;
 
         boolean isPassive = isPassiveSensor(currentSensorType);
@@ -418,7 +416,6 @@ public class SensorDetailActivity extends AppCompatActivity {
                 float newMin = (float) seekBarThresholdMin.getProgress() / 2.0f;
                 float newMax = (float) seekBarThresholdMax.getProgress() / 2.0f;
                 thresholdManager.saveThresholds(gatewayIdString, sensorIdString, newMin, newMax);
-                // Odświeżamy główny widok, żeby zaktualizować kolory alertów
                 loadLatestDataAndHistory();
             }
         };
@@ -469,7 +466,7 @@ public class SensorDetailActivity extends AppCompatActivity {
     }
 
     // ==========================================
-    // LOGIKA ZAPISYWANIA I SIECI (POZOSTAJE BEZ ZMIAN LOGICZNYCH)
+    // LOGIKA ZAPISYWANIA I SIECI
     // ==========================================
 
     private void saveSensorInterval() {

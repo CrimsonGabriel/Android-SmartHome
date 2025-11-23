@@ -154,7 +154,7 @@ public class LoginActivity extends AppCompatActivity {
                         if (msg != null && msg.contains("No credential")) {
                             Log.d(TAG, "Logowanie anulowane przez użytkownika.");
                         } else {
-                            showError("Błąd logowania: " + msg);
+                            showError(getString(R.string.login_error_prefix, msg));
                         }
                     }
                 }
@@ -180,12 +180,12 @@ public class LoginActivity extends AppCompatActivity {
             } catch (Exception e) {
                 Log.e(TAG, "Błąd parsowania Google ID Token", e);
                 showLoading(false);
-                showError("Błąd przetwarzania danych logowania.");
+                showError(getString(R.string.login_error_processing));
             }
         } else {
             Log.e(TAG, "Nieoczekiwany typ poświadczeń: " + credential.getType());
             showLoading(false);
-            showError("Nieznany błąd logowania.");
+            showError(getString(R.string.login_error_unknown));
         }
     }
 
@@ -211,7 +211,7 @@ public class LoginActivity extends AppCompatActivity {
             public void onFailure(@NonNull Call call, @NonNull IOException e) {
                 Log.e(TAG, "Błąd wysyłania tokena do VPS: " + e.getMessage());
                 runOnUiThread(() -> {
-                    showError("Błąd połączenia z serwerem.");
+                    showError(getString(R.string.error_server_connection));
                     showLoading(false);
                 });
             }
@@ -225,7 +225,7 @@ public class LoginActivity extends AppCompatActivity {
                     } else {
                         Log.w(TAG, "Serwer VPS odrzucił logowanie, kod: " + resp.code());
                         runOnUiThread(() -> {
-                            showError("Serwer odrzucił logowanie.");
+                            showError(getString(R.string.login_error_rejected));
                             showLoading(false);
                         });
                     }
@@ -237,7 +237,6 @@ public class LoginActivity extends AppCompatActivity {
     private void processLoginResponse(String responseBody, String tempTokenIf2FA) {
         try {
             JSONObject respJson = new JSONObject(responseBody);
-            String welcomeMsg = respJson.optString("message", getString(R.string.login_welcome_default));
             String userEmail = respJson.optString("email", "");
             boolean requires2FA = respJson.optBoolean("requires2FA", false);
             boolean requiresPasswordSetup = respJson.optBoolean("requiresPasswordSetup", false);
@@ -250,7 +249,7 @@ public class LoginActivity extends AppCompatActivity {
 
                 Log.d(TAG, "Wymagane 2FA.");
                 runOnUiThread(() -> {
-                    Toast.makeText(LoginActivity.this, "Wymagana weryfikacja 2FA", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(LoginActivity.this, R.string.login_msg_2fa_required, Toast.LENGTH_SHORT).show();
                     show2FAInputUI(true);
                     showLoading(false);
                 });
@@ -260,20 +259,20 @@ public class LoginActivity extends AppCompatActivity {
                     runOnUiThread(this::startCreatePasswordActivity);
                 } else {
                     runOnUiThread(() -> {
-                        Toast.makeText(LoginActivity.this, welcomeMsg, Toast.LENGTH_SHORT).show();
+                        Toast.makeText(LoginActivity.this, R.string.login_success, Toast.LENGTH_SHORT).show();
                         startApp();
                     });
                 }
             } else {
                 runOnUiThread(() -> {
-                    showError("Błąd odpowiedzi serwera (brak tokena).");
+                    showError(getString(R.string.login_error_no_token));
                     showLoading(false);
                 });
             }
         } catch (JSONException e) {
             Log.e(TAG, "Błąd JSON", e);
             runOnUiThread(() -> {
-                showError("Błąd przetwarzania danych.");
+                showError(getString(R.string.error_data_processing));
                 showLoading(false);
             });
         }
@@ -284,7 +283,7 @@ public class LoginActivity extends AppCompatActivity {
         String code = (text != null) ? text.toString().trim() : "";
 
         if (code.length() != 6) {
-            showError("Kod 2FA musi mieć 6 cyfr.");
+            showError(getString(R.string.login_error_2fa_length));
             return;
         }
 
@@ -292,7 +291,7 @@ public class LoginActivity extends AppCompatActivity {
         String tempToken = prefs.getString(KEY_JWT_TOKEN, null);
 
         if (tempToken == null) {
-            showError("Błąd sesji. Zaloguj się ponownie.");
+            showError(getString(R.string.login_error_session));
             show2FAInputUI(false);
             return;
         }
@@ -319,7 +318,7 @@ public class LoginActivity extends AppCompatActivity {
             @Override
             public void onFailure(@NonNull Call call, @NonNull IOException e) {
                 runOnUiThread(() -> {
-                    showError("Błąd połączenia.");
+                    showError(getString(R.string.error_connection_short));
                     showLoading(false);
                 });
             }
@@ -342,16 +341,17 @@ public class LoginActivity extends AppCompatActivity {
                                 runOnUiThread(LoginActivity.this::startCreatePasswordActivity);
                             } else {
                                 runOnUiThread(() -> {
-                                    Toast.makeText(LoginActivity.this, "Zalogowano pomyślnie!", Toast.LENGTH_SHORT).show();
+                                    Toast.makeText(LoginActivity.this, R.string.login_success, Toast.LENGTH_SHORT).show();
                                     startApp();
                                 });
                             }
                         } catch (JSONException e) {
-                            runOnUiThread(() -> showError("Błąd danych serwera."));
+                            runOnUiThread(() -> showError(getString(R.string.error_server_data)));
                         }
                     } else {
                         runOnUiThread(() -> {
-                            showError("Nieprawidłowy kod 2FA.");
+
+                            showError(getString(R.string.login_error_2fa_invalid));
                             showLoading(false);
                             editTextLogin2FA.setText("");
                         });
@@ -369,7 +369,7 @@ public class LoginActivity extends AppCompatActivity {
         String password = (passText != null) ? passText.toString().trim() : "";
 
         if (email.isEmpty() || password.isEmpty()) {
-            showError("Wprowadź e-mail i hasło.");
+            showError(getString(R.string.login_error_missing_creds));
             return;
         }
 
@@ -392,7 +392,7 @@ public class LoginActivity extends AppCompatActivity {
             @Override
             public void onFailure(@NonNull Call call, @NonNull IOException e) {
                 runOnUiThread(() -> {
-                    showError("Błąd serwera.");
+                    showError(getString(R.string.error_server_short));
                     showLoading(false);
                 });
             }
@@ -406,7 +406,8 @@ public class LoginActivity extends AppCompatActivity {
                         processLoginResponse(responseBody, null);
                     } else {
                         runOnUiThread(() -> {
-                            showError("Błąd logowania (złe dane).");
+                            // ZMIANA: String z XML
+                            showError(getString(R.string.login_error_invalid_creds));
                             showLoading(false);
                         });
                     }

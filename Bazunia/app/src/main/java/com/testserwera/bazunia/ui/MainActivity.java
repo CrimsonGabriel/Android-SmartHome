@@ -256,7 +256,7 @@ public class MainActivity extends AppCompatActivity {
                 .getString(LoginActivity.KEY_JWT_TOKEN, null);
 
         if (jwtToken == null) {
-            Toast.makeText(this, "Brak tokena! Zaloguj się ponownie.", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, R.string.toast_no_token, Toast.LENGTH_SHORT).show();
             return;
         }
 
@@ -272,7 +272,9 @@ public class MainActivity extends AppCompatActivity {
             public void onFailure(@androidx.annotation.NonNull Call call, @androidx.annotation.NonNull java.io.IOException e) {
                 runOnUiThread(() -> {
                     Log.e("RiskCheck", "Błąd sieci: " + e.getMessage());
-                    Toast.makeText(MainActivity.this, "Błąd połączenia: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                    Toast.makeText(MainActivity.this,
+                            getString(R.string.error_connection_prefix, e.getMessage()),
+                            Toast.LENGTH_LONG).show();
                 });
             }
 
@@ -285,7 +287,9 @@ public class MainActivity extends AppCompatActivity {
                     String errorBody = response.body() != null ? response.body().string() : "";
                     runOnUiThread(() -> {
                         Log.e("RiskCheck", "Błąd serwera: " + response.code() + " " + errorBody);
-                        Toast.makeText(MainActivity.this, "Błąd serwera: " + response.code(), Toast.LENGTH_LONG).show();
+                        Toast.makeText(MainActivity.this,
+                                getString(R.string.error_server_prefix, String.valueOf(response.code())),
+                                Toast.LENGTH_LONG).show();
                     });
                 }
             }
@@ -359,6 +363,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+
     private class RiskAdapter extends RecyclerView.Adapter<RiskAdapter.RiskViewHolder> {
         private final JSONArray data;
 
@@ -377,15 +382,52 @@ public class MainActivity extends AppCompatActivity {
         public void onBindViewHolder(@androidx.annotation.NonNull RiskViewHolder holder, int position) {
             try {
                 JSONObject item = data.getJSONObject(position);
-                holder.name.setText(item.getString("sensorName"));
-                holder.issue.setText(item.getString("issue"));
 
+                // 1. Nazwa czujnika
+                holder.name.setText(item.optString("sensorName", "?"));
+
+                // 2. Pobieramy typ ikony/problemu (np. "light", "window", "door_contact")
                 String iconType = item.optString("iconType", "warning");
+
+                // 3. --- TUTAJ JEST ZMIANA (TŁUMACZENIE) ---
+                // Zamiast brać tekst z serwera, sprawdzamy typ i dajemy własny string
+                switch (iconType) {
+                    case "light":
+                        holder.issue.setText(R.string.risk_issue_light);
+                        break;
+                    case "window":
+                        holder.issue.setText(R.string.risk_issue_window);
+                        break;
+                    case "door":
+                    case "door_contact":
+                    case "contact":
+                        // Obsługa różnych nazw dla drzwi/kontaktronów
+                        holder.issue.setText(R.string.risk_issue_door);
+                        break;
+                    default:
+                        // Jeśli to jakiś inny, nieznany typ, wyświetlamy to co przysłał serwer
+                        // lub domyślny komunikat "Wykryto problem"
+                        String serverMsg = item.optString("issue", "");
+                        if (!serverMsg.isEmpty()) {
+                            holder.issue.setText(serverMsg);
+                        } else {
+                            holder.issue.setText(R.string.risk_issue_default);
+                        }
+                        break;
+                }
+
+                // 4. Ustawianie Ikony (bez zmian)
                 int iconRes = R.drawable.ic_warning;
-                if (iconType.equals("window")) iconRes = R.drawable.ic_open;
-                if (iconType.equals("light")) iconRes = R.drawable.ic_light;
+                if ("window".equals(iconType) || "door".equals(iconType) || "door_contact".equals(iconType)) {
+                    iconRes = R.drawable.ic_open;
+                } else if ("light".equals(iconType)) {
+                    iconRes = R.drawable.ic_light;
+                }
 
                 holder.icon.setImageResource(iconRes);
+
+                // Kolor czerwony dla ostrzeżenia
+                holder.issue.setTextColor(ContextCompat.getColor(MainActivity.this, R.color.colorRisk));
                 holder.icon.setColorFilter(ContextCompat.getColor(MainActivity.this, R.color.colorRisk));
 
             } catch (JSONException e) {

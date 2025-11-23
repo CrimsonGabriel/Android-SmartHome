@@ -304,7 +304,7 @@
 
     <string name="action_check_battery">Check battery status</string>
     <string name="toast_battery_check_started">Starting battery check…</string>
-    <string name="menu_disable_threshold_notifications">Disable value alerts (temp/door)</string>
+    <string name="menu_disable_threshold_notifications">Disable value alerts</string>
     <string name="menu_enable_threshold_notifications">Enable value alerts</string>
     <string name="menu_disable_battery_notifications">Disable battery alerts</string>
     <string name="menu_enable_battery_notifications">Enable battery alerts</string>
@@ -437,4 +437,48 @@
     <string name="error_with_message">Error: %s</string>
     <string name="progress_percent_format">%d%%</string>
     <string name="status_live_label">Status LIVE</string>
+    <string name="msg_testing_connection">Testing connection…</string>
+    <string name="error_missing_token">Error: Missing login token.</string>
+    <string name="error_folder_name_empty">Name cannot be empty</string>
+    <string name="dialog_delete_folder_msg">Are you sure you want to delete folder \'%1$s\'? (Gateways will not be deleted)</string>
+    <string name="toast_create_folder_first">Create a folder first</string>
+
+    <string name="default_no_description">No description</string>
+
+    <string name="error_network_prefix">Network error: %1$s</string>
+    <string name="error_no_content">No error content</string>
+    <string name="error_cannot_read">Cannot read error: %1$s</string>
+    <string name="error_code_format">Error (Code: %1$d)</string>
+    <string name="error_parsing_response">Server response parsing error.</string>
+    <string name="error_server_response_prefix">Server response error (code: %1$d)</string>
+
+    <string name="msg_connection_ok">Connection OK. All devices online.</string>
+    <string name="msg_error_detected_prefix">Error detected: %1$s</string>
+
+    <string name="login_msg_2fa_required">2FA verification required</string>
+
+    <string name="login_error_prefix">Login error: %1$s</string>
+    <string name="login_error_processing">Error processing login data.</string>
+    <string name="login_error_unknown">Unknown login error.</string>
+    <string name="login_error_rejected">Server rejected login.</string>
+    <string name="login_error_no_token">Server response error (missing token).</string>
+    <string name="login_error_session">Session error. Please login again.</string>
+    <string name="login_error_2fa_length">2FA code must be 6 digits.</string>
+    <string name="login_error_2fa_invalid">Invalid 2FA code.</string>
+    <string name="login_error_missing_creds">Enter email and password.</string>
+    <string name="login_error_invalid_creds">Login error (invalid credentials).</string>
+
+    <string name="error_server_connection">Error connecting to server.</string>
+    <string name="error_data_processing">Error processing data.</string>
+    <string name="error_connection_short">Connection error.</string>
+    <string name="error_server_data">Server data error.</string>
+    <string name="error_server_short">Server error.</string>
+    <string name="toast_no_token">No token found! Please login again.</string>
+    <string name="error_connection_prefix">Connection error: %1$s</string>
+    <string name="error_server_prefix">Server error: %1$s</string>
+
+    <string name="risk_issue_light">Light is on</string>
+    <string name="risk_issue_window">Window is open</string>
+    <string name="risk_issue_door">Door is open</string>
+    <string name="risk_issue_default">Issue detected</string>
 </resources>

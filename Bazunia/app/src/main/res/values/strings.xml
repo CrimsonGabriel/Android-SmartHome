@@ -439,4 +439,50 @@
     <string name="progress_percent_format">%d%%</string>
     <string name="status_live_label">Status: NA ŻYWO</string>
 
+    <string name="msg_testing_connection">Testowanie połączenia…</string>
+    <string name="error_missing_token">Błąd: Brak tokena logowania.</string>
+    <string name="error_folder_name_empty">Nazwa nie może być pusta</string>
+    <string name="dialog_delete_folder_msg">Czy na pewno chcesz usunąć folder \'%1$s\'? (Bramki nie zostaną usunięte)</string>
+    <string name="toast_create_folder_first">Najpierw utwórz folder</string>
+
+    <string name="default_no_description">Brak opisu</string>
+
+    <string name="error_network_prefix">Błąd sieci: %1$s</string>
+    <string name="error_no_content">Brak treści błędu</string>
+    <string name="error_cannot_read">Nie można odczytać błędu: %1$s</string>
+    <string name="error_code_format">Błąd (Kod: %1$d)</string>
+    <string name="error_parsing_response">Błąd parsowania odpowiedzi serwera.</string>
+    <string name="error_server_response_prefix">Błąd odpowiedzi serwera (kod: %1$d)</string>
+
+    <string name="msg_connection_ok">Połączenie OK. Wszystkie urządzenia online.</string>
+    <string name="msg_error_detected_prefix">Wykryto błąd: %1$s</string>
+
+
+    <string name="login_msg_2fa_required">Wymagana weryfikacja 2FA</string>
+
+    <string name="login_error_prefix">Błąd logowania: %1$s</string>
+    <string name="login_error_processing">Błąd przetwarzania danych logowania.</string>
+    <string name="login_error_unknown">Nieznany błąd logowania.</string>
+    <string name="login_error_rejected">Serwer odrzucił logowanie.</string>
+    <string name="login_error_no_token">Błąd odpowiedzi serwera (brak tokena).</string>
+    <string name="login_error_session">Błąd sesji. Zaloguj się ponownie.</string>
+    <string name="login_error_2fa_length">Kod 2FA musi mieć 6 cyfr.</string>
+    <string name="login_error_2fa_invalid">Nieprawidłowy kod 2FA.</string>
+    <string name="login_error_missing_creds">Wprowadź e-mail i hasło.</string>
+    <string name="login_error_invalid_creds">Błąd logowania (złe dane).</string>
+
+    <string name="error_server_connection">Błąd połączenia z serwerem.</string>
+    <string name="error_data_processing">Błąd przetwarzania danych.</string>
+    <string name="error_connection_short">Błąd połączenia.</string>
+    <string name="error_server_data">Błąd danych serwera.</string>
+    <string name="error_server_short">Błąd serwera.</string>
+
+    <string name="toast_no_token">Brak tokena! Zaloguj się ponownie.</string>
+    <string name="error_connection_prefix">Błąd połączenia: %1$s</string>
+    <string name="error_server_prefix">Błąd serwera: %1$s</string>
+
+    <string name="risk_issue_light">Światło jest włączone</string>
+    <string name="risk_issue_window">Okno jest otwarte</string>
+    <string name="risk_issue_door">Drzwi są otwarte</string>
+    <string name="risk_issue_default">Wykryto problem</string>
 </resources>

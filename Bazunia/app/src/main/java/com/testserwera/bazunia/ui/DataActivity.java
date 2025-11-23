@@ -483,7 +483,7 @@ public class DataActivity extends AppCompatActivity implements FolderAdapter.Fol
             int itemId = item.getItemId();
 
             if (itemId == R.id.menu_rename_sensor) {
-                showRenameDialog(sensor.id, sensor.name, "Brak opisu", false);
+                showRenameDialog(sensor.id, sensor.name, getString(R.string.default_no_description), false);
                 return true;
             } else if (itemId == R.id.menu_add_sensor_to_folder) {
                 showSelectFolderDialogForSensor(sensor);
@@ -545,7 +545,7 @@ public class DataActivity extends AppCompatActivity implements FolderAdapter.Fol
                     String newName = editName.getText().toString().trim();
                     String newColor = editColor.getText().toString().trim();
                     if (newName.isEmpty()) {
-                        Toast.makeText(this, "Nazwa nie może być pusta", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(this, R.string.error_folder_name_empty, Toast.LENGTH_SHORT).show();
                         return;
                     }
                     long folderId = isEditMode ? folder.id : -1;
@@ -558,7 +558,7 @@ public class DataActivity extends AppCompatActivity implements FolderAdapter.Fol
     private void showDeleteFolderDialog(FolderAdapter.FolderItem folder) {
         new AlertDialog.Builder(this)
                 .setTitle(R.string.menu_delete_folder)
-                .setMessage("Czy na pewno chcesz usunąć folder '" + folder.name + "'? (Bramki nie zostaną usunięte)")
+                .setMessage(getString(R.string.dialog_delete_folder_msg, folder.name))
                 .setIcon(R.drawable.ic_warning)
                 .setPositiveButton(R.string.dialog_delete_confirm, (dialog, which) -> deleteFolderOnServer(folder.id))
                 .setNegativeButton(R.string.dialog_cancel_button, null)
@@ -576,7 +576,7 @@ public class DataActivity extends AppCompatActivity implements FolderAdapter.Fol
             }
         }
         if (folders.isEmpty()) {
-            Toast.makeText(this, "Najpierw utwórz folder", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, R.string.toast_create_folder_first, Toast.LENGTH_SHORT).show();
             return;
         }
         ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, folderNames);
@@ -767,7 +767,8 @@ public class DataActivity extends AppCompatActivity implements FolderAdapter.Fol
             @Override
             public void onFailure(@NonNull Call call, @NonNull IOException e) {
                 Log.e(TAG, "addGatewayToFolderOnServer FAILURE", e);
-                runOnUiThread(() -> Toast.makeText(DataActivity.this, "Błąd sieci: " + e.getMessage(), Toast.LENGTH_LONG).show());
+                runOnUiThread(() -> Toast.makeText(DataActivity.this,
+                        getString(R.string.error_network_prefix, e.getMessage()), Toast.LENGTH_LONG).show());
             }
 
             @Override
@@ -779,18 +780,20 @@ public class DataActivity extends AppCompatActivity implements FolderAdapter.Fol
                         loadDisplayListFromDb();
                     });
                 } else {
-                    String errorBody = "Brak treści błędu";
+                    String errorBody = getString(R.string.error_no_content);
                     try {
                         if (response.body() != null) {
                             errorBody = response.body().string();
                         }
                     } catch (IOException e) {
-                        errorBody = "Nie można odczytać błędu: " + e.getMessage();
+                        errorBody = getString(R.string.error_cannot_read, e.getMessage());
                     }
                     final String finalErrorBody = errorBody;
                     final int responseCode = response.code();
                     Log.e(TAG, "Błąd dodawania bramki. Kod: " + responseCode + ", Treść: " + finalErrorBody);
-                    runOnUiThread(() -> Toast.makeText(DataActivity.this, "Błąd (Kod: " + responseCode + ")", Toast.LENGTH_LONG).show());
+
+                    runOnUiThread(() -> Toast.makeText(DataActivity.this,
+                            getString(R.string.error_code_format, responseCode), Toast.LENGTH_LONG).show());
                 }
                 response.close();
             }
@@ -876,7 +879,7 @@ public class DataActivity extends AppCompatActivity implements FolderAdapter.Fol
             }
         }
         if (folders.isEmpty()) {
-            Toast.makeText(this, "Najpierw utwórz folder", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, R.string.toast_create_folder_first, Toast.LENGTH_SHORT).show();
             return;
         }
         ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, folderNames);
@@ -1015,9 +1018,9 @@ public class DataActivity extends AppCompatActivity implements FolderAdapter.Fol
                 }
 
                 if (success) {
-                    Toast.makeText(context, R.string.sync_success, Toast.LENGTH_SHORT).show();
+                    Toast.makeText(DataActivity.this, R.string.sync_success, Toast.LENGTH_SHORT).show();
                 } else {
-                    Toast.makeText(context, R.string.sync_error, Toast.LENGTH_SHORT).show();
+                    Toast.makeText(DataActivity.this, R.string.sync_error, Toast.LENGTH_SHORT).show();
                 }
 
                 lastSyncToastTime = now;
@@ -1138,11 +1141,11 @@ public class DataActivity extends AppCompatActivity implements FolderAdapter.Fol
     }
 
     private void testConnection() {
-        Toast.makeText(this, "Testowanie połączenia...", Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, R.string.msg_testing_connection, Toast.LENGTH_SHORT).show();
 
         String jwtToken = authPrefs.getString(LoginActivity.KEY_JWT_TOKEN, null);
         if (jwtToken == null) {
-            Toast.makeText(this, "Błąd: Brak tokena logowania.", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, R.string.error_missing_token, Toast.LENGTH_SHORT).show();
             return;
         }
 
@@ -1156,7 +1159,7 @@ public class DataActivity extends AppCompatActivity implements FolderAdapter.Fol
             @Override
             public void onFailure(@NonNull Call call, @NonNull IOException e) {
                 runOnUiThread(() -> Toast.makeText(DataActivity.this,
-                        "Błąd sieci: " + e.getMessage(),
+                        getString(R.string.error_network_prefix, e.getMessage()),
                         Toast.LENGTH_LONG).show());
             }
 
@@ -1172,25 +1175,25 @@ public class DataActivity extends AppCompatActivity implements FolderAdapter.Fol
 
                         if (errors == null || errors.isEmpty()) {
                             runOnUiThread(() -> Toast.makeText(DataActivity.this,
-                                    "Połączenie OK. Wszystkie urządzenia online.",
+                                    R.string.msg_connection_ok,
                                     Toast.LENGTH_LONG).show());
                         } else {
                             String firstErrorMessage = errors.get(0).readableMessage;
                             runOnUiThread(() -> Toast.makeText(DataActivity.this,
-                                    "Wykryto błąd: " + firstErrorMessage,
+                                    getString(R.string.msg_error_detected_prefix, firstErrorMessage),
                                     Toast.LENGTH_LONG).show());
                         }
                     } catch (Exception e) {
                         Log.e(TAG, "testConnection: Błąd parsowania JSON: " + e.getMessage() + ", Odpowiedź: " + responseBody);
                         runOnUiThread(() -> Toast.makeText(DataActivity.this,
-                                "Błąd parsowania odpowiedzi serwera.",
+                                R.string.error_parsing_response,
                                 Toast.LENGTH_LONG).show());
                     }
 
                 } else {
                     Log.e(TAG, "testConnection: Błąd serwera. Kod: " + response.code() + ", Odpowiedź: " + responseBody);
                     runOnUiThread(() -> Toast.makeText(DataActivity.this,
-                            "Błąd odpowiedzi serwera (kod: " + response.code() + ")",
+                            getString(R.string.error_server_response_prefix, response.code()),
                             Toast.LENGTH_LONG).show());
                 }
                 response.close();
