@@ -83,6 +83,7 @@ public class DataActivity extends AppCompatActivity implements FolderAdapter.Fol
     private long lastSyncToastTime = 0;
     private SharedPreferences mutePrefs;
     private Gson gson;
+    private boolean showSyncToast = false;
 
     @Override
     protected void attachBaseContext(Context newBase) {
@@ -132,10 +133,19 @@ public class DataActivity extends AppCompatActivity implements FolderAdapter.Fol
         loadDisplayListFromDb();
     }
 
-    private void forceSync() {
+    private void forceSync(boolean notifyUser) {
+        // Ustawiamy flagę. Jeśli true - receiver wyświetli toast. Jeśli false - receiver będzie cicho.
+        this.showSyncToast = notifyUser;
+
         Intent serviceIntent = new Intent(this, VpsClientService.class);
         serviceIntent.putExtra("FORCE_SYNC_NOW", true);
         startService(serviceIntent);
+    }
+
+    // Przeciążenie dla wygody (domyślnie cicho), żeby stary kod się nie sypał,
+// ale lepiej używać wszędzie wersji z parametrem.
+    private void forceSync() {
+        forceSync(true); // Domyślnie głośno dla starych wywołań (np. przycisk refresh)
     }
 
     private void forceBatteryCheck() {
@@ -635,7 +645,7 @@ public class DataActivity extends AppCompatActivity implements FolderAdapter.Fol
                 runOnUiThread(() -> {
                     if (response.isSuccessful()) {
                         Toast.makeText(DataActivity.this, isGateway ? R.string.toast_gateway_updated : R.string.toast_sensor_updated, Toast.LENGTH_SHORT).show();
-                        forceSync();
+                        forceSync(false);
                     } else {
                         Toast.makeText(DataActivity.this, R.string.toast_update_failed, Toast.LENGTH_SHORT).show();
                     }
@@ -674,7 +684,7 @@ public class DataActivity extends AppCompatActivity implements FolderAdapter.Fol
                 runOnUiThread(() -> {
                     if (response.isSuccessful()) {
                         Toast.makeText(DataActivity.this, R.string.toast_gateway_deleted, Toast.LENGTH_SHORT).show();
-                        forceSync();
+                        forceSync(false);
                     } else {
                         Toast.makeText(DataActivity.this, R.string.toast_delete_failed, Toast.LENGTH_SHORT).show();
                     }
@@ -716,7 +726,7 @@ public class DataActivity extends AppCompatActivity implements FolderAdapter.Fol
                 runOnUiThread(() -> {
                     if (response.isSuccessful()) {
                         Toast.makeText(DataActivity.this, isEdit ? R.string.toast_folder_updated : R.string.toast_folder_created, Toast.LENGTH_SHORT).show();
-                        forceSync();
+                        forceSync(false);
                     } else {
                         Toast.makeText(DataActivity.this, R.string.toast_api_error, Toast.LENGTH_SHORT).show();
                     }
@@ -743,7 +753,7 @@ public class DataActivity extends AppCompatActivity implements FolderAdapter.Fol
                 if (response.isSuccessful()) {
                     runOnUiThread(() -> {
                         Toast.makeText(DataActivity.this, R.string.toast_folder_deleted, Toast.LENGTH_SHORT).show();
-                        forceSync();
+                        forceSync(false);
                     });
                 }
                 response.close();
@@ -778,6 +788,7 @@ public class DataActivity extends AppCompatActivity implements FolderAdapter.Fol
                         Toast.makeText(DataActivity.this, getString(R.string.toast_added_to_folder, folderName), Toast.LENGTH_SHORT).show();
                         dbHelper.addGatewayToFolder(gatewayId, folderId);
                         loadDisplayListFromDb();
+                        forceSync(false);
                     });
                 } else {
                     String errorBody = getString(R.string.error_no_content);
@@ -826,7 +837,7 @@ public class DataActivity extends AppCompatActivity implements FolderAdapter.Fol
                 if (response.isSuccessful()) {
                     runOnUiThread(() -> {
                         Toast.makeText(DataActivity.this, add ? R.string.toast_added_to_favorites : R.string.toast_removed_from_favorites, Toast.LENGTH_SHORT).show();
-                        forceSync();
+                        forceSync(false);
                     });
                 }
                 response.close();
@@ -860,7 +871,7 @@ public class DataActivity extends AppCompatActivity implements FolderAdapter.Fol
                 if (response.isSuccessful()) {
                     runOnUiThread(() -> {
                         Toast.makeText(DataActivity.this, add ? R.string.toast_added_to_favorites : R.string.toast_removed_from_favorites, Toast.LENGTH_SHORT).show();
-                        forceSync();
+                        forceSync(false);
                     });
                 }
                 response.close();
@@ -954,6 +965,7 @@ public class DataActivity extends AppCompatActivity implements FolderAdapter.Fol
 
                         dbHelper.removeGatewayFromFolder(gatewayId, folderId);
                         loadDisplayListFromDb();
+                        forceSync(false);
                     });
                 } else {
                     String errorBody = response.body() != null ? response.body().string() : "Brak treści błędu";
@@ -987,6 +999,7 @@ public class DataActivity extends AppCompatActivity implements FolderAdapter.Fol
                         Toast.makeText(DataActivity.this, R.string.toast_removed_from_folder, Toast.LENGTH_SHORT).show();
                         dbHelper.removeSensorFromFolder(sensorId, folderId);
                         loadDisplayListFromDb();
+                        forceSync(false);
                     });
                 } else {
                     String errorBody = response.body() != null ? response.body().string() : "Brak treści błędu";
@@ -1007,11 +1020,20 @@ public class DataActivity extends AppCompatActivity implements FolderAdapter.Fol
                 loadDisplayListFromDb();
             }
         };
+
         syncStatusReceiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
                 boolean success = intent.getBooleanExtra("SYNC_SUCCESS", false);
                 long now = System.currentTimeMillis();
+
+                // --- NOWA LOGIKA: Pokaż TYLKO jeśli użytkownik o to prosił ---
+                if (!showSyncToast) {
+                    return; // Wychodzimy. Nie ma toasta. Cisza.
+                }
+                // Resetujemy flagę, żeby kolejne automatyczne synchronizacje też były ciche
+                showSyncToast = false;
+                // -------------------------------------------------------------
 
                 if (now - lastSyncToastTime < 3000) {
                     return;
