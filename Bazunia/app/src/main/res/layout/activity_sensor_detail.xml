@@ -48,8 +48,7 @@
             android:contentDescription="@string/favorite_button_desc"
             android:padding="12dp"
             android:scaleType="fitCenter"
-            app:srcCompat="@drawable/ic_sensor"
-            app:tint="?attr/colorOnSurfaceVariant" />
+            app:srcCompat="@drawable/ic_sensor" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnSettings"

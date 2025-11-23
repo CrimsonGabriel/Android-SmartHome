@@ -201,12 +201,12 @@ public class SensorDetailActivity extends AppCompatActivity {
                 public void onReceive(Context context, Intent intent) {
                     boolean success = intent.getBooleanExtra("SYNC_SUCCESS", false);
                     long now = System.currentTimeMillis();
-                    if (now - lastSyncToastTime < 3000) return; // Anty-spam
+                    if (now - lastSyncToastTime < 3000) return;
 
                     if (success) {
-                        Toast.makeText(context, R.string.sync_success, Toast.LENGTH_SHORT).show();
+                        Toast.makeText(SensorDetailActivity.this, R.string.sync_success, Toast.LENGTH_SHORT).show();
                     } else {
-                        Toast.makeText(context, R.string.sync_error, Toast.LENGTH_SHORT).show();
+                        Toast.makeText(SensorDetailActivity.this, R.string.sync_error, Toast.LENGTH_SHORT).show();
                     }
                     lastSyncToastTime = now;
                 }
@@ -285,9 +285,7 @@ public class SensorDetailActivity extends AppCompatActivity {
         setupThresholdControls();
 
 
-        bottomSheetDialog.setOnDismissListener(dialog -> {
-            hideKeyboard();
-        });
+        bottomSheetDialog.setOnDismissListener(dialog -> hideKeyboard());
 
         bottomSheetDialog.show();
     }
