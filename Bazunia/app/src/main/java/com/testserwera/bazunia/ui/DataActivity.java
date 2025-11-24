@@ -54,6 +54,9 @@ import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
+import com.flask.colorpicker.ColorPickerView;
+import com.flask.colorpicker.builder.ColorPickerDialogBuilder;
+import android.graphics.Color;
 
 public class DataActivity extends AppCompatActivity implements FolderAdapter.FolderCallback {
 
@@ -161,8 +164,6 @@ public class DataActivity extends AppCompatActivity implements FolderAdapter.Fol
         displayItems.clear();
 
         // --- 1. Sekcja ULUBIONE ---
-
-        // ZMIANA: Bezpieczne pobieranie Boolean (unika NPE przy unboxing)
         boolean isFavoritesExpanded = Boolean.TRUE.equals(folderExpansionState.get(PARENT_ID_FAVORITE));
 
         displayItems.add(new FolderAdapter.FolderItem(
@@ -176,13 +177,15 @@ public class DataActivity extends AppCompatActivity implements FolderAdapter.Fol
                 while (favGateways.moveToNext()) {
                     long gatewayId = favGateways.getLong(favGateways.getColumnIndexOrThrow(DatabaseHelper.G_COLUMN_ID));
                     String stateKey = "fav_gw_" + gatewayId;
-                    // ZMIANA: Bezpieczne pobieranie Boolean
                     boolean gwExpanded = Boolean.TRUE.equals(gatewayExpansionState.get(stateKey));
+
+                    // TU: Używamy konstruktora pomocniczego (4 argumenty), bo ulubione nie mają koloru tła
                     displayItems.add(new FolderAdapter.GatewayItem(favGateways, PARENT_ID_FAVORITE, true, gwExpanded));
 
                     if (gwExpanded) {
                         try (Cursor sensors = dbHelper.getSensorsForGateway(gatewayId)) {
                             while (sensors.moveToNext()) {
+                                // TU: Używamy konstruktora pomocniczego dla sensora
                                 displayItems.add(new FolderAdapter.SensorItem(sensors, null, PARENT_ID_GATEWAY));
                             }
                         }
@@ -201,8 +204,11 @@ public class DataActivity extends AppCompatActivity implements FolderAdapter.Fol
         try (Cursor folders = dbHelper.getFoldersCursor()) {
             while (folders.moveToNext()) {
                 long folderId = folders.getLong(folders.getColumnIndexOrThrow("_id"));
-                // ZMIANA: Bezpieczne pobieranie Boolean
                 boolean isExpanded = Boolean.TRUE.equals(folderExpansionState.get(folderId));
+
+                // Pobieramy kolor folderu
+                String folderColorHex = folders.getString(folders.getColumnIndexOrThrow(DatabaseHelper.F_COLUMN_COLOR));
+
                 FolderAdapter.FolderItem folderItem = new FolderAdapter.FolderItem(folders, isExpanded);
                 displayItems.add(folderItem);
 
@@ -211,15 +217,17 @@ public class DataActivity extends AppCompatActivity implements FolderAdapter.Fol
                         while (gatewaysInFolder.moveToNext()) {
                             long gatewayId = gatewaysInFolder.getLong(gatewaysInFolder.getColumnIndexOrThrow(DatabaseHelper.G_COLUMN_ID));
                             String stateKey = "folder_" + folderId + "_gw_" + gatewayId;
-                            // ZMIANA: Bezpieczne pobieranie Boolean
                             boolean gwExpanded = Boolean.TRUE.equals(gatewayExpansionState.get(stateKey));
-                            FolderAdapter.GatewayItem gatewayItem = new FolderAdapter.GatewayItem(gatewaysInFolder, folderId, true, gwExpanded);
+
+                            // TU: Używamy konstruktora GŁÓWNEGO (5 argumentów), przekazując kolor
+                            FolderAdapter.GatewayItem gatewayItem = new FolderAdapter.GatewayItem(gatewaysInFolder, folderId, true, gwExpanded, folderColorHex);
                             displayItems.add(gatewayItem);
 
                             if (gwExpanded) {
                                 try (Cursor sensors = dbHelper.getSensorsForGateway(gatewayId)) {
                                     while (sensors.moveToNext()) {
-                                        displayItems.add(new FolderAdapter.SensorItem(sensors, null, PARENT_ID_GATEWAY));
+                                        // TU: Sensor też dostaje kolor tła
+                                        displayItems.add(new FolderAdapter.SensorItem(sensors, null, PARENT_ID_GATEWAY, folderColorHex));
                                     }
                                 }
                             }
@@ -228,7 +236,7 @@ public class DataActivity extends AppCompatActivity implements FolderAdapter.Fol
                     try (Cursor sensorsInFolder = dbHelper.getSensorsForFolderCursor(folderId)) {
                         while (sensorsInFolder.moveToNext()) {
                             String gwName = sensorsInFolder.getString(sensorsInFolder.getColumnIndexOrThrow("gateway_name"));
-                            displayItems.add(new FolderAdapter.SensorItem(sensorsInFolder, gwName, folderId));
+                            displayItems.add(new FolderAdapter.SensorItem(sensorsInFolder, gwName, folderId, folderColorHex));
                         }
                     }
                 }
@@ -236,8 +244,6 @@ public class DataActivity extends AppCompatActivity implements FolderAdapter.Fol
         }
 
         // --- 3. Sekcja "NIEZGRUPOWANE" ---
-
-        // ZMIANA: Bezpieczne pobieranie Boolean
         boolean isUncategorizedExpanded = Boolean.TRUE.equals(folderExpansionState.get(UNCATEGORIZED_PARENT_ID));
 
         displayItems.add(new FolderAdapter.FolderItem(
@@ -251,8 +257,9 @@ public class DataActivity extends AppCompatActivity implements FolderAdapter.Fol
                 while (uncategorized.moveToNext()) {
                     long gatewayId = uncategorized.getLong(uncategorized.getColumnIndexOrThrow(DatabaseHelper.G_COLUMN_ID));
                     String stateKey = "uncat_gw_" + gatewayId;
-                    // ZMIANA: Bezpieczne pobieranie Boolean
                     boolean gwExpanded = Boolean.TRUE.equals(gatewayExpansionState.get(stateKey));
+
+                    // TU: Konstruktor pomocniczy (bez koloru)
                     FolderAdapter.GatewayItem gatewayItem = new FolderAdapter.GatewayItem(uncategorized, UNCATEGORIZED_PARENT_ID, true, gwExpanded);
                     displayItems.add(gatewayItem);
 
@@ -538,16 +545,71 @@ public class DataActivity extends AppCompatActivity implements FolderAdapter.Fol
     private void showCreateFolderDialog(FolderAdapter.FolderItem folder) {
         LayoutInflater inflater = getLayoutInflater();
         View dialogView = inflater.inflate(R.layout.dialog_create_folder, null);
+
         final EditText editName = dialogView.findViewById(R.id.edit_folder_name);
         final EditText editColor = dialogView.findViewById(R.id.edit_folder_color);
+        final View colorPreview = dialogView.findViewById(R.id.view_color_preview);
+
         boolean isEditMode = (folder != null);
         String title = isEditMode ? getString(R.string.dialog_edit_folder_title) : getString(R.string.dialog_create_folder_title);
+
+        int initialColor = Color.GRAY;
+
         if (isEditMode) {
             editName.setText(folder.name);
             editColor.setText(folder.color);
+            try {
+                if (folder.color != null && !folder.color.isEmpty()) {
+                    initialColor = Color.parseColor(folder.color);
+                }
+            } catch (IllegalArgumentException ignore) { }
         } else {
             editColor.setText("#");
         }
+
+        colorPreview.setBackgroundColor(initialColor);
+        final int[] currentColor = {initialColor};
+
+        // --- Live Preview przy wpisywaniu ręcznym ---
+        editColor.addTextChangedListener(new android.text.TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {}
+            @Override
+            public void afterTextChanged(android.text.Editable s) {
+                String input = s.toString().trim();
+                if (!input.startsWith("#")) input = "#" + input;
+                try {
+                    int parsedColor = Color.parseColor(input);
+                    colorPreview.setBackgroundColor(parsedColor);
+                    currentColor[0] = parsedColor;
+                } catch (IllegalArgumentException ignore) { }
+            }
+        });
+
+        // --- OBSŁUGA PICKERA "HUE STYLE" (KOŁO) ---
+        colorPreview.setOnClickListener(v -> ColorPickerDialogBuilder
+                .with(this)
+                .setTitle(getString(R.string.dialog_folder_color_hint))
+                .initialColor(currentColor[0])
+                // WHEEL_TYPE.FLOWER daje efekt tęczowego koła (jak Hue)
+                // Możesz też użyć WHEEL_TYPE.CIRCLE dla prostszego koła
+                .wheelType(ColorPickerView.WHEEL_TYPE.FLOWER)
+                .density(12) // Gęstość kolorów na kole
+                .setOnColorSelectedListener(selectedColor -> {
+                    // Opcjonalnie: Reakcja na przesuwanie palcem (np. toast z hexem)
+                })
+                .setPositiveButton(getString(R.string.dialog_save), (dialog, selectedColor, allColors) -> {
+                    currentColor[0] = selectedColor;
+                    String hexColor = String.format("#%06X", (0xFFFFFF & selectedColor));
+                    editColor.setText(hexColor);
+                    colorPreview.setBackgroundColor(selectedColor);
+                })
+                .setNegativeButton(getString(R.string.dialog_cancel_button), (dialog, which) -> {})
+                .build()
+                .show());
+
         new AlertDialog.Builder(this)
                 .setTitle(title)
                 .setView(dialogView)

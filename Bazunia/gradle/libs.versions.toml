@@ -7,6 +7,7 @@ appcompat = "1.7.0"
 material = "1.12.0"
 activity = "1.10.1"
 constraintlayout = "2.2.1"
+colorpicker = "0.0.15"
 
 # --- NOWE WERSJE (Credential Manager) ---
 # To zastępuje stare logowanie Google
@@ -33,6 +34,7 @@ appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "a
 material = { group = "com.google.android.material", name = "material", version.ref = "material" }
 activity = { group = "androidx.activity", name = "activity", version.ref = "activity" }
 constraintlayout = { group = "androidx.constraintlayout", name = "constraintlayout", version.ref = "constraintlayout" }
+colorpicker = { module = "com.github.QuadFlask:colorpicker", version.ref = "colorpicker" }
 
 # --- NOWE BIBLIOTEKI (Credential Manager) ---
 # Używamy ich zamiast starego play-services-auth

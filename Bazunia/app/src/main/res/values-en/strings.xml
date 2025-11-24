@@ -481,4 +481,5 @@
     <string name="risk_issue_window">Window is open</string>
     <string name="risk_issue_door">Door is open</string>
     <string name="risk_issue_default">Issue detected</string>
+    <string name="color_picker_text">Click to pick color from palette.</string>
 </resources>

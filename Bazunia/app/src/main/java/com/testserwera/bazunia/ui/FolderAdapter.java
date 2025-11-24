@@ -68,6 +68,7 @@ public class FolderAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
         }
     }
 
+    // --- Poprawiona klasa GatewayItem ---
     public static class GatewayItem {
         final long id;
         final String name;
@@ -76,8 +77,10 @@ public class FolderAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
         final boolean isSensorParent;
         boolean isExpanded;
         final long parentFolderId;
+        final String parentColor; // Pole koloru
 
-        public GatewayItem(Cursor cursor, long parentFolderId, boolean isSensorParent, boolean isExpanded) {
+        // KONSTRUKTOR GŁÓWNY (5 argumentów - z kolorem)
+        public GatewayItem(Cursor cursor, long parentFolderId, boolean isSensorParent, boolean isExpanded, String parentColor) {
             this.id = cursor.getLong(cursor.getColumnIndexOrThrow(DatabaseHelper.G_COLUMN_ID));
             this.name = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.G_COLUMN_NAME));
             this.status = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.G_COLUMN_STATUS));
@@ -85,31 +88,47 @@ public class FolderAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
             this.parentFolderId = parentFolderId;
             this.isSensorParent = isSensorParent;
             this.isExpanded = isExpanded;
+            this.parentColor = parentColor; // Przypisanie koloru
+        }
+
+        // KONSTRUKTOR POMOCNICZY (4 argumenty - bez koloru, dla Ulubionych/Niezgrupowanych)
+        public GatewayItem(Cursor cursor, long parentFolderId, boolean isSensorParent, boolean isExpanded) {
+            // Wywołuje główny konstruktor z null jako kolorem
+            this(cursor, parentFolderId, isSensorParent, isExpanded, null);
         }
     }
 
+    // --- Poprawiona klasa SensorItem ---
     public static class SensorItem {
         final long id;
         final long gatewayId;
         final String name;
         final String type;
-        final String value; // Dodano pole VALUE
+        final String value;
         final int batteryLevel;
         final String keyword;
         final String gatewayName;
         final long parentFolderId;
+        final String parentColor; // Pole koloru
 
-        public SensorItem(Cursor cursor, String gatewayName, long parentFolderId) {
+        // KONSTRUKTOR GŁÓWNY (z kolorem)
+        public SensorItem(Cursor cursor, String gatewayName, long parentFolderId, String parentColor) {
             this.id = cursor.getLong(cursor.getColumnIndexOrThrow("_id"));
             this.gatewayId = cursor.getLong(cursor.getColumnIndexOrThrow(DatabaseHelper.S_COLUMN_GATEWAY_ID));
             this.name = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.S_COLUMN_NAME));
             this.type = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.S_COLUMN_TYPE));
-            // Pobieramy wartość z bazy
             this.value = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.S_COLUMN_VALUE));
             this.batteryLevel = cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseHelper.S_COLUMN_BATTERY));
             this.keyword = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.S_COLUMN_KEYWORD));
             this.gatewayName = gatewayName;
             this.parentFolderId = parentFolderId;
+            this.parentColor = parentColor; // Przypisanie koloru
+        }
+
+        // KONSTRUKTOR POMOCNICZY (bez koloru)
+        public SensorItem(Cursor cursor, String gatewayName, long parentFolderId) {
+            // Wywołuje główny konstruktor z null jako kolorem
+            this(cursor, gatewayName, parentFolderId, null);
         }
     }
 
@@ -179,7 +198,7 @@ public class FolderAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
     }
 
 
-    // --- ViewHoldery (TERAZ STATIC) ---
+    // --- ViewHoldery ---
 
     static class HeaderViewHolder extends RecyclerView.ViewHolder {
         TextView textHeader;
@@ -193,33 +212,53 @@ public class FolderAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
     }
 
     static class FolderViewHolder extends RecyclerView.ViewHolder {
-        View colorIndicator;
+
         ImageView iconFolder, iconExpansion;
         TextView textName;
+        View rootView;
+
         FolderViewHolder(View view) {
             super(view);
-            colorIndicator = view.findViewById(R.id.folderColorIndicator);
+            rootView = view;
             iconFolder = view.findViewById(R.id.iconFolder);
             iconExpansion = view.findViewById(R.id.iconExpansionIndicator);
             textName = view.findViewById(R.id.textFolderName);
         }
+
         void bind(FolderItem item, FolderCallback callback) {
             textName.setText(item.name);
 
-            if (item.color != null) {
+            // Ukryj stary wskaźnik jeśli istnieje w XML
+            View oldIndicator = itemView.findViewById(R.id.folderColorIndicator);
+            if(oldIndicator != null) oldIndicator.setVisibility(View.GONE);
+
+            // ZMIANA: Zawsze czyścimy filtr, żeby ikona folderu miała oryginalny kolor
+            iconFolder.clearColorFilter();
+
+            // Logika kolorowania tła
+            if (item.color != null && !item.color.isEmpty()) {
                 try {
-                    colorIndicator.setBackgroundColor(Color.parseColor(item.color));
-                    colorIndicator.setVisibility(View.VISIBLE);
+                    int color = Color.parseColor(item.color);
+                    rootView.setBackgroundColor(color);
+
+                    // ZMIANA: Zmieniamy kolor TYLKO tekstu i strzałki rozwijania
+                    if (isColorDark(color)) {
+                        textName.setTextColor(Color.WHITE);
+                        iconExpansion.setColorFilter(Color.WHITE);
+                    } else {
+                        textName.setTextColor(Color.BLACK);
+                        iconExpansion.setColorFilter(Color.BLACK);
+                    }
                 } catch (Exception e) {
-                    colorIndicator.setBackgroundColor(Color.GRAY);
-                    colorIndicator.setVisibility(View.VISIBLE);
+                    rootView.setBackgroundColor(Color.TRANSPARENT);
+                    restoreDefaultColors();
                 }
             } else {
-                colorIndicator.setVisibility(View.GONE);
+                rootView.setBackgroundColor(Color.TRANSPARENT);
+                restoreDefaultColors();
             }
 
             iconFolder.setImageResource(R.drawable.ic_folder);
-
             iconExpansion.setImageResource(R.drawable.ic_expand_arrow);
             iconExpansion.setRotation(item.isExpanded ? 180f : 0f);
 
@@ -228,6 +267,18 @@ public class FolderAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
                 callback.onFolderLongClicked(item, v);
                 return true;
             });
+        }
+
+        private void restoreDefaultColors() {
+            int defaultColor = ContextCompat.getColor(itemView.getContext(), android.R.color.tab_indicator_text);
+            textName.setTextColor(defaultColor);
+            iconExpansion.clearColorFilter();
+            // iconFolder jest czyszczony na początku bind()
+        }
+
+        private boolean isColorDark(int color) {
+            double darkness = 1 - (0.299 * Color.red(color) + 0.587 * Color.green(color) + 0.114 * Color.blue(color)) / 255;
+            return darkness >= 0.5;
         }
     }
 
@@ -257,12 +308,25 @@ public class FolderAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
 
             if (item.isSensorParent) {
                 iconExpansion.setVisibility(View.VISIBLE);
-
                 iconExpansion.setImageResource(R.drawable.ic_expand_arrow);
                 iconExpansion.setRotation(item.isExpanded ? 180f : 0f);
 
             } else {
                 iconExpansion.setVisibility(View.INVISIBLE);
+            }
+
+            // Obsługa tła z koloru rodzica
+            if (item.parentColor != null) {
+                try {
+                    int color = Color.parseColor(item.parentColor);
+                    // Ustawiamy kolor z dużą przezroczystością (ok 15%), żeby tekst był czytelny
+                    int alphaColor = Color.argb(40, Color.red(color), Color.green(color), Color.blue(color));
+                    itemView.setBackgroundColor(alphaColor);
+                } catch (Exception e) {
+                    itemView.setBackgroundColor(Color.TRANSPARENT);
+                }
+            } else {
+                itemView.setBackgroundColor(Color.TRANSPARENT);
             }
 
             itemView.setOnClickListener(v -> callback.onGatewayClicked(item));
@@ -281,7 +345,6 @@ public class FolderAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
         ImageView iconMuteThresh;
         ImageView iconMuteBatt;
 
-        // Przekazujemy context i prefs do holdera
         Context context;
         SharedPreferences mutePrefs;
         FolderCallback callback;
@@ -300,11 +363,10 @@ public class FolderAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
         }
 
         void bind(SensorItem item) {
-            // Przekazujemy teraz item.value (stan czujnika), aby ikona otwarcia/zamknięcia działała
+            // Przekazujemy teraz item.value, aby ikona otwarcia/zamknięcia działała
             textSensorName.setCompoundDrawablesWithIntrinsicBounds(getIcon(item.type, item.keyword, item.value), 0, 0, 0);
 
             if (item.gatewayName != null) {
-                // Używamy zasobu string zamiast konkatenacji
                 textSensorName.setText(context.getString(R.string.sensor_name_with_gateway_format, item.name, item.gatewayName));
             } else {
                 textSensorName.setText(item.name);
@@ -323,7 +385,6 @@ public class FolderAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
 
             // Obsługa baterii
             if (item.batteryLevel > 0) {
-                // Używamy zasobu string dla procentów
                 textBatteryLevel.setText(context.getString(R.string.battery_percentage_format, item.batteryLevel));
                 textBatteryLevel.setVisibility(View.VISIBLE);
                 iconBattery.setVisibility(View.VISIBLE);
@@ -352,6 +413,19 @@ public class FolderAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
                 textSensorName.setTextColor(getDefaultTextColor(context));
             }
 
+            // Obsługa tła z koloru rodzica
+            if (item.parentColor != null) {
+                try {
+                    int color = Color.parseColor(item.parentColor);
+                    int alphaColor = Color.argb(40, Color.red(color), Color.green(color), Color.blue(color));
+                    itemView.setBackgroundColor(alphaColor);
+                } catch (Exception e) {
+                    itemView.setBackgroundColor(Color.TRANSPARENT);
+                }
+            } else {
+                itemView.setBackgroundColor(Color.TRANSPARENT);
+            }
+
             itemView.setOnClickListener(v -> callback.onSensorClicked(item));
             itemView.setOnLongClickListener(v -> {
                 callback.onSensorLongClicked(item, v);
@@ -360,7 +434,6 @@ public class FolderAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
         }
 
         private int getDefaultTextColor(Context ctx) {
-            // Używamy ContextCompat dla API 26+ (bezpiecznie)
             return ContextCompat.getColor(ctx, android.R.color.tab_indicator_text);
         }
 

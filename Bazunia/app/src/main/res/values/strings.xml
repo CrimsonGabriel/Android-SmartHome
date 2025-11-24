@@ -485,4 +485,5 @@
     <string name="risk_issue_window">Okno jest otwarte</string>
     <string name="risk_issue_door">Drzwi są otwarte</string>
     <string name="risk_issue_default">Wykryto problem</string>
+    <string name="color_picker_text">Kliknij, aby wybrać kolor z palety.</string>
 </resources>
