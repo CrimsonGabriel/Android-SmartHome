@@ -114,10 +114,7 @@
     <string name="log_error_db_types">Błąd pobierania typów: %1$s</string>
     <string name="log_error_db_gateways">Błąd pobierania bramek: %1$s</string>
     <string name="alert_title_temp_humidity">Alert: [TYP] [ID]</string>
-    <string name="alert_msg_too_low">Wartość [TYP] jest za niska: [WARTOŚĆ]. Próg min: [PROG].</string>
-    <string name="alert_msg_too_high">Wartość [TYP] jest za wysoka: [WARTOŚĆ]. Próg max: [PROG].</string>
-    <string name="alert_title_door_window">Alert: Drzwi/Okna</string>
-    <string name="alert_msg_door_open">Czujnik [ID] (Bramka [GATEWAY]) ZGŁASZA OTWARTY STAN!</string>
+
     <string name="error_numeric_parse">Nie można sparsować wartości sensora jako liczby: %1$s</string>
     <string name="disable_2fa_confirm">Potwierdź wyłączenie</string>
     <string name="sign_in_with_google">Zaloguj się przez Google</string>
@@ -486,4 +483,28 @@
     <string name="risk_issue_door">Drzwi są otwarte</string>
     <string name="risk_issue_default">Wykryto problem</string>
     <string name="color_picker_text">Kliknij, aby wybrać kolor z palety.</string>
+
+    <string name="threshold_settings_title">Progi alarmowe</string>
+    <string name="battery_summary">Niski poziom baterii w %1$d %2$s</string>
+
+    <string name="alert_title_door_window">Alarm Otwarcia</string>
+    <string name="alert_msg_door_open">Czujnik %1$s (Bramka %2$s) jest OTWARTY!</string>
+
+    <string name="alert_title_motion">Wykryto Ruch</string>
+    <string name="alert_msg_motion">Wykryto ruch na czujniku %1$s (Bramka %2$s)!</string>
+
+    <string name="alert_title_light">Światło Włączone</string>
+    <string name="alert_msg_light">Światło/Gniazdko %1$s (Bramka %2$s) jest włączone.</string>
+
+    <string name="alert_title_leak">Alarm Wycieku/Przepływu</string>
+    <string name="alert_msg_leak">Wykryto przepływ wody na czujniku %1$s (Bramka %2$s)!</string>
+    <string name="alert_msg_too_low">Wartość za niska dla %1$s! Obecna: %2$s, Min: %3$s</string>
+    <string name="alert_msg_too_high">Wartość za wysoka dla %1$s! Obecna: %2$s, Max: %3$s</string>
+
+    <string name="risk_msg_too_high">Za wysoko! (Jest: %1$s, Max: %2$s)</string>
+    <string name="risk_msg_too_low">Za nisko! (Jest: %1$s, Min: %2$s)</string>
+    <string name="risk_msg_active">Stan Aktywny / Wykryto</string>
+    <string name="risk_msg_on">Włączone</string>
+    <string name="risk_msg_open">Otwarte</string>
+    <string name="risk_msg_flow">Wykryto przepływ</string>
 </resources>

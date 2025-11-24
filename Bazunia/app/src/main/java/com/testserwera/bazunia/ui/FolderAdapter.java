@@ -4,6 +4,7 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.graphics.Color;
+import android.util.Pair;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -16,6 +17,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.testserwera.bazunia.R;
 import com.testserwera.bazunia.data.DatabaseHelper;
+import com.testserwera.bazunia.data.ThresholdManager;
 
 import java.util.List;
 
@@ -30,6 +32,7 @@ public class FolderAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
     private final List<Object> displayItems;
     private final FolderCallback callback;
     private final SharedPreferences mutePrefs;
+    private final ThresholdManager thresholdManager;
 
     public interface FolderCallback {
         void onFolderClicked(FolderItem folder);
@@ -41,7 +44,6 @@ public class FolderAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
     }
 
     // --- Modele Widoków ---
-
     public static class SectionHeader {
         final String title;
         public SectionHeader(String title) { this.title = title; }
@@ -68,7 +70,6 @@ public class FolderAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
         }
     }
 
-    // --- Poprawiona klasa GatewayItem ---
     public static class GatewayItem {
         final long id;
         final String name;
@@ -77,9 +78,8 @@ public class FolderAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
         final boolean isSensorParent;
         boolean isExpanded;
         final long parentFolderId;
-        final String parentColor; // Pole koloru
+        final String parentColor;
 
-        // KONSTRUKTOR GŁÓWNY (5 argumentów - z kolorem)
         public GatewayItem(Cursor cursor, long parentFolderId, boolean isSensorParent, boolean isExpanded, String parentColor) {
             this.id = cursor.getLong(cursor.getColumnIndexOrThrow(DatabaseHelper.G_COLUMN_ID));
             this.name = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.G_COLUMN_NAME));
@@ -88,20 +88,19 @@ public class FolderAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
             this.parentFolderId = parentFolderId;
             this.isSensorParent = isSensorParent;
             this.isExpanded = isExpanded;
-            this.parentColor = parentColor; // Przypisanie koloru
+            this.parentColor = parentColor;
         }
 
-        // KONSTRUKTOR POMOCNICZY (4 argumenty - bez koloru, dla Ulubionych/Niezgrupowanych)
         public GatewayItem(Cursor cursor, long parentFolderId, boolean isSensorParent, boolean isExpanded) {
-            // Wywołuje główny konstruktor z null jako kolorem
             this(cursor, parentFolderId, isSensorParent, isExpanded, null);
         }
     }
 
-    // --- Poprawiona klasa SensorItem ---
     public static class SensorItem {
         final long id;
         final long gatewayId;
+        final String sensorIdString;
+        final String gatewayIdString;
         final String name;
         final String type;
         final String value;
@@ -109,12 +108,16 @@ public class FolderAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
         final String keyword;
         final String gatewayName;
         final long parentFolderId;
-        final String parentColor; // Pole koloru
+        final String parentColor;
 
-        // KONSTRUKTOR GŁÓWNY (z kolorem)
         public SensorItem(Cursor cursor, String gatewayName, long parentFolderId, String parentColor) {
             this.id = cursor.getLong(cursor.getColumnIndexOrThrow("_id"));
-            this.gatewayId = cursor.getLong(cursor.getColumnIndexOrThrow(DatabaseHelper.S_COLUMN_GATEWAY_ID));
+
+            // Używamy bezpośrednich nazw kolumn
+            this.sensorIdString = cursor.getString(cursor.getColumnIndexOrThrow("sensor_id"));
+            this.gatewayIdString = cursor.getString(cursor.getColumnIndexOrThrow("gateway_id"));
+            this.gatewayId = cursor.getLong(cursor.getColumnIndexOrThrow("gateway_id"));
+
             this.name = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.S_COLUMN_NAME));
             this.type = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.S_COLUMN_TYPE));
             this.value = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.S_COLUMN_VALUE));
@@ -122,12 +125,10 @@ public class FolderAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
             this.keyword = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.S_COLUMN_KEYWORD));
             this.gatewayName = gatewayName;
             this.parentFolderId = parentFolderId;
-            this.parentColor = parentColor; // Przypisanie koloru
+            this.parentColor = parentColor;
         }
 
-        // KONSTRUKTOR POMOCNICZY (bez koloru)
         public SensorItem(Cursor cursor, String gatewayName, long parentFolderId) {
-            // Wywołuje główny konstruktor z null jako kolorem
             this(cursor, gatewayName, parentFolderId, null);
         }
     }
@@ -139,6 +140,7 @@ public class FolderAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
         this.displayItems = displayItems;
         this.callback = callback;
         this.mutePrefs = context.getSharedPreferences("NotificationMutePrefs", Context.MODE_PRIVATE);
+        this.thresholdManager = new ThresholdManager(context);
     }
 
     @Override
@@ -167,7 +169,7 @@ public class FolderAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
                 return new GatewayViewHolder(gatewayView);
             case VIEW_TYPE_SENSOR:
                 View sensorView = inflater.inflate(R.layout.list_item, parent, false);
-                return new SensorViewHolder(sensorView, context, mutePrefs, callback);
+                return new SensorViewHolder(sensorView, context, mutePrefs, callback, thresholdManager);
             default:
                 throw new IllegalArgumentException("Invalid view type");
         }
@@ -197,26 +199,18 @@ public class FolderAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
         return displayItems.size();
     }
 
-
     // --- ViewHoldery ---
 
     static class HeaderViewHolder extends RecyclerView.ViewHolder {
         TextView textHeader;
-        HeaderViewHolder(View view) {
-            super(view);
-            textHeader = view.findViewById(R.id.textSectionHeader);
-        }
-        void bind(SectionHeader item) {
-            textHeader.setText(item.title);
-        }
+        HeaderViewHolder(View view) { super(view); textHeader = view.findViewById(R.id.textSectionHeader); }
+        void bind(SectionHeader item) { textHeader.setText(item.title); }
     }
 
     static class FolderViewHolder extends RecyclerView.ViewHolder {
-
         ImageView iconFolder, iconExpansion;
         TextView textName;
         View rootView;
-
         FolderViewHolder(View view) {
             super(view);
             rootView = view;
@@ -224,24 +218,15 @@ public class FolderAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
             iconExpansion = view.findViewById(R.id.iconExpansionIndicator);
             textName = view.findViewById(R.id.textFolderName);
         }
-
         void bind(FolderItem item, FolderCallback callback) {
             textName.setText(item.name);
-
-            // Ukryj stary wskaźnik jeśli istnieje w XML
             View oldIndicator = itemView.findViewById(R.id.folderColorIndicator);
             if(oldIndicator != null) oldIndicator.setVisibility(View.GONE);
-
-            // ZMIANA: Zawsze czyścimy filtr, żeby ikona folderu miała oryginalny kolor
             iconFolder.clearColorFilter();
-
-            // Logika kolorowania tła
             if (item.color != null && !item.color.isEmpty()) {
                 try {
                     int color = Color.parseColor(item.color);
                     rootView.setBackgroundColor(color);
-
-                    // ZMIANA: Zmieniamy kolor TYLKO tekstu i strzałki rozwijania
                     if (isColorDark(color)) {
                         textName.setTextColor(Color.WHITE);
                         iconExpansion.setColorFilter(Color.WHITE);
@@ -257,25 +242,17 @@ public class FolderAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
                 rootView.setBackgroundColor(Color.TRANSPARENT);
                 restoreDefaultColors();
             }
-
             iconFolder.setImageResource(R.drawable.ic_folder);
             iconExpansion.setImageResource(R.drawable.ic_expand_arrow);
             iconExpansion.setRotation(item.isExpanded ? 180f : 0f);
-
             itemView.setOnClickListener(v -> callback.onFolderClicked(item));
-            itemView.setOnLongClickListener(v -> {
-                callback.onFolderLongClicked(item, v);
-                return true;
-            });
+            itemView.setOnLongClickListener(v -> { callback.onFolderLongClicked(item, v); return true; });
         }
-
         private void restoreDefaultColors() {
             int defaultColor = ContextCompat.getColor(itemView.getContext(), android.R.color.tab_indicator_text);
             textName.setTextColor(defaultColor);
             iconExpansion.clearColorFilter();
-            // iconFolder jest czyszczony na początku bind()
         }
-
         private boolean isColorDark(int color) {
             double darkness = 1 - (0.299 * Color.red(color) + 0.587 * Color.green(color) + 0.114 * Color.blue(color)) / 255;
             return darkness >= 0.5;
@@ -284,9 +261,7 @@ public class FolderAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
 
     static class GatewayViewHolder extends RecyclerView.ViewHolder {
         TextView textGroupName, textGroupStatus;
-        ImageView iconGroup;
-        ImageView iconExpansion;
-
+        ImageView iconGroup, iconExpansion;
         GatewayViewHolder(View view) {
             super(view);
             textGroupName = view.findViewById(R.id.textGroup);
@@ -294,7 +269,6 @@ public class FolderAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
             iconGroup = view.findViewById(R.id.iconGroup);
             iconExpansion = view.findViewById(R.id.iconExpansionIndicator);
         }
-
         void bind(GatewayItem item, FolderCallback callback) {
             textGroupName.setText(item.name);
             iconGroup.setImageResource(R.drawable.ic_gateway);
@@ -305,55 +279,42 @@ public class FolderAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
                 textGroupStatus.setText(R.string.gateway_status_offline);
                 textGroupStatus.setTextColor(Color.parseColor("#FF990000"));
             }
-
             if (item.isSensorParent) {
                 iconExpansion.setVisibility(View.VISIBLE);
                 iconExpansion.setImageResource(R.drawable.ic_expand_arrow);
                 iconExpansion.setRotation(item.isExpanded ? 180f : 0f);
-
             } else {
                 iconExpansion.setVisibility(View.INVISIBLE);
             }
-
-            // Obsługa tła z koloru rodzica
             if (item.parentColor != null) {
                 try {
                     int color = Color.parseColor(item.parentColor);
-                    // Ustawiamy kolor z dużą przezroczystością (ok 15%), żeby tekst był czytelny
                     int alphaColor = Color.argb(40, Color.red(color), Color.green(color), Color.blue(color));
                     itemView.setBackgroundColor(alphaColor);
-                } catch (Exception e) {
-                    itemView.setBackgroundColor(Color.TRANSPARENT);
-                }
-            } else {
-                itemView.setBackgroundColor(Color.TRANSPARENT);
-            }
-
+                } catch (Exception e) { itemView.setBackgroundColor(Color.TRANSPARENT); }
+            } else { itemView.setBackgroundColor(Color.TRANSPARENT); }
             itemView.setOnClickListener(v -> callback.onGatewayClicked(item));
-            itemView.setOnLongClickListener(v -> {
-                callback.onGatewayLongClicked(item, v);
-                return true;
-            });
+            itemView.setOnLongClickListener(v -> { callback.onGatewayLongClicked(item, v); return true; });
         }
     }
 
     static class SensorViewHolder extends RecyclerView.ViewHolder {
-
         TextView textSensorName;
         TextView textBatteryLevel;
         ImageView iconBattery;
         ImageView iconMuteThresh;
         ImageView iconMuteBatt;
-
         Context context;
         SharedPreferences mutePrefs;
         FolderCallback callback;
+        ThresholdManager thresholdManager;
 
-        SensorViewHolder(View view, Context context, SharedPreferences mutePrefs, FolderCallback callback) {
+        SensorViewHolder(View view, Context context, SharedPreferences mutePrefs, FolderCallback callback, ThresholdManager thresholdManager) {
             super(view);
             this.context = context;
             this.mutePrefs = mutePrefs;
             this.callback = callback;
+            this.thresholdManager = thresholdManager;
 
             textSensorName = view.findViewById(R.id.sensor_name_text);
             textBatteryLevel = view.findViewById(R.id.battery_text);
@@ -363,7 +324,6 @@ public class FolderAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
         }
 
         void bind(SensorItem item) {
-            // Przekazujemy teraz item.value, aby ikona otwarcia/zamknięcia działała
             textSensorName.setCompoundDrawablesWithIntrinsicBounds(getIcon(item.type, item.keyword, item.value), 0, 0, 0);
 
             if (item.gatewayName != null) {
@@ -372,65 +332,79 @@ public class FolderAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
                 textSensorName.setText(item.name);
             }
 
+            // LOGIKA KOLOROWANIA (ALARM = CZERWONY)
+            boolean isAlarmState = false;
+
+            // Teraz isThresholdSupported zwraca TRUE dla Analogowych (Temp) i FALSE dla Binarnych (Drzwi)
+            if (thresholdManager.isThresholdSupported(item.type)) {
+                // --- LOGIKA DLA ANALOGOWYCH (Suwaki) ---
+                try {
+                    float val = Float.parseFloat(item.value);
+                    Pair<Float, Float> defRange = thresholdManager.getDefaultRangeForType(item.type);
+
+                    float min = thresholdManager.getMinThreshold(item.gatewayIdString, item.sensorIdString, defRange.first);
+                    float max = thresholdManager.getMaxThreshold(item.gatewayIdString, item.sensorIdString, defRange.second);
+
+                    // Jeśli wartość poza zakresem -> Alarm
+                    if (val < min || val > max) {
+                        isAlarmState = true;
+                    }
+                } catch (NumberFormatException e) {
+                    // Ignoruj błędy
+                }
+            } else {
+                // --- LOGIKA DLA BINARNYCH (0/1) ---
+                // Tu wpada: Contact, Light, Motion...
+                try {
+                    float val = Float.parseFloat(item.value);
+                    // Jeśli > 0.5 (czyli 1) uznajemy za stan aktywny -> Alarm/Czerwony
+                    if (val > 0.5f) {
+                        isAlarmState = true;
+                    }
+                } catch (NumberFormatException e) {
+                    // Ignoruj błędy
+                }
+            }
+
+            // Ustaw kolor tekstu
+            if (isAlarmState || item.batteryLevel <= 20) {
+                textSensorName.setTextColor(Color.parseColor("#FF990000")); // Czerwony
+            } else {
+                textSensorName.setTextColor(getDefaultTextColor(context)); // Domyślny
+            }
+
             // Ikony wyciszenia
             boolean isThreshMuted = mutePrefs.getBoolean("thresh_sensor_" + item.id, false);
             boolean isBattMuted = mutePrefs.getBoolean("batt_sensor_" + item.id, false);
+            if (iconMuteThresh != null) iconMuteThresh.setVisibility(isThreshMuted ? View.VISIBLE : View.GONE);
+            if (iconMuteBatt != null) iconMuteBatt.setVisibility(isBattMuted ? View.VISIBLE : View.GONE);
 
-            if (iconMuteThresh != null) {
-                iconMuteThresh.setVisibility(isThreshMuted ? View.VISIBLE : View.GONE);
-            }
-            if (iconMuteBatt != null) {
-                iconMuteBatt.setVisibility(isBattMuted ? View.VISIBLE : View.GONE);
-            }
-
-            // Obsługa baterii
+            // Bateria
             if (item.batteryLevel > 0) {
                 textBatteryLevel.setText(context.getString(R.string.battery_percentage_format, item.batteryLevel));
                 textBatteryLevel.setVisibility(View.VISIBLE);
                 iconBattery.setVisibility(View.VISIBLE);
-
-                if (item.batteryLevel > 75) {
-                    iconBattery.setImageResource(R.drawable.ic_battery_full);
-                } else if (item.batteryLevel > 50) {
-                    iconBattery.setImageResource(R.drawable.ic_battery_good);
-                } else if (item.batteryLevel > 20) {
-                    iconBattery.setImageResource(R.drawable.ic_battery_medium);
-                } else if (item.batteryLevel > 1) {
-                    iconBattery.setImageResource(R.drawable.ic_battery_low);
-                } else {
-                    iconBattery.setImageResource(R.drawable.ic_battery_empty);
-                }
-
-                if (item.batteryLevel <= 20) {
-                    textSensorName.setTextColor(Color.parseColor("#FF990000"));
-                } else {
-                    textSensorName.setTextColor(getDefaultTextColor(context));
-                }
-
+                if (item.batteryLevel > 75) iconBattery.setImageResource(R.drawable.ic_battery_full);
+                else if (item.batteryLevel > 50) iconBattery.setImageResource(R.drawable.ic_battery_good);
+                else if (item.batteryLevel > 20) iconBattery.setImageResource(R.drawable.ic_battery_medium);
+                else if (item.batteryLevel > 1) iconBattery.setImageResource(R.drawable.ic_battery_low);
+                else iconBattery.setImageResource(R.drawable.ic_battery_empty);
             } else {
                 textBatteryLevel.setVisibility(View.GONE);
                 iconBattery.setVisibility(View.GONE);
-                textSensorName.setTextColor(getDefaultTextColor(context));
             }
 
-            // Obsługa tła z koloru rodzica
+            // Tło
             if (item.parentColor != null) {
                 try {
                     int color = Color.parseColor(item.parentColor);
                     int alphaColor = Color.argb(40, Color.red(color), Color.green(color), Color.blue(color));
                     itemView.setBackgroundColor(alphaColor);
-                } catch (Exception e) {
-                    itemView.setBackgroundColor(Color.TRANSPARENT);
-                }
-            } else {
-                itemView.setBackgroundColor(Color.TRANSPARENT);
-            }
+                } catch (Exception e) { itemView.setBackgroundColor(Color.TRANSPARENT); }
+            } else { itemView.setBackgroundColor(Color.TRANSPARENT); }
 
             itemView.setOnClickListener(v -> callback.onSensorClicked(item));
-            itemView.setOnLongClickListener(v -> {
-                callback.onSensorLongClicked(item, v);
-                return true;
-            });
+            itemView.setOnLongClickListener(v -> { callback.onSensorLongClicked(item, v); return true; });
         }
 
         private int getDefaultTextColor(Context ctx) {
@@ -450,6 +424,8 @@ public class FolderAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
                 }
             }
             if (type == null) return R.drawable.ic_sensor;
+
+            // Poprawiona logika dla kontaktronu
             switch (type.toLowerCase()) {
                 case "button_press": return R.drawable.ic_button;
                 case "temperature": return R.drawable.ic_temp;
@@ -463,13 +439,14 @@ public class FolderAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
                 case "level": return R.drawable.ic_level;
                 case "valve": return R.drawable.ic_valve;
                 case "contact":
-                    if ("1".equals(value)) {
-                        return R.drawable.ic_open;
-                    } else {
+                    // Bezpieczne parsowanie float dla ikony otwarcia/zamknięcia
+                    try {
+                        float v = Float.parseFloat(value);
+                        return (v > 0.5f) ? R.drawable.ic_open : R.drawable.ic_closed;
+                    } catch (Exception e) {
                         return R.drawable.ic_closed;
                     }
-                default:
-                    return R.drawable.ic_sensor;
+                default: return R.drawable.ic_sensor;
             }
         }
     }

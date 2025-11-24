@@ -112,10 +112,8 @@
     <string name="log_error_db_types">Error fetching types: %1$s</string>
     <string name="log_error_db_gateways">Error fetching gateways: %1$s</string>
     <string name="alert_title_temp_humidity">Alert: [TYPE] [ID]</string>
-    <string name="alert_msg_too_low">Value [TYPE] is too low: [VALUE]. Min threshold: [THRESHOLD].</string>
-    <string name="alert_msg_too_high">Value [TYPE] is too high: [VALUE]. Max threshold: [THRESHOLD].</string>
-    <string name="alert_title_door_window">Alert: Door/Window</string>
-    <string name="alert_msg_door_open">Sensor [ID] (Gateway [GATEWAY]) REPORTS OPEN STATE!</string>
+
+
     <string name="error_numeric_parse">Could not parse sensor value as a number: %1$s</string>
     <string name="sign_in_with_google">Sign in with Google</string>
     <string name="clear_data_confirmation_title_choose">Select Deletion Scope</string>
@@ -482,4 +480,29 @@
     <string name="risk_issue_door">Door is open</string>
     <string name="risk_issue_default">Issue detected</string>
     <string name="color_picker_text">Click to pick color from palette.</string>
+
+    <string name="threshold_settings_title">Alarm Thresholds</string>
+    <string name="battery_summary">Low battery level in %1$d %2$s</string>
+
+    <string name="alert_title_door_window">Door/Window Alarm</string>
+    <string name="alert_msg_door_open">Sensor %1$s (Gateway %2$s) is OPEN!</string>
+
+    <string name="alert_title_motion">Motion Detected</string>
+    <string name="alert_msg_motion">Motion detected on sensor %1$s (Gateway %2$s)!</string>
+
+    <string name="alert_title_light">Light ON</string>
+    <string name="alert_msg_light">Light/Socket %1$s (Gateway %2$s) is ON.</string>
+
+    <string name="alert_title_leak">Leak/Flow Alert</string>
+    <string name="alert_msg_leak">Water flow detected on sensor %1$s (Gateway %2$s)!</string>
+
+    <string name="alert_msg_too_low">Value too low for %1$s! Current: %2$s, Min: %3$s</string>
+    <string name="alert_msg_too_high">Value too high for %1$s! Current: %2$s, Max: %3$s</string>
+
+    <string name="risk_msg_too_high">Too high! (Cur: %1$s, Max: %2$s)</string>
+    <string name="risk_msg_too_low">Too low! (Cur: %1$s, Min: %2$s)</string>
+    <string name="risk_msg_active">Active State / Detected</string>
+    <string name="risk_msg_on">Turned ON</string>
+    <string name="risk_msg_open">Open</string>
+    <string name="risk_msg_flow">Flow detected</string>
 </resources>

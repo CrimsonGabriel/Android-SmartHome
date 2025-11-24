@@ -5,6 +5,7 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.widget.TextView;
+
 import androidx.appcompat.app.AppCompatActivity;
 import android.content.Context;
 import com.testserwera.bazunia.utils.AppearanceManager;
@@ -17,9 +18,7 @@ import com.google.android.material.button.MaterialButton;
 import com.google.android.material.card.MaterialCardView;
 import androidx.appcompat.app.AlertDialog;
 import com.testserwera.bazunia.utils.LocaleManager;
-
-// --- STARE IMPORTY USUNIĘTE (GoogleSignIn) ---
-// Zamiast nich używamy Credential Manager:
+import android.util.Pair;
 import androidx.credentials.CredentialManager;
 import androidx.credentials.ClearCredentialStateRequest;
 import android.os.CancellationSignal;
@@ -34,8 +33,7 @@ import java.util.Locale;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
-import okhttp3.*;
-import com.testserwera.bazunia.utils.Constants;
+
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -59,8 +57,10 @@ public class MainActivity extends AppCompatActivity {
     private MaterialCardView cardAlerts;
     private TextView textAlertSummary;
 
-    // [NOWA ZMIENNA] Zamiast GoogleSignInClient używamy CredentialManager
     private CredentialManager credentialManager;
+
+    private MaterialCardView cardBattery;
+    private TextView textBatterySummary;
 
     private final ActivityResultLauncher<String> requestPermissionLauncher =
             registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
@@ -92,6 +92,8 @@ public class MainActivity extends AppCompatActivity {
 
         cardAlerts = findViewById(R.id.cardAlerts);
         textAlertSummary = findViewById(R.id.textAlertSummary);
+        cardBattery = findViewById(R.id.cardBattery);
+        textBatterySummary = findViewById(R.id.textBatterySummary);
         MaterialCardView cardAllSensors = findViewById(R.id.cardAllSensors);
         MaterialButton btnSettings = findViewById(R.id.btnSettings);
         MaterialButton btnLogout = findViewById(R.id.btnLogout);
@@ -99,8 +101,6 @@ public class MainActivity extends AppCompatActivity {
         appearanceManager.applyIconScale(btnSettings);
         appearanceManager.applyIconScale(btnLogout);
 
-        // [NOWY KOD] Inicjalizacja CredentialManager
-        // To jest nowoczesny odpowiednik starego klienta
         credentialManager = CredentialManager.create(this);
 
         btnSettings.setOnClickListener(v -> startActivity(new Intent(this, SettingsActivity.class)));
@@ -125,11 +125,8 @@ public class MainActivity extends AppCompatActivity {
                 .show();
     }
 
-    // [NOWA METODA] Wylogowanie za pomocą Credential Manager
     private void performCredentialManagerLogout() {
-        // Nowoczesne wylogowanie (czyści stan zapamiętanych poświadczeń)
         ClearCredentialStateRequest request = new ClearCredentialStateRequest();
-
         CancellationSignal cancellationSignal = new CancellationSignal();
         Executor executor = Executors.newSingleThreadExecutor();
 
@@ -140,15 +137,12 @@ public class MainActivity extends AppCompatActivity {
                 new androidx.credentials.CredentialManagerCallback<>() {
                     @Override
                     public void onResult(Void result) {
-                        Log.d("MainActivity", "Credential Manager: Stan wyczyszczony pomyślnie.");
-                        // Musimy wrócić na wątek główny, żeby dotknąć UI (startActivity)
                         runOnUiThread(() -> stopServiceAndGoToLogin());
                     }
 
                     @Override
                     public void onError(@androidx.annotation.NonNull androidx.credentials.exceptions.ClearCredentialException e) {
-                        Log.e("MainActivity", "Credential Manager: Błąd czyszczenia stanu", e);
-                        // Nawet jak wystąpi błąd (np. brak sieci), i tak wylogowujemy z apki lokalnie
+                        Log.e("MainActivity", "Credential Manager: Błąd", e);
                         runOnUiThread(() -> stopServiceAndGoToLogin());
                     }
                 }
@@ -156,7 +150,6 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void stopServiceAndGoToLogin() {
-        Log.d("MainActivity", "Zatrzymywanie serwisu i powrót do LoginActivity...");
         Intent serviceIntent = new Intent(this, VpsClientService.class);
         stopService(serviceIntent);
 
@@ -186,14 +179,23 @@ public class MainActivity extends AppCompatActivity {
 
     private void loadDashboardData() {
         List<SensorModel> latestData = dbHelper.getLatestUniqueSensorData();
+
         int alertCount = 0;
+        int batteryLowCount = 0;
 
         for (SensorModel sensor : latestData) {
+            // 1. Sprawdzanie Stanu Alarmowego (Threshold/Binary)
             if (isSensorValueInAlertState(sensor)) {
                 alertCount++;
             }
+
+            // 2. Sprawdzanie Baterii (Niezależnie od alarmu)
+            if (sensor.batteryLevel > 0 && sensor.batteryLevel <= 20) {
+                batteryLowCount++;
+            }
         }
 
+        // --- OBSŁUGA KARTY ALARMÓW (CZERWONA) ---
         if (alertCount > 0) {
             textAlertSummary.setText(String.format(Locale.getDefault(),
                     getString(R.string.alert_summary),
@@ -203,26 +205,44 @@ public class MainActivity extends AppCompatActivity {
         } else {
             cardAlerts.setVisibility(View.GONE);
         }
+
+        // --- OBSŁUGA KARTY BATERII (POMARAŃCZOWA) ---
+        if (batteryLowCount > 0) {
+            textBatterySummary.setText(String.format(Locale.getDefault(),
+                    getString(R.string.battery_summary),
+                    batteryLowCount,
+                    getPolishSensorSuffix(batteryLowCount)));
+            cardBattery.setVisibility(View.VISIBLE);
+        } else {
+            cardBattery.setVisibility(View.GONE);
+        }
     }
 
     private boolean isSensorValueInAlertState(SensorModel sensor) {
-        if (getString(R.string.sensor_type_door_contact).equalsIgnoreCase(sensor.type)) {
-            return getString(R.string.door_contact_open_value).equals(sensor.value);
-        }
-
-        boolean isHumidity = getString(R.string.sensor_type_humidity).equalsIgnoreCase(sensor.type);
-        float defaultMin = isHumidity ? 5.0f : 18.0f;
-        float defaultMax = isHumidity ? 30.0f : 22.0f;
-
-        float min = thresholdManager.getMinThreshold(sensor.gatewayId, sensor.sensorId, defaultMin);
-        float max = thresholdManager.getMaxThreshold(sensor.gatewayId, sensor.sensorId, defaultMax);
+        // Sprawdzamy, czy typ ma suwaki (Analogowy) czy jest binarny (ON/OFF)
+        boolean hasThresholds = thresholdManager.isThresholdSupported(sensor.type);
 
         try {
-            float currentValue = Float.parseFloat(sensor.value);
-            return currentValue < min || currentValue > max;
+            float val = Float.parseFloat(sensor.value);
+
+            if (hasThresholds) {
+                // --- 1. LOGIKA DLA ANALOGOWYCH ---
+                Pair<Float, Float> defRange = thresholdManager.getDefaultRangeForType(sensor.type);
+                float min = thresholdManager.getMinThreshold(sensor.gatewayId, sensor.sensorId, defRange.first);
+                float max = thresholdManager.getMaxThreshold(sensor.gatewayId, sensor.sensorId, defRange.second);
+                return val < min || val > max;
+
+            } else {
+                // --- 2. LOGIKA DLA BINARNYCH ---
+                // Specjalny przypadek dla FLOW (Przepływ) > 0.0 -> ALARM
+                if ("flow".equalsIgnoreCase(sensor.type)) {
+                    return val > 0.0f;
+                }
+                // Reszta > 0.5 -> ALARM
+                return val > 0.5f;
+            }
+
         } catch (NumberFormatException e) {
-            Log.w("MainActivity", String.format(Locale.getDefault(),
-                    getString(R.string.error_numeric_parse), sensor.value));
             return false;
         }
     }
@@ -241,61 +261,104 @@ public class MainActivity extends AppCompatActivity {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.POST_NOTIFICATIONS) !=
                     PackageManager.PERMISSION_GRANTED) {
-                Log.d("MainActivity", "Pytam o zgodę na powiadomienia...");
                 requestPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS);
-            } else {
-                Log.d("MainActivity", "Zgoda na powiadomienia jest już przyznana.");
             }
         }
     }
 
+    // 1. Zastąp metodę performHomeCheck tą wersją (LOKALNA LOGIKA):
     private void performHomeCheck() {
+        // Pokaż loader
         showRiskBottomSheet(null);
 
-        String jwtToken = getSharedPreferences(LoginActivity.AUTH_PREFS, MODE_PRIVATE)
-                .getString(LoginActivity.KEY_JWT_TOKEN, null);
+        // Uruchamiamy wątek w tle, żeby nie mrozić UI przy liczeniu
+        new Thread(() -> {
+            try {
+                // 1. Pobierz wszystkie najnowsze dane lokalnie
+                List<SensorModel> sensors = dbHelper.getLatestUniqueSensorData();
+                JSONArray risksArray = new JSONArray();
+                int riskCount = 0;
 
-        if (jwtToken == null) {
-            Toast.makeText(this, R.string.toast_no_token, Toast.LENGTH_SHORT).show();
-            return;
-        }
+                for (SensorModel sensor : sensors) {
+                    JSONObject riskItem = checkSensorRiskLocally(sensor);
+                    if (riskItem != null) {
+                        risksArray.put(riskItem);
+                        riskCount++;
+                    }
+                }
 
-        OkHttpClient client = new OkHttpClient();
-        Request request = new Request.Builder()
-                .url(Constants.RISK_REPORT_ENDPOINT)
-                .addHeader("Authorization", "Bearer " + jwtToken)
-                .get()
-                .build();
+                // 2. Budujemy wynikowy JSON (taki sam format jak kiedyś z serwera, ale lokalny)
+                JSONObject root = new JSONObject();
+                root.put("isSafe", riskCount == 0);
+                root.put("riskCount", riskCount);
+                root.put("risks", risksArray);
 
-        client.newCall(request).enqueue(new Callback() {
-            @Override
-            public void onFailure(@androidx.annotation.NonNull Call call, @androidx.annotation.NonNull java.io.IOException e) {
+                String finalJson = root.toString();
+
+                // 3. Wracamy na główny wątek wyświetlić wynik
+                runOnUiThread(() -> showRiskBottomSheet(finalJson));
+
+            } catch (Exception e) {
+                Log.e("HomeCheck", "Błąd lokalnego sprawdzania", e);
                 runOnUiThread(() -> {
-                    Log.e("RiskCheck", "Błąd sieci: " + e.getMessage());
-                    Toast.makeText(MainActivity.this,
-                            getString(R.string.error_connection_prefix, e.getMessage()),
-                            Toast.LENGTH_LONG).show();
+                    if (riskSheetDialog != null) riskSheetDialog.dismiss();
+                    Toast.makeText(MainActivity.this, "Błąd weryfikacji danych", Toast.LENGTH_SHORT).show();
                 });
             }
-
-            @Override
-            public void onResponse(@androidx.annotation.NonNull Call call, @androidx.annotation.NonNull Response response) throws java.io.IOException {
-                if (response.isSuccessful() && response.body() != null) {
-                    String json = response.body().string();
-                    runOnUiThread(() -> showRiskBottomSheet(json));
-                } else {
-                    String errorBody = response.body() != null ? response.body().string() : "";
-                    runOnUiThread(() -> {
-                        Log.e("RiskCheck", "Błąd serwera: " + response.code() + " " + errorBody);
-                        Toast.makeText(MainActivity.this,
-                                getString(R.string.error_server_prefix, String.valueOf(response.code())),
-                                Toast.LENGTH_LONG).show();
-                    });
-                }
-            }
-        });
+        }).start();
     }
 
+    // 2. Metoda pomocnicza do analizy pojedynczego czujnika
+    private JSONObject checkSensorRiskLocally(SensorModel sensor) {
+        // Logika identyczna jak w liczniku na Dashboardzie!
+        boolean hasThresholds = thresholdManager.isThresholdSupported(sensor.type);
+
+        try {
+            float val = Float.parseFloat(sensor.value);
+
+            if (hasThresholds) {
+                // --- ANALOGOWE (Temp, Lux, Wilgotność) ---
+                Pair<Float, Float> defRange = thresholdManager.getDefaultRangeForType(sensor.type);
+                float min = thresholdManager.getMinThreshold(sensor.gatewayId, sensor.sensorId, defRange.first);
+                float max = thresholdManager.getMaxThreshold(sensor.gatewayId, sensor.sensorId, defRange.second);
+
+                if (val < min) {
+                    return createRiskJson(sensor, "low", String.format(Locale.getDefault(), "%.1f", min));
+                } else if (val > max) {
+                    return createRiskJson(sensor, "high", String.format(Locale.getDefault(), "%.1f", max));
+                }
+
+            } else {
+                // --- BINARNE (Światło, Ruch, Drzwi, Flow) ---
+
+                // Specjalny dla FLOW
+                if ("flow".equalsIgnoreCase(sensor.type)) {
+                    if (val > 0.0f) return createRiskJson(sensor, "flow", null);
+                }
+                // Reszta (Light, Motion, Contact)
+                else {
+                    if (val > 0.5f) return createRiskJson(sensor, "active", null);
+                }
+            }
+        } catch (NumberFormatException e) {
+            // Ignorujemy błędy parsowania
+        }
+        return null; // Brak ryzyka
+    }
+
+    private JSONObject createRiskJson(SensorModel sensor, String issueType, String limitVal) {
+        try {
+            JSONObject json = new JSONObject();
+            json.put("sensorName", sensor.name != null ? sensor.name : sensor.type);
+            json.put("sensorValue", sensor.value); // Aktualna wartość
+            json.put("sensorType", sensor.type);
+            json.put("issueType", issueType); // low, high, active, flow
+            json.put("limitVal", limitVal);   // Próg, który przekroczono (opcjonalne)
+            return json;
+        } catch (JSONException e) { return null; }
+    }
+
+    // 3. Zastąp showRiskBottomSheet (bez zmian w logice wyświetlania, tylko obsługa null)
     private void showRiskBottomSheet(String jsonResponse) {
         if (riskSheetDialog == null) {
             riskSheetDialog = new BottomSheetDialog(this);
@@ -319,6 +382,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
         if (jsonResponse == null) {
+            // Loader
             if (tvTitle != null) tvTitle.setText(R.string.risk_status_check);
             if (tvDesc != null) tvDesc.setText(R.string.please_wait);
             if (imgStatus != null) imgStatus.setImageResource(R.drawable.ic_search);
@@ -352,7 +416,6 @@ public class MainActivity extends AppCompatActivity {
                         recycler.setAdapter(new RiskAdapter(risksArray));
                     }
                 }
-
             } catch (JSONException e) {
                 Log.e("RiskCheck", "JSON Error", e);
             }
@@ -363,7 +426,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-
+    // 4. Zastąp RiskAdapter (Nowa logika wyświetlania tekstów na podstawie issueType)
     private class RiskAdapter extends RecyclerView.Adapter<RiskAdapter.RiskViewHolder> {
         private final JSONArray data;
 
@@ -383,55 +446,61 @@ public class MainActivity extends AppCompatActivity {
             try {
                 JSONObject item = data.getJSONObject(position);
 
-                // 1. Nazwa czujnika
-                holder.name.setText(item.optString("sensorName", "?"));
+                String name = item.optString("sensorName", "Czujnik");
+                String val = item.optString("sensorValue", "?");
+                String type = item.optString("sensorType", "").toLowerCase();
+                String issue = item.optString("issueType", "");
+                String limit = item.optString("limitVal", "");
 
-                // 2. Pobieramy typ ikony/problemu (np. "light", "window", "door_contact")
-                String iconType = item.optString("iconType", "warning");
+                holder.name.setText(name);
 
-                // 3. --- TUTAJ JEST ZMIANA (TŁUMACZENIE) ---
-                // Zamiast brać tekst z serwera, sprawdzamy typ i dajemy własny string
-                switch (iconType) {
-                    case "light":
-                        holder.issue.setText(R.string.risk_issue_light);
+                // Dobieramy ikonę i tekst
+                int iconRes = R.drawable.ic_warning;
+                String msg;
+
+                switch (issue) {
+                    case "high":
+                        msg = getString(R.string.risk_msg_too_high, val, limit);
+                        iconRes = R.drawable.ic_temp;
                         break;
-                    case "window":
-                        holder.issue.setText(R.string.risk_issue_window);
+                    case "low":
+                        msg = getString(R.string.risk_msg_too_low, val, limit);
+                        iconRes = R.drawable.ic_temp;
                         break;
-                    case "door":
-                    case "door_contact":
-                    case "contact":
-                        // Obsługa różnych nazw dla drzwi/kontaktronów
-                        holder.issue.setText(R.string.risk_issue_door);
+                    case "flow":
+                        msg = getString(R.string.risk_msg_flow);
+                        iconRes = R.drawable.ic_flow;
                         break;
-                    default:
-                        // Jeśli to jakiś inny, nieznany typ, wyświetlamy to co przysłał serwer
-                        // lub domyślny komunikat "Wykryto problem"
-                        String serverMsg = item.optString("issue", "");
-                        if (!serverMsg.isEmpty()) {
-                            holder.issue.setText(serverMsg);
+                    case "active":
+                        if (type.contains("motion")) {
+                            msg = getString(R.string.risk_msg_active);
+                            iconRes = R.drawable.ic_motion;
+                        } else if (type.contains("light") || type.contains("socket")) {
+                            msg = getString(R.string.risk_msg_on);
+                            iconRes = R.drawable.ic_light;
+                        } else if (type.contains("door") || type.contains("window") || type.contains("contact")) {
+                            msg = getString(R.string.risk_msg_open);
+                            iconRes = R.drawable.ic_open;
                         } else {
-                            holder.issue.setText(R.string.risk_issue_default);
+                            msg = getString(R.string.risk_msg_active);
                         }
                         break;
+                    default:
+                        msg = "Problem: " + val;
+                        break;
                 }
 
-                // 4. Ustawianie Ikony (bez zmian)
-                int iconRes = R.drawable.ic_warning;
-                if ("window".equals(iconType) || "door".equals(iconType) || "door_contact".equals(iconType)) {
-                    iconRes = R.drawable.ic_open;
-                } else if ("light".equals(iconType)) {
-                    iconRes = R.drawable.ic_light;
-                }
-
+                holder.issue.setText(msg);
                 holder.icon.setImageResource(iconRes);
 
-                // Kolor czerwony dla ostrzeżenia
+                // Kolor tekstu zostawiamy czerwony (ostrzegawczy)
                 holder.issue.setTextColor(ContextCompat.getColor(MainActivity.this, R.color.colorRisk));
-                holder.icon.setColorFilter(ContextCompat.getColor(MainActivity.this, R.color.colorRisk));
+
+                // ⭐️ POPRAWKA: Nie ruszamy koloru ikony (zostaje oryginał)
+                holder.icon.clearColorFilter();
 
             } catch (JSONException e) {
-                Log.e("RiskAdapter", "Błąd parsowania JSON w liście ryzyka", e);
+                Log.e("RiskAdapter", "Błąd parsowania", e);
             }
         }
 

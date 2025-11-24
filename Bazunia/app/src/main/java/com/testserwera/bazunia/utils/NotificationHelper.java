@@ -10,7 +10,7 @@ import android.util.Log;
 import androidx.core.app.NotificationCompat;
 
 import com.testserwera.bazunia.R;
-import com.testserwera.bazunia.data.SensorModel; // Ten import jest OK dla starej metody
+import com.testserwera.bazunia.data.SensorModel;
 import com.testserwera.bazunia.ui.AcceptUpdateActivity;
 import com.testserwera.bazunia.ui.DeferUpdateActivity;
 
@@ -28,8 +28,10 @@ public class NotificationHelper {
     private final NotificationManager notificationManager;
 
     public enum ThresholdType {
-        LOW, HIGH, DOOR,
-        BATTERY // <<< 1. DODANY NOWY TYP
+        LOW,            // Za nisko (np. zimno)
+        HIGH,           // Za wysoko (np. gorąco)
+        BINARY_ACTIVE,  // ⭐️ NOWOŚĆ: Stan aktywny (Otwarte, Ruch, Światło, Wyciek)
+        BATTERY         // Bateria
     }
 
     public NotificationHelper(Context context) {
@@ -44,7 +46,7 @@ public class NotificationHelper {
                 CHANNEL_NAME_ALERTS,
                 NotificationManager.IMPORTANCE_HIGH
         );
-        alertChannel.setDescription("Powiadomienia o przekroczeniu progów czujników.");
+        alertChannel.setDescription("Powiadomienia o alarmach i progach.");
 
         NotificationChannel updateChannel = new NotificationChannel(
                 CHANNEL_ID_UPDATES,
@@ -59,7 +61,6 @@ public class NotificationHelper {
         }
     }
 
-    // Ta metoda jest ogólna i używana przez inne
     public void showNotification(String title, String message, int notificationId) {
         NotificationCompat.Builder builder = new NotificationCompat.Builder(context, CHANNEL_ID_ALERTS)
                 .setSmallIcon(R.drawable.ic_notification_alert)
@@ -71,48 +72,98 @@ public class NotificationHelper {
 
         if (notificationManager != null) {
             notificationManager.notify(notificationId, builder.build());
-            Log.i(TAG, "Wyslano powiadomienie: " + title + " - " + message);
+            Log.i(TAG, "Wyslano powiadomienie: " + title);
         }
     }
 
     /**
-     * NOWA METODA DLA AKTUALIZACJI SYSTEMOWYCH
+     * Główna metoda wyświetlania alarmów czujników.
+     * Obsługuje logikę tekstów dla różnych typów (Ruch, Drzwi, Temp).
      */
+    /**
+     * Główna metoda wyświetlania alarmów czujników.
+     * NAPRAWIONE: Używa poprawnego formatowania stringów (%s) zamiast .replace
+     */
+    public void showThresholdAlert(SensorModel sensor, float currentValue, float threshold, ThresholdType type) {
+        String title;
+        String message;
+        int notificationId = (sensor.gatewayId + "_" + sensor.sensorId).hashCode();
+
+        // Formatowanie wartości liczbowych (dla analogowych)
+        String valStr = String.format(Locale.US, "%.1f", currentValue);
+        String thrStr = String.format(Locale.US, "%.1f", threshold);
+
+        switch (type) {
+            case BINARY_ACTIVE:
+                String sensorType = sensor.type != null ? sensor.type.toLowerCase() : "";
+
+                if (sensorType.contains("motion")) {
+                    // RUCH
+                    title = context.getString(R.string.alert_title_motion);
+                    // Używamy argumentów (sensorId, gatewayId) pod %1$s i %2$s
+                    message = context.getString(R.string.alert_msg_motion, sensor.sensorId, sensor.gatewayId);
+                }
+                else if (sensorType.contains("light") || sensorType.contains("socket") || sensorType.contains("switch")) {
+                    // ŚWIATŁO
+                    title = context.getString(R.string.alert_title_light);
+                    message = context.getString(R.string.alert_msg_light, sensor.sensorId, sensor.gatewayId);
+                }
+                else if (sensorType.contains("flow") || sensorType.contains("leak") || sensorType.contains("valve")) {
+                    // WYCIEK
+                    title = context.getString(R.string.alert_title_leak);
+                    message = context.getString(R.string.alert_msg_leak, sensor.sensorId, sensor.gatewayId);
+                }
+                else {
+                    // DRZWI (Domyślne)
+                    title = context.getString(R.string.alert_title_door_window);
+                    message = context.getString(R.string.alert_msg_door_open, sensor.sensorId, sensor.gatewayId);
+                }
+                break;
+
+            case LOW:
+                // ANALOGOWE - ZA NISKO
+                title = context.getString(R.string.alert_title_temp_humidity)
+                        .replace("[TYP]", sensor.type) // Tu w tytule nie dawaliśmy %s, więc replace jest OK (chyba że w XML zmieniłeś)
+                        .replace("[ID]", sensor.sensorId);
+
+                // W treści używamy argumentów: TYP, WARTOŚĆ, PRÓG
+                message = context.getString(R.string.alert_msg_too_low, sensor.type, valStr, thrStr);
+                break;
+
+            case HIGH:
+                // ANALOGOWE - ZA WYSOKO
+                title = context.getString(R.string.alert_title_temp_humidity)
+                        .replace("[TYP]", sensor.type)
+                        .replace("[ID]", sensor.sensorId);
+
+                message = context.getString(R.string.alert_msg_too_high, sensor.type, valStr, thrStr);
+                break;
+
+            default:
+                return;
+        }
+
+        showNotification(title, message, notificationId);
+    }
+
+    // --- Metody Aktualizacji (System) ---
     public void showUpdateNotification(long assignmentId, String title, String version, String urgency) {
         String notifTitle = "Aktualizacja: " + title + " (" + version + ")";
         String notifBody = "Dostępna nowa aktualizacja. Status: " + urgency;
-
         boolean isRequired = "REQUIRED".equals(urgency);
+        if (isRequired) notifBody += " (Wymagana!)";
 
-        if (isRequired) {
-            notifBody += " (Wymagana!)";
-        }
-
-        // --- NOWA LOGIKA: Sprawdzamy licznik odroczeń ---
-        // Musimy odczytać ten sam plik SharedPreferences co w DeferUpdateActivity ("UpdatePrefs")
         android.content.SharedPreferences prefs = context.getSharedPreferences("UpdatePrefs", Context.MODE_PRIVATE);
         int deferCount = prefs.getInt("defer_count_" + assignmentId, 0);
-
-        // Decyzja: Czy pokazać przycisk "Odłóż"?
-        // Pokaż JEŚLI: (To NIE jest REQUIRED) LUB (To jest REQUIRED, ale licznik jest 0)
         boolean showDeferButton = !isRequired || deferCount == 0;
-        // -----------------------------------------------
 
         int notificationId = (int) assignmentId;
-
-        // Intent dla Akceptacji (Zainstaluj)
         Intent acceptIntent = new Intent(context, AcceptUpdateActivity.class);
         acceptIntent.putExtra("ASSIGNMENT_ID", assignmentId);
         acceptIntent.putExtra("URGENCY", urgency);
         acceptIntent.putExtra("NOTIFICATION_ID", notificationId);
-        PendingIntent acceptPendingIntent = PendingIntent.getActivity(
-                context,
-                notificationId * 10,
-                acceptIntent,
-                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
-        );
+        PendingIntent acceptPendingIntent = PendingIntent.getActivity(context, notificationId * 10, acceptIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
 
-        // Budowanie powiadomienia
         NotificationCompat.Builder builder = new NotificationCompat.Builder(context, CHANNEL_ID_UPDATES)
                 .setSmallIcon(R.drawable.ic_notification_update)
                 .setContentTitle(notifTitle)
@@ -120,151 +171,51 @@ public class NotificationHelper {
                 .setStyle(new NotificationCompat.BigTextStyle().bigText(notifBody))
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
                 .setOnlyAlertOnce(true)
-                .setAutoCancel(false) // Wymaga akcji użytkownika
-                .setOngoing(isRequired) // Nie da się usunąć palcem jeśli wymagana
-
-                // Guzik "Zainstaluj" - ZAWSZE widoczny
+                .setAutoCancel(false)
+                .setOngoing(isRequired)
                 .addAction(R.drawable.ic_check, context.getString(R.string.action_accept_update), acceptPendingIntent);
 
-        // Guzik "Odłóż" - WARUNKOWO widoczny
         if (showDeferButton) {
-            // Intent dla Odroczenia (tworzymy go tylko jeśli potrzebny)
             Intent deferIntent = new Intent(context, DeferUpdateActivity.class);
             deferIntent.putExtra("ASSIGNMENT_ID", assignmentId);
             deferIntent.putExtra("URGENCY", urgency);
             deferIntent.putExtra("NOTIFICATION_ID", notificationId);
-            PendingIntent deferPendingIntent = PendingIntent.getActivity(
-                    context,
-                    notificationId * 10 + 1,
-                    deferIntent,
-                    PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
-            );
-
+            PendingIntent deferPendingIntent = PendingIntent.getActivity(context, notificationId * 10 + 1, deferIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
             builder.addAction(R.drawable.ic_close, context.getString(R.string.action_defer_update), deferPendingIntent);
         } else {
-            // Skoro tu jesteśmy (showDeferButton == false), to znaczy, że aktualizacja JEST Wymagana
-            // i licznik odroczeń > 0. Warunek ("REQUIRED".equals(urgency)) był tutaj zawsze prawdą.
             builder.setContentText(notifBody + "\nOstatnie ostrzeżenie: Instalacja wymagana.");
         }
-
-        if (notificationManager != null) {
-            notificationManager.notify(notificationId, builder.build());
-        }
+        if (notificationManager != null) notificationManager.notify(notificationId, builder.build());
     }
 
-    /**
-     * <<< 2. NOWA METODA DLA POWIADOMIEŃ O BATERII >>>
-     * Używa nowych stringów i formatowania.
-     */
+    // --- Metody Baterii i Błędów ---
     public void showBatteryAlert(String sensorName, String gatewayName, int batteryLevel) {
         String title = context.getString(R.string.alert_title_battery_low);
         String message;
-
-        // Używamy ID powiadomienia na podstawie nazwy, aby nadpisać poprzednie powiadomienie
-        // o baterii dla tego samego czujnika.
         int notificationId = (gatewayName + "_" + sensorName + "_battery").hashCode();
 
-        // Wybierz odpowiedni komunikat na podstawie poziomu baterii
-        if (batteryLevel <= 1) {
-            message = context.getString(R.string.alert_msg_battery_1, sensorName, gatewayName, batteryLevel);
-        } else if (batteryLevel <= 10) {
-            message = context.getString(R.string.alert_msg_battery_10, sensorName, gatewayName, batteryLevel);
-        } else {
-            // Domyślnie dla progu 20% (lub innego między 11 a 20)
-            message = context.getString(R.string.alert_msg_battery_20, sensorName, gatewayName, batteryLevel);
-        }
+        if (batteryLevel <= 1) message = context.getString(R.string.alert_msg_battery_1, sensorName, gatewayName, batteryLevel);
+        else if (batteryLevel <= 10) message = context.getString(R.string.alert_msg_battery_10, sensorName, gatewayName, batteryLevel);
+        else message = context.getString(R.string.alert_msg_battery_20, sensorName, gatewayName, batteryLevel);
 
-        // Użyj ogólnej metody do zbudowania i wysłania
         showNotification(title, message, notificationId);
     }
 
-
-    /**
-     * Stara metoda dla progów (temp, drzwi)
-     */
-    public void showThresholdAlert(SensorModel sensor, float currentValue, float threshold, ThresholdType type) {
-        String title, message;
-
-        int notificationId = (sensor.gatewayId + "_" + sensor.sensorId).hashCode();
-
-        // Konwertuj float na String (bezpiecznie, z kropką)
-        String valStr = String.format(Locale.US, "%.1f", currentValue);
-        String thrStr = String.format(Locale.US, "%.1f", threshold);
-
-
-        switch (type) {
-            case DOOR:
-                title = context.getString(R.string.alert_title_door_window);
-                message = context.getString(R.string.alert_msg_door_open)
-                        .replace("[ID]", sensor.sensorId)
-                        .replace("[GATEWAY]", sensor.gatewayId);
-                break;
-
-
-            case LOW:
-                title = context.getString(R.string.alert_title_temp_humidity)
-                        .replace("[TYP]", sensor.type)
-                        .replace("[ID]", sensor.sensorId);
-
-                message = context.getString(R.string.alert_msg_too_low)
-                        .replace("[TYP]", sensor.type)
-                        .replace("[WARTOŚĆ]", valStr)
-                        .replace("[PROG]", thrStr);
-                break;
-
-
-            case HIGH:
-                title = context.getString(R.string.alert_title_temp_humidity)
-                        .replace("[TYP]", sensor.type)
-                        .replace("[ID]", sensor.sensorId);
-
-                message = context.getString(R.string.alert_msg_too_high)
-                        .replace("[TYP]", sensor.type)
-                        .replace("[WARTOŚĆ]", valStr)
-                        .replace("[PROG]", thrStr);
-                break;
-
-            // <<< 3. DODANA OBSŁUGA NOWEGO TYPU ENUM (aby uniknąć błędu) >>>
-            case BATTERY:
-            default:
-                // Ta metoda nie powinna być nigdy wywołana dla 'BATTERY'
-                // Używamy 'showBatteryAlert'
-                Log.e(TAG, "showThresholdAlert został błędnie wywołany dla typu BATTERY.");
-                return; // Nie wysyłaj powiadomienia
-        }
-
-        // Używamy standardowej metody showNotification do wyświetlenia
-        showNotification(title, message, notificationId);
-    }
     public void showSensorCommsError(String entityName, String errorMessage) {
-        String title = context.getString(R.string.alert_title_sensor_comms_error); // Nowy string
-        int notificationId = (entityName + "_comms_error").hashCode(); // Unikalne ID
-        showNotification(title, errorMessage, notificationId); // Użyj generycznej metody
+        String title = context.getString(R.string.alert_title_sensor_comms_error);
+        int notificationId = (entityName + "_comms_error").hashCode();
+        showNotification(title, errorMessage, notificationId);
     }
 
-    /**
-     * Powiadomienie o decyzji Admina ws. retencji danych.
-     */
     public void showRetentionStatusNotification(boolean accepted) {
         String title = context.getString(R.string.notif_retention_title);
-        String message = accepted
-                ? context.getString(R.string.notif_retention_accepted)
-                : context.getString(R.string.notif_retention_rejected);
-
-        // ID powiadomienia (stałe, żeby nadpisywać)
+        String message = accepted ? context.getString(R.string.notif_retention_accepted) : context.getString(R.string.notif_retention_rejected);
         int notificationId = 999;
-
-        NotificationCompat.Builder builder = new NotificationCompat.Builder(context, CHANNEL_ID_UPDATES) // Używamy kanału Updates (ważne, rzadkie)
-                .setSmallIcon(accepted ? R.drawable.ic_check : R.drawable.ic_close) // Zakładam, że masz te ikony
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(context, CHANNEL_ID_UPDATES)
+                .setSmallIcon(accepted ? R.drawable.ic_check : R.drawable.ic_close)
                 .setContentTitle(title)
                 .setContentText(message)
-                .setStyle(new NotificationCompat.BigTextStyle().bigText(message))
-                .setPriority(NotificationCompat.PRIORITY_DEFAULT)
-                .setAutoCancel(true);
-
-        if (notificationManager != null) {
-            notificationManager.notify(notificationId, builder.build());
-        }
+                .setPriority(NotificationCompat.PRIORITY_DEFAULT);
+        if (notificationManager != null) notificationManager.notify(notificationId, builder.build());
     }
-
 }

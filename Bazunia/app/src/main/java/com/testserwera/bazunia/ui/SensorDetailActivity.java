@@ -9,6 +9,7 @@ import android.database.Cursor;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.util.Log;
+import android.util.Pair;
 import android.util.TypedValue;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
@@ -20,8 +21,9 @@ import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.annotation.NonNull;
+import androidx.annotation.NonNull; // ✅ Dodano wymagany import
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.cardview.widget.CardView;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import com.google.android.material.bottomsheet.BottomSheetDialog;
@@ -40,7 +42,6 @@ import com.testserwera.bazunia.utils.AppearanceManager;
 import com.testserwera.bazunia.utils.Constants;
 import com.testserwera.bazunia.utils.LocaleManager;
 
-import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.IOException;
@@ -61,31 +62,25 @@ import okhttp3.Response;
 public class SensorDetailActivity extends AppCompatActivity {
 
     private static final String TAG = "SensorDetailActivity";
-    private static final int HISTORY_LIMIT = 50; // Zwiększono limit historii, skoro mamy więcej miejsca
+    private static final int HISTORY_LIMIT = 50;
 
-    // --- GŁÓWNE ELEMENTY UI (Dostępne zawsze) ---
+    // --- UI GŁÓWNE ---
     private TextView textSensorDetails;
     private ListView listSensorHistory;
     private ImageButton btnFavorite;
 
-    // --- ELEMENTY UI USTAWIEŃ (Dostępne tylko gdy BottomSheet jest otwarty) ---
-    // Są nullem, gdy panel jest zamknięty
-    private TextView textThresholdMin;
-    private TextView textThresholdMax;
-    private SeekBar seekBarThresholdMin;
-    private SeekBar seekBarThresholdMax;
-    private LinearLayout thresholdContainer;
+    // --- UI BOTTOM SHEET ---
+    private TextView textThresholdMin, textThresholdMax;
+    private SeekBar seekBarThresholdMin, seekBarThresholdMax;
+    private CardView cardThresholds; // ✅ Używamy tego zamiast thresholdContainer
 
     private TextInputEditText editSensorInterval;
-    private LinearLayout intervalContainer;
-
     private SwitchMaterial switchReporting;
-    private LinearLayout reportingContainer;
 
     private TextInputEditText editSensorNotificationInterval;
     private LinearLayout notificationIntervalContainer;
 
-    // --- LOGIKA I DANE ---
+    // --- LOGIKA ---
     private DatabaseHelper dbHelper;
     private ThresholdManager thresholdManager;
     private NotificationFrequencyManager notificationFrequencyManager;
@@ -94,17 +89,14 @@ public class SensorDetailActivity extends AppCompatActivity {
     private SharedPreferences authPrefs;
     private BroadcastReceiver syncStatusReceiver;
 
-    // --- STAN ---
     private long sensorIdLong;
     private String gatewayIdString;
     private String sensorIdString;
     private String currentSensorType = "";
-    private String currentTextScale;
-    private String currentButtonScale;
+    private String currentTextScale, currentButtonScale;
     private boolean isFavorite = false;
     private long lastSyncToastTime = 0;
 
-    // Receiver aktualizacji danych w tle
     private final BroadcastReceiver dataUpdateReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -124,14 +116,12 @@ public class SensorDetailActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_sensor_detail);
 
-        // Inicjalizacja helperów
         dbHelper = new DatabaseHelper(this);
         thresholdManager = new ThresholdManager(this);
         notificationFrequencyManager = new NotificationFrequencyManager(this);
         httpClient = new OkHttpClient();
         authPrefs = getSharedPreferences(LoginActivity.AUTH_PREFS, Context.MODE_PRIVATE);
 
-        // --- Pobieranie danych z Intent ---
         Intent intent = getIntent();
         long gatewayIdLong = intent.getLongExtra("GATEWAY_ID_LONG", -1);
         sensorIdLong = intent.getLongExtra("SENSOR_ID_LONG", -1);
@@ -140,49 +130,37 @@ public class SensorDetailActivity extends AppCompatActivity {
         sensorIdString = String.valueOf(sensorIdLong);
 
         if (gatewayIdLong == -1 || sensorIdLong == -1) {
-            Log.e(TAG, getString(R.string.log_error_gateway_sensor_null));
             finish();
             return;
         }
 
-        // --- Wyszukiwanie widoków GŁÓWNYCH ---
         TextView textSensorTitle = findViewById(R.id.textSensorTitle);
         textSensorDetails = findViewById(R.id.textSensorDetails);
         listSensorHistory = findViewById(R.id.listSensorHistory);
-
         MaterialButton btnBack = findViewById(R.id.btnBackSensorDetail);
         ImageButton btnRefresh = findViewById(R.id.btnRefresh);
         btnFavorite = findViewById(R.id.btnFavorite);
         FloatingActionButton fabSettings = findViewById(R.id.fabSettings);
 
-        // Stary przycisk settings (jeśli nadal jest w XML) ukrywamy, bo mamy FAB
+        // Ukrycie starego przycisku jeśli istnieje
         View oldBtnSettings = findViewById(R.id.btnSettings);
         if (oldBtnSettings != null) oldBtnSettings.setVisibility(View.GONE);
 
-        // --- Konfiguracja UI ---
         textSensorTitle.setText(String.format(getString(R.string.sensor_detail_title), sensorIdString, gatewayIdString));
         appearanceManager.applyIconScale(btnBack);
 
-        // --- Listenery Główne ---
         btnRefresh.setOnClickListener(v -> forceReadingsSync());
         btnBack.setOnClickListener(v -> finish());
         btnFavorite.setOnClickListener(v -> toggleFavoriteStatus());
-
-        // NOWOŚĆ: Otwieranie panelu ustawień
         fabSettings.setOnClickListener(v -> openSettingsSheet());
 
-        // Ładowanie danych
         loadLatestDataAndHistory();
         checkFavoriteStatus();
-
-        // UWAGA: loadSensorMetadata() i setupThresholdControls() wywołamy dopiero po otwarciu okna ustawień!
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-
-        // Obsługa zmiany języka/wyglądu
         if (LocaleManager.languageChanged) {
             LocaleManager.languageChanged = false;
             recreate();
@@ -193,8 +171,6 @@ public class SensorDetailActivity extends AppCompatActivity {
             recreate();
             return;
         }
-
-        // Rejestracja Receiverów
         if (syncStatusReceiver == null) {
             syncStatusReceiver = new BroadcastReceiver() {
                 @Override
@@ -202,19 +178,14 @@ public class SensorDetailActivity extends AppCompatActivity {
                     boolean success = intent.getBooleanExtra("SYNC_SUCCESS", false);
                     long now = System.currentTimeMillis();
                     if (now - lastSyncToastTime < 3000) return;
-
-                    if (success) {
-                        Toast.makeText(SensorDetailActivity.this, R.string.sync_success, Toast.LENGTH_SHORT).show();
-                    } else {
-                        Toast.makeText(SensorDetailActivity.this, R.string.sync_error, Toast.LENGTH_SHORT).show();
-                    }
+                    if (success) Toast.makeText(SensorDetailActivity.this, R.string.sync_success, Toast.LENGTH_SHORT).show();
+                    else Toast.makeText(SensorDetailActivity.this, R.string.sync_error, Toast.LENGTH_SHORT).show();
                     lastSyncToastTime = now;
                 }
             };
         }
         LocalBroadcastManager.getInstance(this).registerReceiver(syncStatusReceiver, new IntentFilter(Constants.ACTION_SYNC_STATUS));
         LocalBroadcastManager.getInstance(this).registerReceiver(dataUpdateReceiver, new IntentFilter(Constants.ACTION_DATA_UPDATED));
-
         loadLatestDataAndHistory();
         checkFavoriteStatus();
     }
@@ -223,55 +194,44 @@ public class SensorDetailActivity extends AppCompatActivity {
     protected void onPause() {
         super.onPause();
         LocalBroadcastManager.getInstance(this).unregisterReceiver(dataUpdateReceiver);
-        if (syncStatusReceiver != null) {
-            LocalBroadcastManager.getInstance(this).unregisterReceiver(syncStatusReceiver);
-        }
+        if (syncStatusReceiver != null) LocalBroadcastManager.getInstance(this).unregisterReceiver(syncStatusReceiver);
     }
 
-    // ==========================================
-    // OBSŁUGA BOTTOM SHEET (USTAWIENIA)
-    // ==========================================
-
+    // --- BOTTOM SHEET ---
     private void openSettingsSheet() {
         BottomSheetDialog bottomSheetDialog = new BottomSheetDialog(this);
-
-        android.view.ViewGroup viewGroup = findViewById(android.R.id.content);
-        View sheetView = getLayoutInflater().inflate(R.layout.layout_sensor_settings_sheet, viewGroup, false);
+        View sheetView = getLayoutInflater().inflate(R.layout.layout_sensor_settings_sheet, findViewById(android.R.id.content), false);
         bottomSheetDialog.setContentView(sheetView);
 
+        // ✅ Teraz pobieramy CardView (card_thresholds) z XML-a, który właśnie utworzyliśmy
+        cardThresholds = sheetView.findViewById(R.id.card_thresholds);
 
-        thresholdContainer = sheetView.findViewById(R.id.thresholdContainer);
         seekBarThresholdMin = sheetView.findViewById(R.id.seekBarThresholdMin);
         textThresholdMin = sheetView.findViewById(R.id.textThresholdMin);
         seekBarThresholdMax = sheetView.findViewById(R.id.seekBarThresholdMax);
         textThresholdMax = sheetView.findViewById(R.id.textThresholdMax);
 
-        intervalContainer = sheetView.findViewById(R.id.intervalContainer);
         editSensorInterval = sheetView.findViewById(R.id.editSensorInterval);
         MaterialButton btnSaveInterval = sheetView.findViewById(R.id.btnSaveInterval);
 
-        reportingContainer = sheetView.findViewById(R.id.reportingContainer);
         switchReporting = sheetView.findViewById(R.id.switchReporting);
 
         notificationIntervalContainer = sheetView.findViewById(R.id.notificationIntervalContainer);
         editSensorNotificationInterval = sheetView.findViewById(R.id.editSensorNotificationInterval);
         MaterialButton btnSaveNotificationInterval = sheetView.findViewById(R.id.btnSaveNotificationInterval);
 
-        // 2. Konfiguracja listenerów wewnątrz arkusza
         if (btnSaveInterval != null) {
             btnSaveInterval.setOnClickListener(v -> {
                 saveSensorInterval();
                 bottomSheetDialog.dismiss();
             });
         }
-
         if (btnSaveNotificationInterval != null) {
             btnSaveNotificationInterval.setOnClickListener(v -> {
                 saveSensorNotificationInterval();
                 bottomSheetDialog.dismiss();
             });
         }
-
         if (switchReporting != null) {
             switchReporting.setOnClickListener(v -> {
                 switchReporting.setEnabled(false);
@@ -279,20 +239,14 @@ public class SensorDetailActivity extends AppCompatActivity {
             });
         }
 
-        // 3. Wypełnienie danymi
+        // Wczytaj dane i ustaw widoczność
         loadSensorMetadata();
         loadSensorNotificationSettings();
         setupThresholdControls();
 
-
         bottomSheetDialog.setOnDismissListener(dialog -> hideKeyboard());
-
         bottomSheetDialog.show();
     }
-
-    // ==========================================
-    // LOGIKA UI GŁÓWNEGO
-    // ==========================================
 
     private void loadLatestDataAndHistory() {
         SensorModel latestModel = dbHelper.getLatestSensorData(gatewayIdString, sensorIdString);
@@ -312,370 +266,262 @@ public class SensorDetailActivity extends AppCompatActivity {
 
         textSensorDetails.setText(displayData);
 
-
+        // Pobranie domyślnego koloru tekstu z motywu (żeby wracał do normalnego koloru)
         TypedValue typedValue = new TypedValue();
         getTheme().resolveAttribute(com.google.android.material.R.attr.colorOnSurface, typedValue, true);
         int defaultColor = typedValue.data;
 
-        if (getString(R.string.sensor_type_door_contact).equalsIgnoreCase(model.type)) {
-            textSensorDetails.setTextColor(getString(R.string.door_contact_open_value).equals(model.value) ? Color.RED : defaultColor);
-        } else {
-            boolean isHumidity = getString(R.string.sensor_type_humidity).equalsIgnoreCase(model.type);
-            float defaultMin = isHumidity ? 5.0f : 18.0f;
-            float defaultMax = isHumidity ? 30.0f : 22.0f;
+        // ⭐️ NOWA LOGIKA KOLOROWANIA (Spójna z listą) ⭐️
+        boolean isAlarmState = false;
 
-            float min = thresholdManager.getMinThreshold(gatewayIdString, sensorIdString, defaultMin);
-            float max = thresholdManager.getMaxThreshold(gatewayIdString, sensorIdString, defaultMax);
+        if (!thresholdManager.isThresholdSupported(model.type)) {
+            // --- LOGIKA DLA BINARNYCH (Światło, Drzwi, Ruch itp.) ---
+            // Używamy Float.parseFloat, żeby "1" i "1.0" działały tak samo
+            try {
+                float val = Float.parseFloat(model.value);
+                // Jeśli > 0.5 (czyli 1) uznajemy za stan aktywny/alarmowy -> CZERWONY
+                if (val > 0.5f) {
+                    isAlarmState = true;
+                }
+            } catch (NumberFormatException e) {
+                // Jak przyjdą śmieci zamiast liczby, to nie robimy alarmu
+            }
+        } else {
+            // --- LOGIKA DLA ANALOGOWYCH (Suwaki: Temp, Wilgotność itp.) ---
+            // Czerwony tylko jeśli wyjdzie poza suwaki (Thresholds)
+            Pair<Float, Float> defaultRange = thresholdManager.getDefaultRangeForType(model.type);
+            float min = thresholdManager.getMinThreshold(gatewayIdString, sensorIdString, defaultRange.first);
+            float max = thresholdManager.getMaxThreshold(gatewayIdString, sensorIdString, defaultRange.second);
 
             try {
-                float currentValue = Float.parseFloat(model.value);
-                textSensorDetails.setTextColor(currentValue < min || currentValue > max ? Color.RED : defaultColor);
-            } catch (NumberFormatException e) {
-                textSensorDetails.setTextColor(defaultColor);
+                float val = Float.parseFloat(model.value);
+                if (val < min || val > max) {
+                    isAlarmState = true;
+                }
+            } catch (NumberFormatException ignored) {
             }
         }
+
+        // Aplikujemy kolor: Czerwony (Alarm) lub Domyślny (Norma)
+        if (isAlarmState) {
+            textSensorDetails.setTextColor(Color.RED);
+        } else {
+            textSensorDetails.setTextColor(defaultColor);
+        }
+
         loadSensorHistory();
     }
 
     private void loadSensorHistory() {
         List<String> historyList = new ArrayList<>();
         SimpleDateFormat sdf = new SimpleDateFormat("HH:mm:ss", Locale.getDefault());
-
-        try (Cursor historyCursor = dbHelper.getSensorHistory(gatewayIdString, sensorIdString, HISTORY_LIMIT)) {
-            if (historyCursor != null && historyCursor.moveToFirst()) {
+        try (Cursor c = dbHelper.getSensorHistory(gatewayIdString, sensorIdString, HISTORY_LIMIT)) {
+            if (c != null && c.moveToFirst()) {
                 do {
-                    try {
-                        String value = historyCursor.getString(historyCursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_VALUE));
-                        long timestamp = historyCursor.getLong(historyCursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_TIMESTAMP));
-                        String type = historyCursor.getString(historyCursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_TYPE));
-                        historyList.add(String.format(Locale.getDefault(), getString(R.string.sensor_history_item_format), sdf.format(new Date(timestamp)), type, value));
-                    } catch (Exception e) {
-                        Log.e(TAG, "Error processing history row", e);
-                    }
-                } while (historyCursor.moveToNext());
+                    String val = c.getString(c.getColumnIndexOrThrow(DatabaseHelper.COLUMN_VALUE));
+                    long ts = c.getLong(c.getColumnIndexOrThrow(DatabaseHelper.COLUMN_TIMESTAMP));
+                    String type = c.getString(c.getColumnIndexOrThrow(DatabaseHelper.COLUMN_TYPE));
+                    historyList.add(String.format(Locale.getDefault(), getString(R.string.sensor_history_item_format), sdf.format(new Date(ts)), type, val));
+                } while (c.moveToNext());
             }
-        } catch (Exception e) {
-            Log.e(TAG, "Error loading sensor history cursor", e);
-        }
-
-        ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, historyList);
-        listSensorHistory.setAdapter(adapter);
+        } catch (Exception e) { Log.e(TAG, "History error", e); }
+        listSensorHistory.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, historyList));
     }
 
-    // ==========================================
-    // LOGIKA PROGÓW (ZMODYFIKOWANA DLA BOTTOM SHEET)
-    // ==========================================
-
+    // --- SUWAKI I PROGI ---
     private void setupThresholdControls() {
-
         if (seekBarThresholdMin == null || seekBarThresholdMax == null) return;
 
-        boolean isPassive = isPassiveSensor(currentSensorType);
+        // ⭐️ POPRAWKA LOGIKI ⭐️
+        // thresholdManager.isThresholdSupported zwraca TRUE dla Analogowych (Temp, Power)
+        // i FALSE dla Binarnych (Light, Flow, Button).
 
-        if (isPassive) {
-            if (thresholdContainer != null) thresholdContainer.setVisibility(View.GONE);
-            return;
+        if (thresholdManager.isThresholdSupported(currentSensorType)) {
+            // JEST Analogowy -> POKAZUJEMY suwaki
+            if (cardThresholds != null) cardThresholds.setVisibility(View.VISIBLE);
         } else {
-            if (thresholdContainer != null) thresholdContainer.setVisibility(View.VISIBLE);
+            // JEST Binarny -> UKRYWAMY suwaki
+            if (cardThresholds != null) cardThresholds.setVisibility(View.GONE);
+            return; // Wychodzimy, nie ma sensu ustawiać paska
         }
 
-        boolean isHumidity = getString(R.string.sensor_type_humidity).equalsIgnoreCase(currentSensorType);
-        float defaultMin = isHumidity ? 5.0f : 18.0f;
-        float defaultMax = isHumidity ? 30.0f : 22.0f;
+        // Dalsza część kodu wykonuje się tylko dla Analogowych (tych widocznych)
+        Pair<Float, Float> range = thresholdManager.getDefaultRangeForType(currentSensorType);
+        float absMin = range.first;
+        float absMax = range.second;
 
-        float savedMin = thresholdManager.getMinThreshold(gatewayIdString, sensorIdString, defaultMin);
-        float savedMax = thresholdManager.getMaxThreshold(gatewayIdString, sensorIdString, defaultMax);
+        int maxProgress = (int) ((absMax - absMin) * 2);
+        seekBarThresholdMin.setMax(maxProgress);
+        seekBarThresholdMax.setMax(maxProgress);
 
-        updateSeekBarUI(seekBarThresholdMin, textThresholdMin, getString(R.string.threshold_min_label), savedMin);
-        updateSeekBarUI(seekBarThresholdMax, textThresholdMax, getString(R.string.threshold_max_label), savedMax);
+        float currentMin = thresholdManager.getMinThreshold(gatewayIdString, sensorIdString, absMin);
+        float currentMax = thresholdManager.getMaxThreshold(gatewayIdString, sensorIdString, absMax);
 
-        seekBarThresholdMin.setOnSeekBarChangeListener(createSeekBarListener(false));
-        seekBarThresholdMax.setOnSeekBarChangeListener(createSeekBarListener(true));
-    }
+        seekBarThresholdMin.setProgress((int)((currentMin - absMin) * 2));
+        seekBarThresholdMax.setProgress((int)((currentMax - absMin) * 2));
 
-    private SeekBar.OnSeekBarChangeListener createSeekBarListener(boolean isMaxSlider) {
-        return new SeekBar.OnSeekBarChangeListener() {
+        updateThresholdLabel(textThresholdMin, getString(R.string.threshold_min_label), currentMin);
+        updateThresholdLabel(textThresholdMax, getString(R.string.threshold_max_label), currentMax);
+
+        SeekBar.OnSeekBarChangeListener listener = new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                float value = (float) progress / 2.0f;
-                TextView targetTextView = isMaxSlider ? textThresholdMax : textThresholdMin;
-                if (targetTextView != null) {
-                    String label = isMaxSlider ? getString(R.string.threshold_max_label) : getString(R.string.threshold_min_label);
-                    targetTextView.setText(String.format(Locale.getDefault(), getString(R.string.threshold_label_format), label, value));
-                }
+                float val = absMin + (progress / 2.0f);
+                boolean isMax = (seekBar == seekBarThresholdMax);
+                updateThresholdLabel(isMax ? textThresholdMax : textThresholdMin,
+                        isMax ? getString(R.string.threshold_max_label) : getString(R.string.threshold_min_label),
+                        val);
             }
-
             @Override
             public void onStartTrackingTouch(SeekBar seekBar) {}
-
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {
-                if (seekBarThresholdMin == null || seekBarThresholdMax == null) return;
-                float newMin = (float) seekBarThresholdMin.getProgress() / 2.0f;
-                float newMax = (float) seekBarThresholdMax.getProgress() / 2.0f;
+                float newMin = absMin + (seekBarThresholdMin.getProgress() / 2.0f);
+                float newMax = absMin + (seekBarThresholdMax.getProgress() / 2.0f);
                 thresholdManager.saveThresholds(gatewayIdString, sensorIdString, newMin, newMax);
                 loadLatestDataAndHistory();
             }
         };
+
+        seekBarThresholdMin.setOnSeekBarChangeListener(listener);
+        seekBarThresholdMax.setOnSeekBarChangeListener(listener);
     }
 
-    private void updateSeekBarUI(SeekBar seekBar, TextView textView, String label, float value) {
-        if (seekBar != null) seekBar.setProgress((int) (value * 2.0));
-        if (textView != null) textView.setText(String.format(Locale.getDefault(), getString(R.string.threshold_label_format), label, value));
+    private void updateThresholdLabel(TextView view, String label, float val) {
+        if (view != null) view.setText(String.format(Locale.US, "%s: %.1f", label, val));
     }
-
-    // ==========================================
-    // LOGIKA USTAWIEŃ (ZMODYFIKOWANA DLA BOTTOM SHEET)
-    // ==========================================
 
     private void loadSensorMetadata() {
-        // Jeśli panel nie jest otwarty, nie ma czego aktualizować
         if (editSensorInterval == null || switchReporting == null) return;
-
         Sensor sensorData = dbHelper.getSensorMetadata(sensorIdLong);
-        boolean isPassive = isPassiveSensor(currentSensorType);
-
-        if (isPassive) {
-            if(intervalContainer != null) intervalContainer.setVisibility(View.GONE);
-            if(reportingContainer != null) reportingContainer.setVisibility(View.GONE);
-        } else {
-            if(intervalContainer != null) intervalContainer.setVisibility(View.VISIBLE);
-            if(reportingContainer != null) reportingContainer.setVisibility(View.VISIBLE);
-
-            if (sensorData != null) {
-                Integer interval = sensorData.getIntervalSeconds();
-                editSensorInterval.setText((interval != null && interval > 0) ? String.valueOf(interval) : "");
-                switchReporting.setChecked(sensorData.isReportingEnabled());
-                switchReporting.setEnabled(true);
-            }
+        if (sensorData != null) {
+            Integer interval = sensorData.getIntervalSeconds();
+            editSensorInterval.setText((interval != null && interval > 0) ? String.valueOf(interval) : "");
+            switchReporting.setChecked(sensorData.isReportingEnabled());
+            switchReporting.setEnabled(true);
         }
     }
 
     private void loadSensorNotificationSettings() {
         if (notificationIntervalContainer == null || editSensorNotificationInterval == null) return;
+        boolean isPassive = isPassiveSensor(currentSensorType);
+        notificationIntervalContainer.setVisibility(isPassive ? View.GONE : View.VISIBLE);
 
-        if (isPassiveSensor(currentSensorType)) {
-            notificationIntervalContainer.setVisibility(View.GONE);
-        } else {
-            notificationIntervalContainer.setVisibility(View.VISIBLE);
+        if (!isPassive) {
             int savedInterval = notificationFrequencyManager.getFrequency(sensorIdLong, -1);
             editSensorNotificationInterval.setText(savedInterval > 0 ? String.valueOf(savedInterval) : "");
         }
     }
 
-    // ==========================================
-    // LOGIKA ZAPISYWANIA I SIECI
-    // ==========================================
-
     private void saveSensorInterval() {
         if (editSensorInterval == null) return;
+        String jwt = authPrefs.getString(LoginActivity.KEY_JWT_TOKEN, null);
+        if (jwt == null) return;
 
-        String jwtToken = authPrefs.getString(LoginActivity.KEY_JWT_TOKEN, null);
-        if (jwtToken == null) {
-            Toast.makeText(this, R.string.toast_error_not_logged_in, Toast.LENGTH_SHORT).show();
-            return;
-        }
+        String txt = (editSensorInterval.getText() != null) ? editSensorInterval.getText().toString() : "";
+        Integer val = null;
+        try { if(!txt.isEmpty()) val = Integer.parseInt(txt); } catch(Exception ignored) {}
 
-        String intervalStr = editSensorInterval.getText() != null ? editSensorInterval.getText().toString() : "";
-        Integer intervalToSend = null;
+        String json = "{\"intervalSeconds\": " + val + "}";
+        RequestBody body = RequestBody.create(json, MediaType.get("application/json"));
+        Request req = new Request.Builder().url(Constants.SENSORS_ENDPOINT + "/" + sensorIdLong).put(body).addHeader("Authorization", "Bearer " + jwt).build();
 
-        if (!intervalStr.isEmpty()) {
-            try {
-                intervalToSend = Integer.parseInt(intervalStr);
-                if (intervalToSend <= 0) intervalToSend = null;
-            } catch (NumberFormatException e) {
-                editSensorInterval.setError(getString(R.string.error_invalid_number));
-                return;
-            }
-        }
-
-        String jsonBody = "{\"intervalSeconds\": " + intervalToSend + "}";
-        RequestBody body = RequestBody.create(jsonBody, MediaType.get("application/json; charset=utf-8"));
-        String url = Constants.SENSORS_ENDPOINT + "/" + sensorIdLong;
-
-        Request request = new Request.Builder()
-                .url(url)
-                .addHeader("Authorization", "Bearer " + jwtToken)
-                .put(body)
-                .build();
-
-        httpClient.newCall(request).enqueue(new Callback() {
+        httpClient.newCall(req).enqueue(new Callback() {
             @Override
-            public void onFailure(@NonNull Call call, @NonNull IOException e) {
-                runOnUiThread(() -> Toast.makeText(SensorDetailActivity.this,
-                        getString(R.string.toast_api_error_with_reason, e.getMessage()), Toast.LENGTH_SHORT).show());
-            }
-
+            public void onFailure(@NonNull Call call, @NonNull IOException e) { runOnUiThread(() -> Toast.makeText(SensorDetailActivity.this, "Error", Toast.LENGTH_SHORT).show()); }
             @Override
             public void onResponse(@NonNull Call call, @NonNull Response response) {
-                try (Response r = response) {
-                    if (r.isSuccessful()) {
-                        runOnUiThread(() -> {
-                            Toast.makeText(SensorDetailActivity.this, R.string.toast_interval_update_success, Toast.LENGTH_SHORT).show();
-                            // Wymuszenie synchronizacji, aby zaktualizować lokalną bazę danych
-                            Intent serviceIntent = new Intent(SensorDetailActivity.this, VpsClientService.class);
-                            serviceIntent.putExtra("FORCE_SYNC_NOW", true);
-                            serviceIntent.putExtra("IS_SILENT", true);
-                            startService(serviceIntent);
-                        });
-                    } else {
-                        String error = r.body() != null ? r.body().string() : "Unknown error";
-                        runOnUiThread(() -> Toast.makeText(SensorDetailActivity.this,
-                                getString(R.string.toast_api_error_with_reason, error), Toast.LENGTH_SHORT).show());
-                    }
-                } catch (IOException e) {
-                    Log.e(TAG, "Błąd odczytu odpowiedzi API", e);
-                }
+                runOnUiThread(() -> {
+                    Toast.makeText(SensorDetailActivity.this, "Saved", Toast.LENGTH_SHORT).show();
+                    Intent intent = new Intent(SensorDetailActivity.this, VpsClientService.class);
+                    intent.putExtra("FORCE_SYNC_NOW", true);
+                    intent.putExtra("IS_SILENT", true);
+                    startService(intent);
+                });
             }
         });
     }
 
     private void saveSensorNotificationInterval() {
         if (editSensorNotificationInterval == null) return;
-
-        String intervalStr = editSensorNotificationInterval.getText() != null ? editSensorNotificationInterval.getText().toString() : "";
-        int intervalToSave = 0;
-
-        if (!intervalStr.isEmpty()) {
-            try {
-                intervalToSave = Integer.parseInt(intervalStr);
-                if (intervalToSave <= 0) intervalToSave = 0;
-            } catch (NumberFormatException e) {
-                editSensorNotificationInterval.setError(getString(R.string.error_invalid_number));
-                return;
-            }
-        }
-
-        notificationFrequencyManager.saveFrequency(sensorIdLong, intervalToSave);
-        Toast.makeText(this, R.string.toast_notification_interval_saved, Toast.LENGTH_SHORT).show();
+        String txt = (editSensorNotificationInterval.getText() != null) ? editSensorNotificationInterval.getText().toString() : "";
+        int val = 0;
+        try { if(!txt.isEmpty()) val = Integer.parseInt(txt); } catch(Exception ignored) {}
+        notificationFrequencyManager.saveFrequency(sensorIdLong, val);
+        Toast.makeText(this, "Saved Notif Interval", Toast.LENGTH_SHORT).show();
         hideKeyboard();
     }
 
     private void toggleReportingStatus() {
         if (switchReporting == null) return;
+        String jwt = authPrefs.getString(LoginActivity.KEY_JWT_TOKEN, null);
+        if (jwt == null) { switchReporting.setEnabled(true); return; }
 
-        String jwtToken = authPrefs.getString(LoginActivity.KEY_JWT_TOKEN, null);
-        if (jwtToken == null) {
-            Toast.makeText(this, R.string.toast_error_not_logged_in, Toast.LENGTH_SHORT).show();
-            switchReporting.setEnabled(true);
-            return;
-        }
-
-        String url = Constants.SENSORS_ENDPOINT + "/" + sensorIdLong + "/toggle-reporting";
-        RequestBody body = RequestBody.create(new byte[0]);
-
-        Request request = new Request.Builder()
-                .url(url)
-                .addHeader("Authorization", "Bearer " + jwtToken)
-                .post(body)
+        Request req = new Request.Builder()
+                .url(Constants.SENSORS_ENDPOINT + "/" + sensorIdLong + "/toggle-reporting")
+                .post(RequestBody.create(new byte[0]))
+                .addHeader("Authorization", "Bearer " + jwt)
                 .build();
 
-        httpClient.newCall(request).enqueue(new Callback() {
+        httpClient.newCall(req).enqueue(new Callback() {
             @Override
             public void onFailure(@NonNull Call call, @NonNull IOException e) {
-                runOnUiThread(() -> {
-                    Toast.makeText(SensorDetailActivity.this,
-                            getString(R.string.toast_api_error_with_reason, e.getMessage()), Toast.LENGTH_SHORT).show();
-                    if(switchReporting != null) switchReporting.setEnabled(true);
-                });
+                runOnUiThread(() -> switchReporting.setEnabled(true));
             }
-
             @Override
-            public void onResponse(@NonNull Call call, @NonNull Response response) {
-                try (Response r = response) {
-                    String responseBody = r.body() != null ? r.body().string() : "";
-
-                    if (r.isSuccessful()) {
-                        JSONObject sensorJson = new JSONObject(responseBody);
-                        final boolean newStatus = sensorJson.getBoolean("reportingEnabled");
+            public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
+                String body = response.body() != null ? response.body().string() : "{}";
+                if (response.isSuccessful()) {
+                    try {
+                        boolean newStatus = new JSONObject(body).getBoolean("reportingEnabled");
                         dbHelper.updateSensorReportingStatus(sensorIdLong, newStatus);
-
                         runOnUiThread(() -> {
-                            if (switchReporting != null) {
-                                switchReporting.setChecked(newStatus);
-                                switchReporting.setEnabled(true);
-                            }
-                            Toast.makeText(SensorDetailActivity.this,
-                                    newStatus ? R.string.toast_reporting_enabled : R.string.toast_reporting_disabled,
-                                    Toast.LENGTH_SHORT).show();
+                            switchReporting.setChecked(newStatus);
+                            switchReporting.setEnabled(true);
                         });
-                    } else {
-                        runOnUiThread(() -> {
-                            Toast.makeText(SensorDetailActivity.this,
-                                    getString(R.string.toast_api_error_with_reason, responseBody), Toast.LENGTH_SHORT).show();
-                            if(switchReporting != null) switchReporting.setEnabled(true);
-                        });
+                    } catch (Exception e) {
+                        Log.e(TAG, "JSON error: " + e.getMessage());
+                        runOnUiThread(() -> switchReporting.setEnabled(true));
                     }
-                } catch (Exception e) {
-                    Log.e(TAG, "Błąd w onResponse /toggle-reporting", e);
-                    runOnUiThread(() -> {
-                        Toast.makeText(SensorDetailActivity.this, R.string.toast_api_error, Toast.LENGTH_SHORT).show();
-                        if(switchReporting != null) switchReporting.setEnabled(true);
-                    });
+                } else {
+                    runOnUiThread(() -> switchReporting.setEnabled(true));
                 }
             }
         });
     }
 
     private void toggleFavoriteStatus() {
-        String jwtToken = authPrefs.getString(LoginActivity.KEY_JWT_TOKEN, null);
-        if (jwtToken == null) {
-            Toast.makeText(this, R.string.toast_error_not_logged_in, Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        final boolean becomingFavorite = !isFavorite;
-        isFavorite = becomingFavorite;
+        String jwt = authPrefs.getString(LoginActivity.KEY_JWT_TOKEN, null);
+        if (jwt == null) return;
+        boolean becomingFav = !isFavorite;
+        isFavorite = becomingFav;
         updateFavoriteIcon();
 
         String url = Constants.FAVORITE_SENSORS_ENDPOINT;
-        Request request;
-
-        if (becomingFavorite) {
+        Request req;
+        if (becomingFav) {
             JSONObject json = new JSONObject();
-            try {
-                json.put("id", sensorIdLong);
-            } catch (JSONException e) {
-                Log.e(TAG, "Błąd tworzenia JSON dla ulubionych", e);
-            }
-            RequestBody body = RequestBody.create(json.toString(), MediaType.get("application/json; charset=utf-8"));
-            request = new Request.Builder().url(url).addHeader("Authorization", "Bearer " + jwtToken).post(body).build();
+            try { json.put("id", sensorIdLong); } catch(Exception ignored){}
+            req = new Request.Builder().url(url).post(RequestBody.create(json.toString(), MediaType.get("application/json"))).addHeader("Authorization", "Bearer " + jwt).build();
         } else {
-            url += "/" + sensorIdLong;
-            request = new Request.Builder().url(url).addHeader("Authorization", "Bearer " + jwtToken).delete().build();
+            req = new Request.Builder().url(url + "/" + sensorIdLong).delete().addHeader("Authorization", "Bearer " + jwt).build();
         }
-
-        httpClient.newCall(request).enqueue(new Callback() {
+        httpClient.newCall(req).enqueue(new Callback() {
             @Override
             public void onFailure(@NonNull Call call, @NonNull IOException e) {
-                runOnUiThread(() -> {
-                    Toast.makeText(SensorDetailActivity.this, R.string.toast_api_error, Toast.LENGTH_SHORT).show();
-                    isFavorite = !becomingFavorite;
-                    updateFavoriteIcon();
-                });
+                runOnUiThread(() -> { isFavorite = !becomingFav; updateFavoriteIcon(); });
             }
-
             @Override
             public void onResponse(@NonNull Call call, @NonNull Response response) {
-                try (Response r = response) {
-                    if (r.isSuccessful()) {
-                        runOnUiThread(() -> {
-                            Toast.makeText(SensorDetailActivity.this,
-                                    becomingFavorite ? R.string.toast_added_to_favorites : R.string.toast_removed_from_favorites,
-                                    Toast.LENGTH_SHORT).show();
-                            // Synchronizacja
-                            Intent serviceIntent = new Intent(SensorDetailActivity.this, VpsClientService.class);
-                            serviceIntent.putExtra("FORCE_SYNC_NOW", true);
-                            serviceIntent.putExtra("IS_SILENT", true);
-                            startService(serviceIntent);
-                        });
-                    } else {
-                        runOnUiThread(() -> {
-                            Toast.makeText(SensorDetailActivity.this, R.string.toast_api_error, Toast.LENGTH_SHORT).show();
-                            isFavorite = !becomingFavorite;
-                            updateFavoriteIcon();
-                        });
-                    }
+                if (response.isSuccessful()) {
+                    runOnUiThread(() -> {
+                        Intent intent = new Intent(SensorDetailActivity.this, VpsClientService.class);
+                        intent.putExtra("FORCE_SYNC_NOW", true);
+                        intent.putExtra("IS_SILENT", true);
+                        startService(intent);
+                    });
+                } else {
+                    runOnUiThread(() -> { isFavorite = !becomingFav; updateFavoriteIcon(); });
                 }
             }
         });
@@ -687,31 +533,27 @@ public class SensorDetailActivity extends AppCompatActivity {
     }
 
     private void updateFavoriteIcon() {
-        if (btnFavorite != null) {
-            btnFavorite.setImageResource(isFavorite ? R.drawable.ic_star_filled : R.drawable.ic_star_outline);
-        }
+        if (btnFavorite != null) btnFavorite.setImageResource(isFavorite ? R.drawable.ic_star_filled : R.drawable.ic_star_outline);
     }
 
     private void forceReadingsSync() {
-        Intent serviceIntent = new Intent(this, VpsClientService.class);
-        serviceIntent.putExtra("FORCE_READINGS_NOW", true);
-        startService(serviceIntent);
+        Intent intent = new Intent(this, VpsClientService.class);
+        intent.putExtra("FORCE_READINGS_NOW", true);
+        startService(intent);
     }
 
     private boolean isPassiveSensor(String type) {
-        return type.equalsIgnoreCase("contact") ||
-                type.equalsIgnoreCase("button") ||
-                type.equalsIgnoreCase("motion");
+        if (type == null) return false;
+        String t = type.toLowerCase();
+        return t.equals("contact") || t.equals("button") || t.equals("motion") || t.equals("button_press");
     }
 
     private void hideKeyboard() {
         try {
             InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
-            if (imm != null && getCurrentFocus() != null) {
-                imm.hideSoftInputFromWindow(getCurrentFocus().getWindowToken(), 0);
-            }
+            if (imm != null && getCurrentFocus() != null) imm.hideSoftInputFromWindow(getCurrentFocus().getWindowToken(), 0);
         } catch (Exception e) {
-            Log.w(TAG, "Nie udało się schować klawiatury", e);
+            Log.e(TAG, "Keyboard hide error", e);
         }
     }
 }

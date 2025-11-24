@@ -17,6 +17,7 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import com.testserwera.bazunia.utils.CleanupManager;
 import com.testserwera.bazunia.utils.Constants;
+import com.testserwera.bazunia.utils.LocaleManager;
 import com.testserwera.bazunia.utils.NotificationHelper;
 import com.testserwera.bazunia.R;
 import com.testserwera.bazunia.ui.LoginActivity;
@@ -70,6 +71,14 @@ public class VpsClientService extends Service {
     private static final String UPDATE_PREFS = "UpdatePrefs";
     private static final int POLLING_INTERVAL_RETENTION_SECONDS = 300;
     private SharedPreferences retentionPrefs;
+
+    @Override
+    protected void attachBaseContext(Context newBase) {
+        // "Owijamy" kontekst serwisu wybranym językiem
+        LocaleManager localeManager = new LocaleManager(newBase);
+        super.attachBaseContext(localeManager.setLocale(newBase));
+    }
+
     @Override
     public void onCreate() {
         super.onCreate();
@@ -396,7 +405,7 @@ public class VpsClientService extends Service {
                 String type = sensorJson.getString("type");
                 String value = sensorJson.getString("value");
                 long timestamp = sensorJson.getLong("timestamp");
-                SensorModel sensor = new SensorModel(gatewayId, sensorId, type, value, timestamp);
+                SensorModel sensor = new SensorModel(gatewayId, sensorId, null, type, value, timestamp, 0);
                 dbHelper.addSensorData(sensor);
                 checkThresholds(sensor);
             }
@@ -416,38 +425,55 @@ public class VpsClientService extends Service {
     }
 
     private void checkThresholds(SensorModel sensor) {
-        // ... (bez zmian)
         if (sensor == null || sensor.type == null) return;
-        // Sprawdź, czy alerty wartości (progi) są wyciszone dla tego sensora
+
+        // Sprawdź czy wyciszone
         String muteKey = "thresh_sensor_" + sensor.sensorId;
-        if (mutePrefs.getBoolean(muteKey, false)) {
-            // Log.d(TAG, "Alerty wartości dla " + sensor.sensorId + " są wyciszone.");
-            return; // Zakończ, nie wysyłaj powiadomienia
-        }
-        String type = sensor.type.toLowerCase();
-        String doorContactType = getString(R.string.sensor_type_door_contact);
-        String humidityType = getString(R.string.sensor_type_humidity);
-        if (type.equals(doorContactType) || type.equals("contact")) {
-            if (getString(R.string.door_contact_open_value).equals(sensor.value)) {
-                notificationHelper.showThresholdAlert(sensor, 0, 0, NotificationHelper.ThresholdType.DOOR);
-            }
-        } else if (type.equals("temperature") || type.equals(humidityType)) {
-            try {
-                float currentValue = Float.parseFloat(sensor.value);
-                boolean isHumidity = type.equals(humidityType);
-                float defaultMin = isHumidity ? 5.0f : 18.0f;
-                float defaultMax = isHumidity ? 30.0f : 22.0f;
-                float min = thresholdManager.getMinThreshold(sensor.gatewayId, sensor.sensorId, defaultMin);
-                float max = thresholdManager.getMaxThreshold(sensor.gatewayId, sensor.sensorId, defaultMax);
-                if (currentValue < min) {
-                    notificationHelper.showThresholdAlert(sensor, currentValue, min, NotificationHelper.ThresholdType.LOW);
-                } else if (currentValue > max) {
-                    notificationHelper.showThresholdAlert(sensor, currentValue, max, NotificationHelper.ThresholdType.HIGH);
+        if (mutePrefs.getBoolean(muteKey, false)) return;
+
+        // 1. Sprawdzamy, czy typ ma suwaki (Analogowy) czy jest binarny (ON/OFF)
+        // Używamy tego samego ThresholdManagera co w UI
+        boolean hasThresholds = thresholdManager.isThresholdSupported(sensor.type);
+
+        try {
+            float val = Float.parseFloat(sensor.value);
+
+            if (hasThresholds) {
+                // --- LOGIKA DLA ANALOGOWYCH (Temp, Humidity, Power) ---
+                // Sprawdzamy min/max z suwaków
+
+                android.util.Pair<Float, Float> defRange = thresholdManager.getDefaultRangeForType(sensor.type);
+                float min = thresholdManager.getMinThreshold(sensor.gatewayId, sensor.sensorId, defRange.first);
+                float max = thresholdManager.getMaxThreshold(sensor.gatewayId, sensor.sensorId, defRange.second);
+
+                if (val < min) {
+                    notificationHelper.showThresholdAlert(sensor, val, min, NotificationHelper.ThresholdType.LOW);
+                } else if (val > max) {
+                    notificationHelper.showThresholdAlert(sensor, val, max, NotificationHelper.ThresholdType.HIGH);
                 }
-            } catch (NumberFormatException e) {
-                Log.w(TAG, String.format(Locale.getDefault(),
-                        getString(R.string.log_error_not_numeric), sensor.value));
+
+            } else {
+                // --- LOGIKA DLA BINARNYCH (Światło, Ruch, Drzwi, Flow) ---
+                // Alarm, jeśli wartość > 0.5 (czyli 1) lub > 0.0 dla Flow
+
+                boolean isAlarm = false;
+
+                if ("flow".equalsIgnoreCase(sensor.type)) {
+                    // Dla przepływu każdy ruch > 0 to alarm
+                    if (val > 0.0f) isAlarm = true;
+                } else {
+                    // Dla reszty (światło, ruch, drzwi) alarm gdy 1
+                    if (val > 0.5f) isAlarm = true;
+                }
+
+                if (isAlarm) {
+                    // Wysyłamy typ BINARY_ACTIVE - NotificationHelper sam dobierze tekst (Ruch/Światło/Drzwi)
+                    notificationHelper.showThresholdAlert(sensor, val, 0, NotificationHelper.ThresholdType.BINARY_ACTIVE);
+                }
             }
+
+        } catch (NumberFormatException e) {
+            // Ignorujemy wartości nieliczbowe
         }
     }
 

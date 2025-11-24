@@ -10,10 +10,9 @@ import android.util.Log;
 
 import androidx.annotation.NonNull;
 
-import com.testserwera.bazunia.R;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
+
 
 public class DatabaseHelper extends SQLiteOpenHelper {
 
@@ -24,7 +23,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     public static final String TABLE_READINGS = "readings";
     private static final String COLUMN_ID = "id";
     public static final String COLUMN_GATE_ID = "gate_id";
-    public static final String COLUMN_SENSOR_ID = "sensor_id";
+    public static final String COLUMN_SENSOR_ID = "sensor_id"; // Nazwa kolumny w readings
     public static final String COLUMN_TYPE = "type";
     public static final String COLUMN_VALUE = "value";
     public static final String COLUMN_TIMESTAMP = "timestamp";
@@ -50,11 +49,9 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     public static final String S_COLUMN_INTERVAL = "interval_seconds";
     public static final String S_COLUMN_REPORTING_ENABLED = "reporting_enabled";
 
-    // ⭐️ DODAŁEM TĘ STAŁĄ (używaną w adapterze jako alias kolumny z podzapytania)
-    public static final String S_COLUMN_VALUE = "value";
+    public static final String S_COLUMN_VALUE = "value"; // Alias do wynikow zlaczen
 
-
-    // Tabele v3
+    // Tabele v3 (Foldery i Ulubione)
     public static final String TABLE_FOLDERS = "folders";
     public static final String F_COLUMN_ID = "id";
     public static final String F_COLUMN_NAME = "name";
@@ -70,12 +67,11 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     public static final String FS_COLUMN_FOLDER_ID = "folder_id";
     public static final String FS_COLUMN_SENSOR_ID = "sensor_id";
 
-
-    private final Context context;
+    // USUNIĘTO: private final Context context; - nie jest już potrzebne jako pole klasy
 
     public DatabaseHelper(Context context) {
         super(context, DATABASE_NAME, null, DATABASE_VERSION);
-        this.context = context;
+        // USUNIĘTO: this.context = context;
     }
 
     @Override
@@ -151,22 +147,19 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             try {
                 db.execSQL("ALTER TABLE " + TABLE_SENSORS + " ADD COLUMN " + S_COLUMN_REPORTING_ENABLED + " INTEGER NOT NULL DEFAULT 1");
             } catch (SQLException e) {
-                Log.e("DB_UPGRADE", "Nie udało się dodać kolumny reporting_enabled: " + e.getMessage());
+                // POPRAWKA: Przekazanie wyjątku do Log.e
+                Log.e("DB_UPGRADE", "Nie udało się dodać kolumny reporting_enabled", e);
             }
         }
-        // ... (reszta migracji bez zmian)
+        // Migracje (bez zmian)
         if (oldVersion < 2) {
             try {
                 db.execSQL("ALTER TABLE sensors RENAME TO " + TABLE_READINGS);
             } catch (SQLException e) {
+                // Fallback
                 db.execSQL("DROP TABLE IF EXISTS " + TABLE_READINGS);
                 db.execSQL("DROP TABLE IF EXISTS " + TABLE_GATEWAYS);
                 db.execSQL("DROP TABLE IF EXISTS " + TABLE_SENSORS);
-                db.execSQL("DROP TABLE IF EXISTS " + TABLE_FOLDERS);
-                db.execSQL("DROP TABLE IF EXISTS " + TABLE_FOLDER_GATEWAYS);
-                db.execSQL("DROP TABLE IF EXISTS " + TABLE_FAVORITE_GATEWAYS);
-                db.execSQL("DROP TABLE IF EXISTS " + TABLE_FAVORITE_SENSORS);
-                db.execSQL("DROP TABLE IF EXISTS " + TABLE_FOLDER_SENSORS);
                 onCreate(db);
                 return;
             }
@@ -179,7 +172,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             try {
                 db.execSQL("ALTER TABLE " + TABLE_SENSORS + " ADD COLUMN " + S_COLUMN_INTERVAL + " INTEGER");
             } catch (SQLException e) {
-                Log.e("DB_UPGRADE", "Nie udało się dodać kolumny interval_seconds: " + e.getMessage());
+                // POPRAWKA: Przekazanie wyjątku do Log.e
+                Log.e("DB_UPGRADE", "Nie udało się dodać kolumny interval_seconds", e);
             }
         }
     }
@@ -197,7 +191,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         try {
             db.insertOrThrow(TABLE_READINGS, null, values);
         } catch (SQLException e) {
-            Log.e("DB_INSERT", "SQLException podczas dodawania odczytu: " + e.getMessage());
+            // POPRAWKA: Usunięcie e.getMessage() i przekazanie wyjątku
+            Log.e("DB_INSERT", "SQLException while adding data", e);
         }
     }
 
@@ -216,11 +211,13 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 String type = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_TYPE));
                 String value = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_VALUE));
                 long timestamp = cursor.getLong(cursor.getColumnIndexOrThrow(COLUMN_TIMESTAMP));
-                latestModel = new SensorModel(gatewayId, sId, type, value, timestamp);
+
+                latestModel = new SensorModel(gatewayId, sId, null, type, value, timestamp, 0);
             }
         } catch (Exception e) {
-            Log.e("DB_QUERY_ERROR", String.format(Locale.getDefault(),
-                    context.getString(R.string.log_error_db_query), e.getMessage()));
+            // POPRAWKA: Usunięcie zależności od context i e.getMessage()
+            // Zamiast pobierać string z zasobów, logujemy techniczny błąd bezpośrednio.
+            Log.e("DB_QUERY_ERROR", "Error fetching latest data", e);
         }
         return latestModel;
     }
@@ -228,22 +225,41 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     public List<SensorModel> getLatestUniqueSensorData() {
         List<SensorModel> latestDataList = new ArrayList<>();
         SQLiteDatabase db = this.getReadableDatabase();
-        String distinctQuery = "SELECT DISTINCT " + COLUMN_GATE_ID + ", " + COLUMN_SENSOR_ID + " FROM " + TABLE_READINGS;
 
-        try (Cursor uniqueSensorsCursor = db.rawQuery(distinctQuery, null)) {
-            if (uniqueSensorsCursor.moveToFirst()) {
+        String query = "SELECT " +
+                "r." + COLUMN_GATE_ID + ", " +
+                "r." + COLUMN_SENSOR_ID + ", " +
+                "r." + COLUMN_TYPE + ", " +
+                "r." + COLUMN_VALUE + ", " +
+                "MAX(r." + COLUMN_TIMESTAMP + ") as " + COLUMN_TIMESTAMP + ", " +
+                "s." + S_COLUMN_BATTERY + ", " +
+                "s." + S_COLUMN_NAME +
+                " FROM " + TABLE_READINGS + " r " +
+                " LEFT JOIN " + TABLE_SENSORS + " s " +
+                " ON r." + COLUMN_SENSOR_ID + " = CAST(s." + S_COLUMN_ID + " AS TEXT) " +
+                " GROUP BY r." + COLUMN_GATE_ID + ", r." + COLUMN_SENSOR_ID;
+
+        try (Cursor cursor = db.rawQuery(query, null)) {
+            if (cursor.moveToFirst()) {
                 do {
-                    String gateId = uniqueSensorsCursor.getString(uniqueSensorsCursor.getColumnIndexOrThrow(COLUMN_GATE_ID));
-                    String sensorId = uniqueSensorsCursor.getString(uniqueSensorsCursor.getColumnIndexOrThrow(COLUMN_SENSOR_ID));
-                    SensorModel latestModel = getLatestSensorData(gateId, sensorId);
-                    if (latestModel != null) {
-                        latestDataList.add(latestModel);
-                    }
-                } while (uniqueSensorsCursor.moveToNext());
+                    String gateId = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_GATE_ID));
+                    String sensorId = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_SENSOR_ID));
+                    String type = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_TYPE));
+                    String value = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_VALUE));
+                    long timestamp = cursor.getLong(cursor.getColumnIndexOrThrow(COLUMN_TIMESTAMP));
+
+                    int batteryIndex = cursor.getColumnIndex(S_COLUMN_BATTERY);
+                    int battery = (batteryIndex != -1 && !cursor.isNull(batteryIndex)) ? cursor.getInt(batteryIndex) : 0;
+
+                    int nameIndex = cursor.getColumnIndex(S_COLUMN_NAME);
+                    String name = (nameIndex != -1) ? cursor.getString(nameIndex) : null;
+
+                    latestDataList.add(new SensorModel(gateId, sensorId, name, type, value, timestamp, battery));
+                } while (cursor.moveToNext());
             }
         } catch (Exception e) {
-            Log.e("DB_FILTER_ERROR", String.format(Locale.getDefault(),
-                    context.getString(R.string.log_error_db_filter), e.getMessage()));
+            // POPRAWKA: Przekazanie wyjątku
+            Log.e("DB_FILTER_ERROR", "Error filtering unique data", e);
         }
         return latestDataList;
     }
@@ -261,32 +277,26 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         if (days <= 0) return;
         SQLiteDatabase db = this.getWritableDatabase();
         long cutoffTime = System.currentTimeMillis() - (days * 24 * 60 * 60 * 1000L);
-
         try {
-            int deletedRows = db.delete(TABLE_READINGS, COLUMN_TIMESTAMP + " < ?", new String[]{String.valueOf(cutoffTime)});
-            Log.d("DB_CLEAN", String.format(Locale.getDefault(),
-                    context.getString(R.string.log_info_data_cleaned), deletedRows, days));
+            db.delete(TABLE_READINGS, COLUMN_TIMESTAMP + " < ?", new String[]{String.valueOf(cutoffTime)});
         } catch (SQLException e) {
-            Log.e("DB_CLEAN", "Błąd automatycznego czyszczenia: " + e.getMessage());
+            // POPRAWKA: Przekazanie wyjątku
+            Log.e("DB_CLEAN", "Error cleaning old data", e);
         }
     }
 
     public void cleanSensorDataBySize(int maxRecords) {
         if (maxRecords <= 0) return;
         SQLiteDatabase db = this.getWritableDatabase();
-
         try {
             String whereClause = COLUMN_ID + " NOT IN (" +
                     "SELECT " + COLUMN_ID + " FROM " + TABLE_READINGS +
                     " ORDER BY " + COLUMN_TIMESTAMP + " DESC " +
                     " LIMIT " + maxRecords + ")";
-            int deletedRows = db.delete(TABLE_READINGS, whereClause, null);
-            if (deletedRows > 0) {
-                Log.d("DB_CLEAN", String.format(Locale.getDefault(),
-                        context.getString(R.string.log_info_data_cleaned_size), deletedRows, maxRecords));
-            }
+            db.delete(TABLE_READINGS, whereClause, null);
         } catch (SQLException e) {
-            Log.e("DB_CLEAN", "Błąd czyszczenia wg rozmiaru: " + e.getMessage());
+            // POPRAWKA: Przekazanie wyjątku
+            Log.e("DB_CLEAN", "Error cleaning by size", e);
         }
     }
 
@@ -317,9 +327,9 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 }
             }
             db.setTransactionSuccessful();
-            Log.d("DB_SYNC", "Pomyślnie zsynchronizowano " + gateways.size() + " bramek.");
         } catch (Exception e) {
-            Log.e("DB_SYNC", "Błąd synchronizacji bramek: " + e.getMessage());
+            // POPRAWKA: Przekazanie wyjątku
+            Log.e("DB_SYNC", "Error syncing gateways", e);
         } finally {
             if (db.inTransaction()) {
                 db.endTransaction();
@@ -366,7 +376,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                             db.insert(TABLE_FOLDER_GATEWAYS, null, fgValues);
                         }
                     }
-
                     if (folder.getSensorIds() != null) {
                         for (Long sensorId : folder.getSensorIds()) {
                             ContentValues fsValues = new ContentValues();
@@ -388,7 +397,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                     db.insert(TABLE_FAVORITE_GATEWAYS, null, favGValues);
                 }
             }
-
             if (favoriteSensors != null) {
                 for (Sensor sensor : favoriteSensors) {
                     ContentValues favSValues = new ContentValues();
@@ -396,11 +404,10 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                     db.insert(TABLE_FAVORITE_SENSORS, null, favSValues);
                 }
             }
-
             db.setTransactionSuccessful();
-            Log.d("DB_SYNC", "Pomyślnie zsynchronizowano foldery i ulubione.");
         } catch (Exception e) {
-            Log.e("DB_SYNC", "Błąd synchronizacji folderów: " + e.getMessage());
+            // POPRAWKA: Przekazanie wyjątku
+            Log.e("DB_SYNC", "Error syncing folders", e);
         } finally {
             if (db.inTransaction()) {
                 db.endTransaction();
@@ -409,7 +416,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     }
 
     // --- METODY ZARZĄDZANIA FOLDERAMI (LOKALNE) ---
-
     public void addGatewayToFolder(long gatewayId, long folderId) {
         SQLiteDatabase db = this.getWritableDatabase();
         ContentValues values = new ContentValues();
@@ -418,17 +424,16 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         try {
             db.insertWithOnConflict(TABLE_FOLDER_GATEWAYS, null, values, SQLiteDatabase.CONFLICT_IGNORE);
         } catch (Exception e) {
-            Log.e("DB_UPDATE", "Błąd dodawania bramki do folderu lokalnie: " + e.getMessage());
+            Log.e("DB_UPDATE", "Error addGatewayToFolder", e);
         }
     }
     public void removeGatewayFromFolder(long gatewayId, long folderId) {
         SQLiteDatabase db = this.getWritableDatabase();
         try {
-            db.delete(TABLE_FOLDER_GATEWAYS,
-                    FG_COLUMN_GATEWAY_ID + " = ? AND " + FG_COLUMN_FOLDER_ID + " = ?",
+            db.delete(TABLE_FOLDER_GATEWAYS, FG_COLUMN_GATEWAY_ID + " = ? AND " + FG_COLUMN_FOLDER_ID + " = ?",
                     new String[]{String.valueOf(gatewayId), String.valueOf(folderId)});
         } catch (Exception e) {
-            Log.e("DB_UPDATE", "Błąd usuwania bramki z folderu lokalnie: " + e.getMessage());
+            Log.e("DB_UPDATE", "Error removeGatewayFromFolder", e);
         }
     }
     public void addSensorToFolder(long sensorId, long folderId) {
@@ -439,17 +444,16 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         try {
             db.insertWithOnConflict(TABLE_FOLDER_SENSORS, null, values, SQLiteDatabase.CONFLICT_IGNORE);
         } catch (Exception e) {
-            Log.e("DB_UPDATE", "Błąd dodawania czujnika do folderu lokalnie: " + e.getMessage());
+            Log.e("DB_UPDATE", "Error addSensorToFolder", e);
         }
     }
     public void removeSensorFromFolder(long sensorId, long folderId) {
         SQLiteDatabase db = this.getWritableDatabase();
         try {
-            db.delete(TABLE_FOLDER_SENSORS,
-                    FS_COLUMN_SENSOR_ID + " = ? AND " + FS_COLUMN_FOLDER_ID + " = ?",
+            db.delete(TABLE_FOLDER_SENSORS, FS_COLUMN_SENSOR_ID + " = ? AND " + FS_COLUMN_FOLDER_ID + " = ?",
                     new String[]{String.valueOf(sensorId), String.valueOf(folderId)});
         } catch (Exception e) {
-            Log.e("DB_UPDATE", "Błąd usuwania czujnika z folderu lokalnie: " + e.getMessage());
+            Log.e("DB_UPDATE", "Error removeSensorFromFolder", e);
         }
     }
 
@@ -457,10 +461,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
     public Cursor getFoldersCursor() {
         SQLiteDatabase db = this.getReadableDatabase();
-        String query = "SELECT " + F_COLUMN_ID + " AS _id, " +
-                F_COLUMN_NAME + ", " + F_COLUMN_COLOR +
-                " FROM " + TABLE_FOLDERS +
-                " ORDER BY " + F_COLUMN_NAME + " ASC";
+        String query = "SELECT " + F_COLUMN_ID + " AS _id, " + F_COLUMN_NAME + ", " + F_COLUMN_COLOR + " FROM " + TABLE_FOLDERS + " ORDER BY " + F_COLUMN_NAME + " ASC";
         return db.rawQuery(query, null);
     }
 
@@ -473,20 +474,17 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         return db.rawQuery(query, new String[]{String.valueOf(folderId)});
     }
 
-    // ⭐️ POPRAWIONE ZAPYTANIA DLA SENSORÓW (DOŁĄCZANIE WARTOŚCI ODCZYTU)
-
     public Cursor getSensorsForGateway(long gatewayId) {
         SQLiteDatabase db = this.getReadableDatabase();
-        // Podzapytanie, aby pobrać ostatni odczyt dla czujnika
         String query = "SELECT " +
                 "s." + S_COLUMN_ID + " AS _id, " +
+                "s." + S_COLUMN_ID + " AS " + COLUMN_SENSOR_ID + ", " +
                 "s." + S_COLUMN_GATEWAY_ID + ", " +
                 "s." + S_COLUMN_NAME + ", " +
                 "s." + S_COLUMN_TYPE + ", " +
                 "s." + S_COLUMN_DESCRIPTION + ", " +
                 "s." + S_COLUMN_BATTERY + ", " +
                 "s." + S_COLUMN_KEYWORD + ", " +
-                // Pobierz wartość z tabeli readings
                 "(SELECT " + COLUMN_VALUE + " FROM " + TABLE_READINGS + " r " +
                 " WHERE r." + COLUMN_SENSOR_ID + " = CAST(s." + S_COLUMN_ID + " AS TEXT) " +
                 " ORDER BY r." + COLUMN_TIMESTAMP + " DESC LIMIT 1) AS " + S_COLUMN_VALUE +
@@ -506,8 +504,9 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
     public Cursor getFavoriteSensorsCursor() {
         SQLiteDatabase db = this.getReadableDatabase();
-        // Dołączamy też wartość
-        String query = "SELECT s." + S_COLUMN_ID + " AS _id, s.*, " +
+        String query = "SELECT s." + S_COLUMN_ID + " AS _id, " +
+                "s." + S_COLUMN_ID + " AS " + COLUMN_SENSOR_ID + ", " +
+                "s.*, " +
                 "g." + G_COLUMN_NAME + " AS gateway_name, " +
                 "(SELECT " + COLUMN_VALUE + " FROM " + TABLE_READINGS + " r " +
                 " WHERE r." + COLUMN_SENSOR_ID + " = CAST(s." + S_COLUMN_ID + " AS TEXT) " +
@@ -521,8 +520,9 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
     public Cursor getSensorsForFolderCursor(long folderId) {
         SQLiteDatabase db = this.getReadableDatabase();
-        // Dołączamy też wartość
-        String query = "SELECT s." + S_COLUMN_ID + " AS _id, s.*, " +
+        String query = "SELECT s." + S_COLUMN_ID + " AS _id, " +
+                "s." + S_COLUMN_ID + " AS " + COLUMN_SENSOR_ID + ", " +
+                "s.*, " +
                 "g." + G_COLUMN_NAME + " AS gateway_name, " +
                 "(SELECT " + COLUMN_VALUE + " FROM " + TABLE_READINGS + " r " +
                 " WHERE r." + COLUMN_SENSOR_ID + " = CAST(s." + S_COLUMN_ID + " AS TEXT) " +
@@ -547,15 +547,13 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
     public boolean isFavoriteSensor(long sensorId) {
         SQLiteDatabase db = this.getReadableDatabase();
-        try (Cursor c = db.query(TABLE_FAVORITE_SENSORS, new String[]{FAV_S_SENSOR_ID}, FAV_S_SENSOR_ID + " = ?",
-                new String[]{String.valueOf(sensorId)}, null, null, null, "1")) {
+        try (Cursor c = db.query(TABLE_FAVORITE_SENSORS, new String[]{FAV_S_SENSOR_ID}, FAV_S_SENSOR_ID + " = ?", new String[]{String.valueOf(sensorId)}, null, null, null, "1")) {
             return c.getCount() > 0;
         }
     }
     public boolean isFavoriteGateway(long gatewayId) {
         SQLiteDatabase db = this.getReadableDatabase();
-        try (Cursor c = db.query(TABLE_FAVORITE_GATEWAYS, new String[]{FAV_G_GATEWAY_ID}, FAV_G_GATEWAY_ID + " = ?",
-                new String[]{String.valueOf(gatewayId)}, null, null, null, "1")) {
+        try (Cursor c = db.query(TABLE_FAVORITE_GATEWAYS, new String[]{FAV_G_GATEWAY_ID}, FAV_G_GATEWAY_ID + " = ?", new String[]{String.valueOf(gatewayId)}, null, null, null, "1")) {
             return c.getCount() > 0;
         }
     }
@@ -563,24 +561,17 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     public Sensor getSensorMetadata(long sensorId) {
         Sensor sensorData = null;
         SQLiteDatabase db = this.getReadableDatabase();
-        try (Cursor cursor = db.query(TABLE_SENSORS,
-                new String[]{S_COLUMN_INTERVAL, S_COLUMN_REPORTING_ENABLED},
-                S_COLUMN_ID + " = ?",
-                new String[]{String.valueOf(sensorId)},
-                null, null, null)) {
-
-            // Usunięto sprawdzenie "cursor != null", bo db.query zawsze zwraca obiekt Cursor
+        try (Cursor cursor = db.query(TABLE_SENSORS, new String[]{S_COLUMN_INTERVAL, S_COLUMN_REPORTING_ENABLED}, S_COLUMN_ID + " = ?", new String[]{String.valueOf(sensorId)}, null, null, null)) {
             if (cursor.moveToFirst()) {
                 sensorData = new Sensor();
                 int intervalIndex = cursor.getColumnIndex(S_COLUMN_INTERVAL);
-                if (!cursor.isNull(intervalIndex)) {
-                    sensorData.intervalSeconds = cursor.getInt(intervalIndex);
-                }
+                if (!cursor.isNull(intervalIndex)) sensorData.intervalSeconds = cursor.getInt(intervalIndex);
                 int reportingIndex = cursor.getColumnIndex(S_COLUMN_REPORTING_ENABLED);
                 sensorData.reportingEnabled = cursor.getInt(reportingIndex) != 0;
             }
         } catch (Exception e) {
-            Log.e("DatabaseHelper", "Błąd przy pobieraniu metadanych czujnika", e);
+            // POPRAWKA: Przekazanie wyjątku
+            Log.e("DatabaseHelper", "Error getting metadata", e);
         }
         return sensorData;
     }
@@ -592,7 +583,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         try {
             db.update(TABLE_SENSORS, values, S_COLUMN_ID + " = ?", new String[]{String.valueOf(sensorId)});
         } catch (Exception e) {
-            Log.e("DatabaseHelper", "Błąd aktualizacji statusu raportowania w DB", e);
+            // POPRAWKA: Przekazanie wyjątku
+            Log.e("DatabaseHelper", "Error updating status", e);
         }
     }
 }
