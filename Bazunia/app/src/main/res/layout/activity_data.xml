@@ -16,57 +16,80 @@
         <com.google.android.material.appbar.MaterialToolbar
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
-            android:layout_height="?attr/actionBarSize">
+            android:layout_height="?attr/actionBarSize"
+            android:paddingStart="0dp"
+            android:paddingEnd="4dp"> <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnBack"
                 style="?attr/materialIconButtonStyle"
+                android:layout_width="?attr/appButtonHeight"
+                android:layout_height="?attr/appButtonHeight"
+                app:icon="@drawable/ic_arrow_back"
+                app:iconSize="?attr/appIconSize"
+                android:contentDescription="@string/back_content_description"
+                app:tint="?attr/colorOnSurface"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent"/>
+
+            <LinearLayout
+                android:id="@+id/buttonsContainer"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                app:icon="@drawable/ic_arrow_back"
-                android:contentDescription="@string/back_content_description"
-                android:layout_gravity="start"
-                app:tint="?attr/colorOnSurface" />
+                android:orientation="horizontal"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnTestConnection"
+                    style="?attr/materialIconButtonStyle"
+                    android:layout_width="?attr/appButtonHeight"
+                    android:layout_height="?attr/appButtonHeight"
+                    app:icon="@drawable/ic_connect_test"
+                    app:iconSize="?attr/appIconSize"
+                    android:contentDescription="@string/test_connection_desc"
+                    app:tint="?attr/colorOnSurface"
+                    android:layout_marginEnd="0dp" /> <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnSettings"
+                style="?attr/materialIconButtonStyle"
+                android:layout_width="?attr/appButtonHeight"
+                android:layout_height="?attr/appButtonHeight"
+                app:icon="@drawable/ic_settings"
+                app:iconSize="?attr/appIconSize"
+                android:contentDescription="@string/settings_content_description"
+                app:tint="?attr/colorOnSurface"
+                android:layout_marginEnd="0dp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnRefresh"
+                    style="?attr/materialIconButtonStyle"
+                    android:layout_width="?attr/appButtonHeight"
+                    android:layout_height="?attr/appButtonHeight"
+                    app:icon="@drawable/ic_refresh"
+                    app:iconSize="?attr/appIconSize"
+                    android:contentDescription="@string/refresh_content_description"
+                    app:tint="?attr/colorOnSurface" />
+            </LinearLayout>
 
             <TextView
-                android:layout_width="wrap_content"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:text="@string/data_activity_title"
                 android:textAppearance="?attr/textAppearanceTitleLarge"
-                android:layout_gravity="center_horizontal" />
+                android:gravity="center_vertical|start"
+                android:maxLines="1"
+                android:ellipsize="end"
+                android:layout_marginStart="8dp"
+                app:layout_constraintStart_toEndOf="@id/btnBack"
+                app:layout_constraintEnd_toStartOf="@id/buttonsContainer"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent" />
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnTestConnection"
-                style="?attr/myIconButtonTextStyle"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                app:icon="@drawable/ic_connect_test"
-                android:contentDescription="@string/test_connection_desc"
-                android:layout_gravity="end"
-                android:layout_marginEnd="8dp"
-                app:tint="?attr/colorOnSurface" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnSettings"
-                style="?attr/myIconButtonTextStyle"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                app:icon="@drawable/ic_settings"
-                android:contentDescription="@string/settings_content_description"
-                android:layout_gravity="end"
-                android:layout_marginEnd="8dp"
-                app:tint="?attr/colorOnSurface" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnRefresh"
-                style="?attr/myIconButtonTextStyle"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                app:icon="@drawable/ic_refresh"
-                android:contentDescription="@string/refresh_content_description"
-                android:layout_gravity="end"
-                android:layout_marginEnd="16dp"
-                app:tint="?attr/colorOnSurface" />
+        </androidx.constraintlayout.widget.ConstraintLayout>
 
         </com.google.android.material.appbar.MaterialToolbar>
     </com.google.android.material.appbar.AppBarLayout>

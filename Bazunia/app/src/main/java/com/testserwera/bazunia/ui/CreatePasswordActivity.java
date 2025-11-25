@@ -11,13 +11,10 @@ import android.widget.ProgressBar;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
-import androidx.appcompat.app.AppCompatActivity;
 
 import com.testserwera.bazunia.R;
 import com.testserwera.bazunia.data.VpsClientService;
-import com.testserwera.bazunia.utils.AppearanceManager;
 import com.testserwera.bazunia.utils.Constants;
-import com.testserwera.bazunia.utils.LocaleManager;
 import com.google.android.material.button.MaterialButton;
 
 import org.json.JSONException;
@@ -33,7 +30,8 @@ import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
 
-public class CreatePasswordActivity extends AppCompatActivity {
+// ZMIANA: BaseActivity
+public class CreatePasswordActivity extends BaseActivity {
 
     private static final String TAG = "CreatePasswordActivity";
 
@@ -43,28 +41,23 @@ public class CreatePasswordActivity extends AppCompatActivity {
     private OkHttpClient httpClient;
     private String currentJwtToken;
 
-    @Override
-    protected void attachBaseContext(Context newBase) {
-        LocaleManager localeManager = new LocaleManager(newBase);
-        super.attachBaseContext(localeManager.setLocale(newBase));
-    }
+    // ZMIANA: Usunięto attachBaseContext - BaseActivity to obsługuje
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        new AppearanceManager(this).applyAppearance(this);
+        // ZMIANA: Usunięto ręczne AppearanceManager
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_create_password);
 
         httpClient = new OkHttpClient();
 
-        // Pobierz token JWT zapisany przez LoginActivity
         SharedPreferences authPrefs = getSharedPreferences(LoginActivity.AUTH_PREFS, Context.MODE_PRIVATE);
         currentJwtToken = authPrefs.getString(LoginActivity.KEY_JWT_TOKEN, null);
 
         if (currentJwtToken == null) {
             Log.e(TAG, "Krytyczny błąd: Brak tokena JWT na ekranie tworzenia hasła. Wracam do logowania.");
             Toast.makeText(this, "Błąd sesji, zaloguj się ponownie", Toast.LENGTH_LONG).show();
-            finish(); // Wróć do LoginActivity
+            finish();
             return;
         }
 
@@ -109,8 +102,8 @@ public class CreatePasswordActivity extends AppCompatActivity {
         RequestBody body = RequestBody.create(json.toString(), MediaType.get("application/json; charset=utf-8"));
 
         Request request = new Request.Builder()
-                .url(Constants.SET_PASSWORD_ENDPOINT) // Używamy nowego endpointu
-                .header("Authorization", "Bearer " + currentJwtToken) // Używamy tokena z logowania
+                .url(Constants.SET_PASSWORD_ENDPOINT)
+                .header("Authorization", "Bearer " + currentJwtToken)
                 .post(body)
                 .build();
 
@@ -126,13 +119,12 @@ public class CreatePasswordActivity extends AppCompatActivity {
 
             @Override
             public void onResponse(@NonNull Call call, @NonNull Response response) {
-
                 try (Response r = response) {
                     if (r.isSuccessful()) {
                         Log.i(TAG, "Hasło pomyślnie ustawione na serwerze.");
                         runOnUiThread(() -> {
                             Toast.makeText(CreatePasswordActivity.this, R.string.toast_password_set_success, Toast.LENGTH_SHORT).show();
-                            startApp(); // Uruchom główną aplikację
+                            startApp();
                         });
                     } else {
                         Log.w(TAG, "Serwer odrzucił ustawienie hasła, kod: " + r.code());
@@ -147,13 +139,11 @@ public class CreatePasswordActivity extends AppCompatActivity {
     }
 
     private void startApp() {
-        // Ta metoda jest skopiowana z LoginActivity
         Log.d(TAG, "Ustawiono hasło. Uruchamiam serwis i MainActivity.");
         Intent serviceIntent = new Intent(this, VpsClientService.class);
         startForegroundService(serviceIntent);
         Intent intent = new Intent(this, MainActivity.class);
         startActivity(intent);
-        // Zakończ wszystkie aktywności związane z logowaniem (Login i CreatePassword)
         finishAffinity();
     }
 

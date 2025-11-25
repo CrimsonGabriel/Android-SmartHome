@@ -5,8 +5,8 @@
     android:layout_height="wrap_content"
     android:paddingStart="40dp"
     android:paddingEnd="16dp"
-    android:paddingTop="16dp"
-    android:paddingBottom="16dp"
+    android:paddingTop="12dp"
+    android:paddingBottom="12dp"
     android:gravity="center_vertical"
     android:background="?android:attr/selectableItemBackground">
 
@@ -34,8 +34,8 @@
 
         <ImageView
             android:id="@+id/icon_mute_threshold"
-            android:layout_width="18dp"
-            android:layout_height="18dp"
+            android:layout_width="?attr/appIconSize"
+            android:layout_height="?attr/appIconSize"
             android:layout_marginEnd="6dp"
             android:src="@drawable/ic_notif_off"
             android:visibility="gone"
@@ -44,8 +44,8 @@
 
         <ImageView
             android:id="@+id/icon_mute_battery"
-            android:layout_width="18dp"
-            android:layout_height="18dp"
+            android:layout_width="?attr/appIconSize"
+            android:layout_height="?attr/appIconSize"
             android:layout_marginEnd="6dp"
             android:src="@drawable/ic_battery_off"
             android:visibility="gone"
@@ -54,8 +54,8 @@
 
         <ImageView
             android:id="@+id/battery_icon"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
+            android:layout_width="?attr/appIconSize"
+            android:layout_height="?attr/appIconSize"
             android:layout_marginEnd="4dp"
             android:contentDescription="@string/desc_battery_level"
             tools:src="@drawable/ic_battery_full" />

@@ -22,7 +22,6 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -62,11 +61,11 @@ import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
 
-public class DataActivity extends AppCompatActivity implements FolderAdapter.FolderCallback {
+// ZMIANA: BaseActivity
+public class DataActivity extends BaseActivity implements FolderAdapter.FolderCallback {
 
     private static final String TAG = "DataActivity";
 
-    // Pola finalne dla list i map
     private final List<Object> displayItems = new ArrayList<>();
     private final Map<Long, Boolean> folderExpansionState = new HashMap<>();
     private final Map<String, Boolean> gatewayExpansionState = new HashMap<>();
@@ -92,24 +91,19 @@ public class DataActivity extends AppCompatActivity implements FolderAdapter.Fol
     private Gson gson;
     private boolean showSyncToast = false;
 
-    // --- Stan Filtrów ---
     private String filterQuery = "";
-    private String filterType = null; // null = wszystkie
-    private Long filterGatewayId = null; // null = wszystkie
+    private String filterType = null;
+    private Long filterGatewayId = null;
     private FloatingActionButton fabFilter;
 
-    @Override
-    protected void attachBaseContext(Context newBase) {
-        LocaleManager localeManager = new LocaleManager(newBase);
-        super.attachBaseContext(localeManager.setLocale(newBase));
-    }
+    // ZMIANA: Usunięto attachBaseContext
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         appearanceManager = new AppearanceManager(this);
         currentTextScale = appearanceManager.getTextScale();
         currentButtonScale = appearanceManager.getButtonScale();
-        appearanceManager.applyAppearance(this);
+        // ZMIANA: Usunięto applyAppearance
 
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_data);
@@ -159,22 +153,15 @@ public class DataActivity extends AppCompatActivity implements FolderAdapter.Fol
 
     private void updateFilterFabState() {
         if (isFilterActive()) {
-            // Zmień kolor ikonki na czerwony (lub inny ostrzegawczy), jeśli filtr jest aktywny
-            // Uwaga: Wymaga zdefiniowania koloru error w colors.xml lub użycia systemowego
             fabFilter.setImageTintList(getColorStateList(android.R.color.holo_red_light));
         } else {
-            // Domyślny kolor (z tematu)
             fabFilter.setImageTintList(null);
         }
     }
 
     private void showFilterBottomSheet() {
         BottomSheetDialog bottomSheetDialog = new BottomSheetDialog(this);
-
-        // ZMIANA: Używamy findViewById(android.R.id.content) jako parent, ale attach=false.
-        // To naprawia ostrzeżenie "Avoid passing null as the view root".
         View sheetView = getLayoutInflater().inflate(R.layout.bottom_sheet_filter, findViewById(android.R.id.content), false);
-
         bottomSheetDialog.setContentView(sheetView);
 
         TextInputEditText editSearch = sheetView.findViewById(R.id.editSearchFilter);
@@ -183,12 +170,10 @@ public class DataActivity extends AppCompatActivity implements FolderAdapter.Fol
         MaterialButton btnClear = sheetView.findViewById(R.id.btnClearFilter);
         MaterialButton btnApply = sheetView.findViewById(R.id.btnApplyFilter);
 
-        // Ustawienie obecnych wartości
         editSearch.setText(filterQuery);
 
-        // --- Konfiguracja listy Typów ---
         List<String> types = dbHelper.getAllSensorTypes();
-        types.add(0, getString(R.string.filter_all_types)); // Opcja "Wszystkie"
+        types.add(0, getString(R.string.filter_all_types));
         ArrayAdapter<String> typeAdapter = new ArrayAdapter<>(this, android.R.layout.simple_dropdown_item_1line, types);
         autoType.setAdapter(typeAdapter);
         if (filterType != null) {
@@ -197,7 +182,6 @@ public class DataActivity extends AppCompatActivity implements FolderAdapter.Fol
             autoType.setText(types.get(0), false);
         }
 
-        // --- Konfiguracja listy Bramek ---
         List<Gateway> gateways = dbHelper.getAllGatewaysList();
         List<String> gatewayNames = new ArrayList<>();
         gatewayNames.add(getString(R.string.filter_all_gateways));
@@ -205,14 +189,13 @@ public class DataActivity extends AppCompatActivity implements FolderAdapter.Fol
         for (int i = 0; i < gateways.size(); i++) {
             gatewayNames.add(gateways.get(i).getName());
             if (filterGatewayId != null && filterGatewayId == gateways.get(i).getId()) {
-                selectedGatewayIndex = i + 1; // +1 bo "Wszystkie" jest na 0
+                selectedGatewayIndex = i + 1;
             }
         }
         ArrayAdapter<String> gatewayAdapter = new ArrayAdapter<>(this, android.R.layout.simple_dropdown_item_1line, gatewayNames);
         autoGateway.setAdapter(gatewayAdapter);
         autoGateway.setText(gatewayNames.get(selectedGatewayIndex), false);
 
-        // --- Obsługa Przycisków ---
         btnClear.setOnClickListener(v -> {
             filterQuery = "";
             filterType = null;
@@ -257,7 +240,6 @@ public class DataActivity extends AppCompatActivity implements FolderAdapter.Fol
 
         boolean match = true;
 
-        // 1. Filtr Tekstowy (Nazwa czujnika, ID, Typ, Opis, Nazwa Bramki)
         if (!filterQuery.isEmpty()) {
             String name = cursor.getString(cursor.getColumnIndexOrThrow("name"));
             String type = cursor.getString(cursor.getColumnIndexOrThrow("type"));
@@ -271,7 +253,6 @@ public class DataActivity extends AppCompatActivity implements FolderAdapter.Fol
             if (!textMatch) match = false;
         }
 
-        // 2. Filtr Typu
         if (match && filterType != null) {
             String type = cursor.getString(cursor.getColumnIndexOrThrow("type"));
             if (type == null || !type.equalsIgnoreCase(filterType)) {
@@ -279,7 +260,6 @@ public class DataActivity extends AppCompatActivity implements FolderAdapter.Fol
             }
         }
 
-        // 3. Filtr Bramki
         if (match && filterGatewayId != null) {
             long gwId = cursor.getLong(cursor.getColumnIndexOrThrow("gateway_id"));
             if (gwId != filterGatewayId) {
@@ -295,7 +275,6 @@ public class DataActivity extends AppCompatActivity implements FolderAdapter.Fol
 
         boolean match = true;
 
-        // 1. Filtr Tekstowy dla bramki
         if (!filterQuery.isEmpty()) {
             String name = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.G_COLUMN_NAME));
             String desc = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.G_COLUMN_DESCRIPTION));
@@ -306,7 +285,6 @@ public class DataActivity extends AppCompatActivity implements FolderAdapter.Fol
             }
         }
 
-        // 2. Filtr ID Bramki (Explicit select)
         if (match && filterGatewayId != null) {
             long id = cursor.getLong(cursor.getColumnIndexOrThrow(DatabaseHelper.G_COLUMN_ID));
             if (id != filterGatewayId) {
@@ -314,8 +292,6 @@ public class DataActivity extends AppCompatActivity implements FolderAdapter.Fol
             }
         }
 
-        // Jeśli wybrano filtr TYPU czujnika, sama bramka (jako nagłówek) nie pasuje,
-        // chyba że ma dzieci (co sprawdzamy w loadDisplayListFromDb)
         if (filterType != null) {
             match = false;
         }
@@ -323,14 +299,9 @@ public class DataActivity extends AppCompatActivity implements FolderAdapter.Fol
         return match;
     }
 
-
-    // --- GŁÓWNA METODA ŁADOWANIA DANYCH ---
     @SuppressLint("NotifyDataSetChanged")
     private void loadDisplayListFromDb() {
-        // 1. Uruchamiamy wątek w tle, żeby nie blokować UI (nie lagować)
         new Thread(() -> {
-
-            // Tutaj robimy całą ciężką pracę na bazie danych
             List<Object> tempItems = new ArrayList<>();
             boolean filtering = isFilterActive();
 
@@ -355,8 +326,6 @@ public class DataActivity extends AppCompatActivity implements FolderAdapter.Fol
 
                     if (gwMatches || !matchingSensors.isEmpty()) {
                         String stateKey = "fav_gw_" + gatewayId;
-                        // Uwaga: dostęp do mapy expansionState musi być ostrożny, ale odczyt jest zazwyczaj ok.
-                        // Dla pewności w przyszłości warto użyć ConcurrentHashMap, ale tu przy odczycie nie powinno wywalić.
                         boolean gwExpanded = filtering ? !matchingSensors.isEmpty() : Boolean.TRUE.equals(gatewayExpansionState.get(stateKey));
 
                         favoriteChildren.add(new FolderAdapter.GatewayItem(favGateways, PARENT_ID_FAVORITE, true, gwExpanded));
@@ -396,7 +365,6 @@ public class DataActivity extends AppCompatActivity implements FolderAdapter.Fol
 
                     List<Object> folderChildren = new ArrayList<>();
 
-                    // Bramki w folderze
                     try (Cursor gatewaysInFolder = dbHelper.getGatewaysForFolderCursor(folderId)) {
                         while (gatewaysInFolder.moveToNext()) {
                             long gatewayId = gatewaysInFolder.getLong(gatewaysInFolder.getColumnIndexOrThrow(DatabaseHelper.G_COLUMN_ID));
@@ -426,7 +394,6 @@ public class DataActivity extends AppCompatActivity implements FolderAdapter.Fol
                         }
                     }
 
-                    // Sensory luzem w folderze
                     try (Cursor sensorsInFolder = dbHelper.getSensorsForFolderCursor(folderId)) {
                         while (sensorsInFolder.moveToNext()) {
                             String gwName = sensorsInFolder.getString(sensorsInFolder.getColumnIndexOrThrow("gateway_name"));
@@ -490,14 +457,13 @@ public class DataActivity extends AppCompatActivity implements FolderAdapter.Fol
                 }
             }
 
-            // 2. Po zakończeniu pracy w tle, wracamy na wątek główny, żeby odświeżyć widok
             runOnUiThread(() -> {
                 displayItems.clear();
                 displayItems.addAll(tempItems);
                 adapter.notifyDataSetChanged();
             });
 
-        }).start(); // Start wątku
+        }).start();
     }
 
     // --- POZOSTAŁE METODY (LOGIKA BIZNESOWA) ---
@@ -800,7 +766,7 @@ public class DataActivity extends AppCompatActivity implements FolderAdapter.Fol
                 if (folder.color != null && !folder.color.isEmpty()) {
                     initialColor = Color.parseColor(folder.color);
                 }
-            } catch (IllegalArgumentException ignore) { }
+            } catch (IllegalArgumentException e) { Log.w(TAG, "Błąd koloru", e); }
         } else {
             editColor.setText("#");
         }
@@ -821,7 +787,7 @@ public class DataActivity extends AppCompatActivity implements FolderAdapter.Fol
                     int parsedColor = Color.parseColor(input);
                     colorPreview.setBackgroundColor(parsedColor);
                     currentColor[0] = parsedColor;
-                } catch (IllegalArgumentException ignore) { }
+                } catch (IllegalArgumentException e) { Log.w(TAG, "Błąd koloru", e); }
             }
         });
 
@@ -1114,7 +1080,7 @@ public class DataActivity extends AppCompatActivity implements FolderAdapter.Fol
             try {
                 json.put("id", gatewayId);
             } catch (Exception e) {
-                // ignored
+                Log.e(TAG, "JSON Error", e);
             }
             RequestBody body = RequestBody.create(json.toString(), MediaType.get("application/json; charset=utf-8"));
             request = new Request.Builder().url(url).addHeader("Authorization", "Bearer " + jwtToken).post(body).build();
@@ -1123,7 +1089,7 @@ public class DataActivity extends AppCompatActivity implements FolderAdapter.Fol
         }
         httpClient.newCall(request).enqueue(new Callback() {
             @Override
-            public void onFailure(@NonNull Call call, @NonNull IOException e) { /* ... */ }
+            public void onFailure(@NonNull Call call, @NonNull IOException e) { Log.e(TAG, "Fav error", e); }
 
             @Override
             public void onResponse(@NonNull Call call, @NonNull Response response) {
@@ -1148,7 +1114,7 @@ public class DataActivity extends AppCompatActivity implements FolderAdapter.Fol
             try {
                 json.put("id", sensorId);
             } catch (Exception e) {
-                // ignored
+                Log.e(TAG, "JSON Error", e);
             }
             RequestBody body = RequestBody.create(json.toString(), MediaType.get("application/json; charset=utf-8"));
             request = new Request.Builder().url(url).addHeader("Authorization", "Bearer " + jwtToken).post(body).build();
@@ -1157,7 +1123,7 @@ public class DataActivity extends AppCompatActivity implements FolderAdapter.Fol
         }
         httpClient.newCall(request).enqueue(new Callback() {
             @Override
-            public void onFailure(@NonNull Call call, @NonNull IOException e) { /* ... */ }
+            public void onFailure(@NonNull Call call, @NonNull IOException e) { Log.e(TAG, "Fav error", e); }
 
             @Override
             public void onResponse(@NonNull Call call, @NonNull Response response) {
@@ -1311,7 +1277,7 @@ public class DataActivity extends AppCompatActivity implements FolderAdapter.Fol
             @Override
             public void onReceive(Context context, Intent intent) {
                 long now = System.currentTimeMillis();
-               
+
                 if (now - lastUpdateTimestamp > 500) {
                     lastUpdateTimestamp = now;
                     loadDisplayListFromDb();

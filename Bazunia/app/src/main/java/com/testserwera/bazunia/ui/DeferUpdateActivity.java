@@ -8,14 +8,14 @@ import android.os.Bundle;
 import android.util.Log;
 import android.widget.Toast;
 import androidx.annotation.NonNull;
-import androidx.appcompat.app.AppCompatActivity;
+// ZMIANA: BaseActivity
 import com.testserwera.bazunia.utils.Constants;
 import okhttp3.*;
 import org.json.JSONObject;
 import java.io.IOException;
 
-
-public class DeferUpdateActivity extends AppCompatActivity {
+// ZMIANA: Dziedziczenie po BaseActivity (nawet dla Activity bez UI warto zachować spójność)
+public class DeferUpdateActivity extends BaseActivity {
 
     private static final String TAG = "DeferUpdateActivity";
     private static final String UPDATE_PREFS = "UpdatePrefs";
@@ -23,7 +23,7 @@ public class DeferUpdateActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        // Bez UI - działamy w tle
+        // Bez UI - działamy w tle, ale BaseActivity się zainicjuje (Locale/Theme)
 
         long assignmentId = getIntent().getLongExtra("ASSIGNMENT_ID", -1);
         String urgency = getIntent().getStringExtra("URGENCY");
@@ -39,26 +39,20 @@ public class DeferUpdateActivity extends AppCompatActivity {
     private void handleDefer(long id, String urgency, int notifId) {
         SharedPreferences prefs = getSharedPreferences(UPDATE_PREFS, Context.MODE_PRIVATE);
 
-        // 1. Zwiększamy licznik odroczeń dla tego konkretnego ID
         String countKey = "defer_count_" + id;
         int currentCount = prefs.getInt(countKey, 0);
         prefs.edit().putInt(countKey, currentCount + 1).apply();
 
-        // 2. Logika Snooze (5 minut)
         long snoozeTime = 5 * 60 * 1000;
         prefs.edit().putLong("snooze_" + id, System.currentTimeMillis() + snoozeTime).apply();
 
-        // 3. Usuń powiadomienie
         NotificationManager manager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
         if (manager != null) manager.cancel(notifId);
 
-        // 4. Komunikaty (Twoja poprzednia logika)
         if ("REQUIRED".equals(urgency)) {
-            // Jeśli to było pierwsze (i ostatnie) odłożenie
             if (currentCount == 0) {
                 Toast.makeText(this, R.string.toast_update_postponed_timer, Toast.LENGTH_SHORT).show();
             } else {
-                // Teoretycznie tu nie wejdzie, bo przycisk zniknie, ale dla bezpieczeństwa:
                 Toast.makeText(this, "Tej aktualizacji nie można już odłożyć!", Toast.LENGTH_SHORT).show();
             }
         } else {
@@ -81,10 +75,8 @@ public class DeferUpdateActivity extends AppCompatActivity {
         OkHttpClient client = new OkHttpClient();
         JSONObject json = new JSONObject();
         try {
-            // Wpisujemy status na sztywno, co rozwiązuje warning
             json.put("status", "DEFERRED");
         } catch (Exception e) {
-            // Rozwiązanie problemu "Empty catch block"
             Log.e(TAG, "Błąd tworzenia JSON statusu", e);
         }
 

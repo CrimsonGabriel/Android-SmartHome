@@ -17,16 +17,15 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
-import androidx.appcompat.app.AppCompatActivity;
+// import androidx.appcompat.app.AppCompatActivity; // ZMIANA: Niepotrzebne
 
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.button.MaterialButton;
 import com.google.zxing.BarcodeFormat;
 import com.journeyapps.barcodescanner.BarcodeEncoder;
 import com.testserwera.bazunia.R;
-import com.testserwera.bazunia.utils.AppearanceManager;
 import com.testserwera.bazunia.utils.Constants;
-import com.testserwera.bazunia.utils.LocaleManager;
+// import com.testserwera.bazunia.utils.LocaleManager; // ZMIANA: Obsługiwane w BaseActivity
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -41,7 +40,8 @@ import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
 
-public class AccountSettingsActivity extends AppCompatActivity {
+// ZMIANA: BaseActivity
+public class AccountSettingsActivity extends BaseActivity {
 
     private static final String TAG = "AccountSettingsActivity";
     private static final String PREFS_2FA = "TwoFAPrefs";
@@ -61,22 +61,14 @@ public class AccountSettingsActivity extends AppCompatActivity {
     private MaterialButton btnConfirmDisable2FA;
     private ProgressBar progressBar2FA;
 
-    // Zmieniono na zmienną lokalną w onCreate (pole usunięte)
-    // private MaterialButton btnChangePassword;
-
     private String currentJwtToken;
     private String currentSecretKey;
 
-
-    @Override
-    protected void attachBaseContext(Context newBase) {
-        LocaleManager localeManager = new LocaleManager(newBase);
-        super.attachBaseContext(localeManager.setLocale(newBase));
-    }
+    // ZMIANA: Usunięto attachBaseContext (BaseActivity to robi)
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        new AppearanceManager(this).applyAppearance(this);
+        // ZMIANA: Usunięto AppearanceManager (BaseActivity to robi)
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_account_settings);
 
@@ -98,7 +90,6 @@ public class AccountSettingsActivity extends AppCompatActivity {
         btnConfirmDisable2FA = findViewById(R.id.btnConfirmDisable2FA);
         progressBar2FA = findViewById(R.id.progressBar2FA);
 
-        // Zmienna lokalna
         MaterialButton btnChangePassword = findViewById(R.id.btnChangePassword);
 
         setup2FAListeners();
@@ -111,8 +102,6 @@ public class AccountSettingsActivity extends AppCompatActivity {
         retrieveJwtToken();
         fetch2FAStatusFromServer();
     }
-
-    // --- CAŁA LOGIKA 2FA JEST PRZENIESIONA TUTAJ ---
 
     private void setup2FAListeners() {
         btnToggle2FA.setOnClickListener(v -> toggle2FA());
@@ -133,7 +122,6 @@ public class AccountSettingsActivity extends AppCompatActivity {
     }
 
     private void retrieveJwtToken() {
-        // Używamy tych samych SharedPreferences, co LoginActivity
         SharedPreferences authPrefs = getSharedPreferences(LoginActivity.AUTH_PREFS, Context.MODE_PRIVATE);
         currentJwtToken = authPrefs.getString(LoginActivity.KEY_JWT_TOKEN, null);
 
@@ -142,7 +130,6 @@ public class AccountSettingsActivity extends AppCompatActivity {
         } else {
             Log.e(TAG, "Nie znaleziono tokena JWT w SharedPreferences. Użytkownik nie jest zalogowany.");
             Toast.makeText(this, "Błąd: Brak zalogowanego użytkownika (brak tokena).", Toast.LENGTH_LONG).show();
-            // Możemy też zamknąć aktywność, bo nic tu nie zadziała
             finish();
         }
     }

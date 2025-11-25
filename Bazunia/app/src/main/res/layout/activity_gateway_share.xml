@@ -12,10 +12,11 @@
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btnBack"
         style="@style/Widget.Material3.Button.IconButton"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_width="?attr/appButtonHeight"
+        android:layout_height="?attr/appButtonHeight"
         android:contentDescription="@string/back_content_description"
         app:icon="@drawable/ic_arrow_back"
+        app:iconSize="?attr/appIconSize"
         app:iconTint="?attr/colorOnSurface"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
@@ -64,6 +65,7 @@
             android:id="@+id/spinnerGateways"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:minHeight="?attr/appButtonHeight"
             android:inputType="none"
             android:hint="@string/sharing_select_gateway_label"
             tools:text="Bramka w Salonie" />
@@ -87,6 +89,7 @@
             android:id="@+id/spinnerUsers"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:minHeight="?attr/appButtonHeight"
             android:inputType="none"
             android:hint="@string/sharing_select_user_label"
             tools:text="jan.kowalski@example.com"/>
@@ -132,6 +135,7 @@
                     android:id="@+id/radioView"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:minHeight="?attr/appButtonHeight"
                     android:text="@string/perm_view"
                     android:checked="true"
                     android:layout_marginBottom="4dp"/>
@@ -140,6 +144,7 @@
                     android:id="@+id/radioFull"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:minHeight="?attr/appButtonHeight"
                     android:text="@string/perm_full"/>
             </RadioGroup>
         </LinearLayout>
@@ -150,6 +155,7 @@
         style="@style/Widget.Material3.Button"
         android:layout_width="0dp"
         android:layout_height="56dp"
+        android:minHeight="?attr/appButtonHeight"
         android:text="@string/btn_share_add"
         android:layout_marginTop="24dp"
         app:icon="@drawable/ic_check"

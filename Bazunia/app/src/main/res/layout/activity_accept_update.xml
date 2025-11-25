@@ -23,7 +23,6 @@
         android:textStyle="bold"
         android:layout_marginBottom="16dp"/>
 
-    <!-- Pasek postępu -->
     <ProgressBar
         android:id="@+id/progressBar"
         style="?android:attr/progressBarStyleHorizontal"
@@ -45,6 +44,7 @@
         android:id="@+id/btnClose"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:minHeight="?attr/appButtonHeight"
         android:text="@string/update_btn_close"
         android:visibility="gone"
         android:layout_marginTop="24dp"/>

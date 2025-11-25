@@ -1,16 +1,36 @@
 <resources>
     <style name="Base.Theme.Bazunia" parent="Theme.Material3.DayNight.NoActionBar">
-        <item name="colorPrimary">#93CCEA</item>
-        <item name="colorOnPrimary">#00354A</item>
+        <item name="colorPrimary">#93CCEA</item> <item name="colorOnPrimary">#00354A</item>
         <item name="colorPrimaryContainer">#004D6A</item>
         <item name="colorOnPrimaryContainer">#CDE5FF</item>
-        <item name="colorSecondary">#B6C8D5</item>
-        <item name="colorOnSecondary">#21333E</item>
-        <item name="android:colorBackground">#191C1E</item>
-        <item name="colorOnBackground">#E2E2E5</item>
-        <item name="colorSurface">#191C1E</item>
-        <item name="colorOnSurface">#E2E2E5</item>
-        <item name="colorSurfaceVariant">#41484D</item>
+
+        <item name="android:colorBackground">#121212</item>
+        <item name="colorOnBackground">#E2E2E5</item> <item name="colorSurface">#121212</item>
+        <item name="colorOnSurface">#E2E2E5</item> <item name="colorSurfaceVariant">#41484D</item>
         <item name="colorOnSurfaceVariant">#C1C7CE</item>
+
+        <item name="appButtonHeight">@dimen/button_height_medium</item>
+        <item name="appIconSize">@dimen/icon_size_medium</item>
+        <item name="appCardCornerRadius">@dimen/corner_radius_medium</item>
+    </style>
+
+    <style name="Theme.Bazunia" parent="Base.Theme.Bazunia" />
+
+    <style name="Theme.Bazunia.ButtonSize.Small" parent="">
+        <item name="appButtonHeight">@dimen/button_height_small</item>
+        <item name="appIconSize">@dimen/icon_size_small</item>
+        <item name="appCardCornerRadius">@dimen/corner_radius_small</item>
+    </style>
+
+    <style name="Theme.Bazunia.ButtonSize.Medium" parent="">
+        <item name="appButtonHeight">@dimen/button_height_medium</item>
+        <item name="appIconSize">@dimen/icon_size_medium</item>
+        <item name="appCardCornerRadius">@dimen/corner_radius_medium</item>
+    </style>
+
+    <style name="Theme.Bazunia.ButtonSize.Large" parent="">
+        <item name="appButtonHeight">@dimen/button_height_large</item>
+        <item name="appIconSize">@dimen/icon_size_large</item>
+        <item name="appCardCornerRadius">@dimen/corner_radius_large</item>
     </style>
 </resources>

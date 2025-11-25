@@ -16,7 +16,7 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
-import androidx.appcompat.app.AppCompatActivity;
+// import androidx.appcompat.app.AppCompatActivity; // ZMIANA: Niepotrzebne
 
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.materialswitch.MaterialSwitch;
@@ -41,7 +41,8 @@ import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
 
-public class SettingsActivity extends AppCompatActivity {
+// ZMIANA: BaseActivity
+public class SettingsActivity extends BaseActivity {
     private static final String TAG = "SettingsActivity";
     public static final String NOTIFICATION_PREFS = "NotificationSettings";
     public static final String KEY_GLOBAL_NOTIFICATION_INTERVAL = "global_notification_interval_minutes";
@@ -63,28 +64,26 @@ public class SettingsActivity extends AppCompatActivity {
     private SharedPreferences authPrefs;
     private SharedPreferences notificationPrefs;
 
-    @Override
-    protected void attachBaseContext(Context newBase) {
-        LocaleManager tempLocaleManager = new LocaleManager(newBase);
-        super.attachBaseContext(tempLocaleManager.setLocale(newBase));
-    }
+    // ZMIANA: Usunięto attachBaseContext
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        appearanceManager = new AppearanceManager(this);
-        appearanceManager.applyAppearance(this);
+        // ZMIANA: Usunięto ręczne applyAppearance
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_settings);
 
+        // Inicjalizacja menedżerów (potrzebne do zapisu ustawień)
+        appearanceManager = new AppearanceManager(this);
         localeManager = new LocaleManager(this);
+        cleanupManager = new CleanupManager(this);
+
         httpClient = new OkHttpClient();
         authPrefs = getSharedPreferences(LoginActivity.AUTH_PREFS, Context.MODE_PRIVATE);
         notificationPrefs = getSharedPreferences(NOTIFICATION_PREFS, Context.MODE_PRIVATE);
-        cleanupManager = new CleanupManager(this);
 
         setupViews();
         loadCurrentAppearanceSettings();
-        fetchCurrentRetentionStatus(); // To update the summary text
+        fetchCurrentRetentionStatus();
         setupAppearanceListeners();
         setupClickListeners();
     }
@@ -101,51 +100,40 @@ public class SettingsActivity extends AppCompatActivity {
     }
 
     private void setupClickListeners() {
-        // 1. Global Interval (Server Sync)
         LinearLayout rowGlobalInterval = findViewById(R.id.rowGlobalInterval);
         rowGlobalInterval.setOnClickListener(v -> showGlobalIntervalDialog());
 
-        // 2. Notification Interval
         LinearLayout rowNotificationInterval = findViewById(R.id.rowNotificationInterval);
         rowNotificationInterval.setOnClickListener(v -> showNotificationIntervalDialog());
 
-        // 3. Cleanup & Retention
         LinearLayout rowCleanup = findViewById(R.id.rowCleanup);
         rowCleanup.setOnClickListener(v -> showCleanupDialog());
 
-        // 4. Account Settings
         LinearLayout rowAccount = findViewById(R.id.rowAccountSettings);
         rowAccount.setOnClickListener(v -> {
             Intent intent = new Intent(SettingsActivity.this, AccountSettingsActivity.class);
             startActivity(intent);
         });
 
-        // 5. Sharing Settings
         LinearLayout rowSharing = findViewById(R.id.rowSharingSettings);
         rowSharing.setOnClickListener(v -> {
             Intent intent = new Intent(SettingsActivity.this, GatewayShareActivity.class);
             startActivity(intent);
         });
 
-        // Back Button
         MaterialButton btnBackSettings = findViewById(R.id.btnBackSettings);
         btnBackSettings.setOnClickListener(v -> finish());
     }
 
     // ============================================================
-    //  DIALOGI I LOGIKA BIZNESOWA (Nowe podejście "Professional")
+    //  DIALOGI I LOGIKA BIZNESOWA
     // ============================================================
 
-    /**
-     * Shows a dialog to edit the Global Synchronization Interval.
-     * Contains logic previously in saveGlobalInterval().
-     */
     private void showGlobalIntervalDialog() {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle(getString(R.string.settings_interval_title));
         builder.setMessage(getString(R.string.settings_interval_hint));
 
-        // Create layout for dialog
         LinearLayout layout = new LinearLayout(this);
         layout.setOrientation(LinearLayout.VERTICAL);
         layout.setPadding(50, 20, 50, 10);
@@ -153,9 +141,11 @@ public class SettingsActivity extends AppCompatActivity {
         final TextInputEditText input = new TextInputEditText(this);
         input.setInputType(InputType.TYPE_CLASS_NUMBER);
         input.setHint(getString(R.string.default_interval_value));
-
-        // We will default to "60" or empty.
         input.setText(getString(R.string.default_interval_value));
+
+        // Dodajemy minimalną wysokość dla inputu w kodzie, jeśli to dialog programowy
+        // Choć lepiej byłoby użyć layoutu XML, tutaj robimy to programowo:
+        // (Opcjonalnie, BaseActivity zajmuje się głównie XMLami, tu zostawiamy standard)
 
         layout.addView(input);
         builder.setView(layout);
@@ -232,9 +222,6 @@ public class SettingsActivity extends AppCompatActivity {
         });
     }
 
-    /**
-     * Shows a dialog to edit the Notification Check Interval (Local preference).
-     */
     private void showNotificationIntervalDialog() {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle(getString(R.string.settings_notification_interval_title));
@@ -246,7 +233,6 @@ public class SettingsActivity extends AppCompatActivity {
         final TextInputEditText input = new TextInputEditText(this);
         input.setInputType(InputType.TYPE_CLASS_NUMBER);
 
-        // Load current value
         int savedInterval = notificationPrefs.getInt(KEY_GLOBAL_NOTIFICATION_INTERVAL, 0);
         if (savedInterval > 0) input.setText(String.valueOf(savedInterval));
 
@@ -277,10 +263,6 @@ public class SettingsActivity extends AppCompatActivity {
         Toast.makeText(this, R.string.toast_global_notification_interval_saved, Toast.LENGTH_SHORT).show();
     }
 
-    /**
-     * Shows a complex dialog for Cleanup Settings (Local & Server Request).
-     * This combines the local preferences and the server request button into one clean view.
-     */
     private void showCleanupDialog() {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle(getString(R.string.settings_data_cleanup_title));
@@ -289,12 +271,10 @@ public class SettingsActivity extends AppCompatActivity {
         layout.setOrientation(LinearLayout.VERTICAL);
         layout.setPadding(40, 30, 40, 10);
 
-        // --- LOCAL SETTINGS ---
         TextView headerLocal = new TextView(this);
         headerLocal.setText(getString(R.string.cleanup_local_label));
         headerLocal.setTextAppearance(androidx.appcompat.R.style.TextAppearance_AppCompat_Medium);
 
-        // FIX: Resolve 'colorPrimary' programmatically instead of hardcoded resource
         TypedValue typedValue = new TypedValue();
         getTheme().resolveAttribute(com.google.android.material.R.attr.colorPrimary, typedValue, true);
         headerLocal.setTextColor(typedValue.data);
@@ -306,13 +286,11 @@ public class SettingsActivity extends AppCompatActivity {
         daysLayout.setBoxBackgroundMode(TextInputLayout.BOX_BACKGROUND_OUTLINE);
         final TextInputEditText inputDays = new TextInputEditText(this);
         inputDays.setInputType(InputType.TYPE_CLASS_NUMBER);
-        // Load current
         int currentDays = cleanupManager.getCleanupDays();
         if (currentDays > 0) inputDays.setText(String.valueOf(currentDays));
         daysLayout.addView(inputDays);
         layout.addView(daysLayout);
 
-        // Spacer
         layout.addView(new View(this), new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 20));
 
         final TextInputLayout sizeLayout = new TextInputLayout(this);
@@ -320,30 +298,22 @@ public class SettingsActivity extends AppCompatActivity {
         sizeLayout.setBoxBackgroundMode(TextInputLayout.BOX_BACKGROUND_OUTLINE);
         final TextInputEditText inputSize = new TextInputEditText(this);
         inputSize.setInputType(InputType.TYPE_CLASS_NUMBER);
-        // Load current
         int currentSize = cleanupManager.getCleanupSize();
         if (currentSize > 0) inputSize.setText(String.valueOf(currentSize));
         sizeLayout.addView(inputSize);
         layout.addView(sizeLayout);
 
-        // --- SERVER BUTTON ---
-        // Spacer
         layout.addView(new View(this), new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 40));
 
         MaterialButton btnServerRequest = new MaterialButton(this);
         btnServerRequest.setText(getString(R.string.cleanup_gateway_label));
         btnServerRequest.setIconResource(R.drawable.ic_settings_server);
-        btnServerRequest.setOnClickListener(v -> {
-            // Close parent dialog and show the specific server request dialog
-            // Note: we just stack the dialogs here, or we could dismiss 'dialog' first if we had reference
-            showRetentionRequestDialog();
-        });
+        btnServerRequest.setOnClickListener(v -> showRetentionRequestDialog());
         layout.addView(btnServerRequest);
 
         builder.setView(layout);
 
         builder.setPositiveButton(getString(R.string.settings_interval_save_button), (dialog, which) -> {
-            // FIX: Null check before calling toString()
             String daysStr = (inputDays.getText() != null) ? inputDays.getText().toString() : "";
             String sizeStr = (inputSize.getText() != null) ? inputSize.getText().toString() : "";
 
@@ -360,7 +330,6 @@ public class SettingsActivity extends AppCompatActivity {
             try {
                 days = Integer.parseInt(daysStr);
             } catch (NumberFormatException e) {
-                // Ignore invalid number, use 0
                 Log.w(TAG, "Invalid cleanup days number: " + daysStr);
             }
         }
@@ -371,20 +340,15 @@ public class SettingsActivity extends AppCompatActivity {
             try {
                 size = Integer.parseInt(sizeStr);
             } catch (NumberFormatException e) {
-                // Ignore invalid number, use 0
                 Log.w(TAG, "Invalid cleanup size number: " + sizeStr);
             }
         }
         cleanupManager.saveCleanupSize(size);
 
-        // Refresh summary text on main screen
         fetchCurrentRetentionStatus();
         Toast.makeText(this, getString(R.string.toast_local_settings_saved), Toast.LENGTH_SHORT).show();
     }
 
-    /**
-     * Dialog specifically for the SERVER retention request (API call).
-     */
     private void showRetentionRequestDialog() {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle(getString(R.string.cleanup_request_dialog_title));
@@ -529,6 +493,11 @@ public class SettingsActivity extends AppCompatActivity {
     }
 
     private void setupAppearanceListeners() {
+        // KIEDY UŻYTKOWNIK ZMIENIA USTAWIENIE:
+        // 1. Zapisujemy do SharedPreferences
+        // 2. Wołamy recreate()
+        // 3. BaseActivity.onCreate() wstaje, czyta nowe prefsy i nakłada odpowiedni Theme Overlay.
+
         switchTheme.setOnCheckedChangeListener((buttonView, isChecked) -> {
             int newTheme = isChecked ? AppearanceManager.THEME_DARK : AppearanceManager.THEME_LIGHT;
             if (appearanceManager.getTheme() != newTheme) {

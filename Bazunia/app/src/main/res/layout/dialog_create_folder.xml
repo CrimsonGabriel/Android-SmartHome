@@ -15,6 +15,7 @@
             android:id="@+id/edit_folder_name"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:minHeight="?attr/appButtonHeight"
             android:hint="@string/dialog_folder_name_hint" />
     </com.google.android.material.textfield.TextInputLayout>
 
@@ -26,10 +27,10 @@
         android:orientation="horizontal">
 
         <com.google.android.material.card.MaterialCardView
-            android:layout_width="48dp"
-            android:layout_height="48dp"
+            android:layout_width="?attr/appButtonHeight"
+            android:layout_height="?attr/appButtonHeight"
             android:layout_marginEnd="16dp"
-            app:cardCornerRadius="24dp"
+            app:cardCornerRadius="?attr/appCardCornerRadius"
             app:cardElevation="4dp"
             app:strokeWidth="1dp"
             app:strokeColor="#DDDDDD">
@@ -54,6 +55,7 @@
                 android:id="@+id/edit_folder_color"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:minHeight="?attr/appButtonHeight"
                 android:hint="@string/dialog_folder_color_hint"
                 android:text="@string/Hash" />
         </com.google.android.material.textfield.TextInputLayout>

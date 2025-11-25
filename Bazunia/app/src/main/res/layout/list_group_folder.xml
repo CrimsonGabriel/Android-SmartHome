@@ -18,8 +18,8 @@
 
     <ImageView
         android:id="@+id/iconFolder"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_width="?attr/appIconSize"
+        android:layout_height="?attr/appIconSize"
         android:layout_marginEnd="16dp"
         android:contentDescription="@string/desc_folder_icon"
         app:srcCompat="@drawable/ic_folder" />
@@ -35,8 +35,8 @@
 
     <ImageView
         android:id="@+id/iconExpansionIndicator"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_width="?attr/appIconSize"
+        android:layout_height="?attr/appIconSize"
         android:contentDescription="@string/desc_expand_icon"
         app:srcCompat="@drawable/ic_expand_arrow" />
 

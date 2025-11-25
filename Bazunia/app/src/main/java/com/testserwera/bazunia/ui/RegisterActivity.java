@@ -1,6 +1,6 @@
 package com.testserwera.bazunia.ui;
 
-import android.content.Context;
+
 import android.os.Bundle;
 import android.util.Log;
 import android.util.Patterns;
@@ -11,12 +11,10 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
-import androidx.appcompat.app.AppCompatActivity;
+// import androidx.appcompat.app.AppCompatActivity; // ZMIANA: Niepotrzebne
 
 import com.testserwera.bazunia.R;
-import com.testserwera.bazunia.utils.AppearanceManager;
 import com.testserwera.bazunia.utils.Constants;
-import com.testserwera.bazunia.utils.LocaleManager;
 import com.google.android.material.button.MaterialButton;
 
 import org.json.JSONException;
@@ -32,7 +30,8 @@ import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
 
-public class RegisterActivity extends AppCompatActivity {
+// ZMIANA: BaseActivity
+public class RegisterActivity extends BaseActivity {
 
     private static final String TAG = "RegisterActivity";
 
@@ -42,19 +41,14 @@ public class RegisterActivity extends AppCompatActivity {
 
     private final OkHttpClient httpClient = new OkHttpClient();
 
-    @Override
-    protected void attachBaseContext(Context newBase) {
-        LocaleManager localeManager = new LocaleManager(newBase);
-        super.attachBaseContext(localeManager.setLocale(newBase));
-    }
+    // ZMIANA: Usunięto attachBaseContext
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        new AppearanceManager(this).applyAppearance(this);
+        // ZMIANA: Usunięto AppearanceManager
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_register);
 
-        // Znajdź widoki
         editTextEmail = findViewById(R.id.editTextEmail);
         editTextPassword = findViewById(R.id.editTextPassword);
         editTextConfirmPassword = findViewById(R.id.editTextConfirmPassword);
@@ -62,9 +56,8 @@ public class RegisterActivity extends AppCompatActivity {
         btnLoginLink = findViewById(R.id.btnLoginLink);
         registerProgressBar = findViewById(R.id.registerProgressBar);
 
-        // Obsługa kliknięć
         btnRegister.setOnClickListener(v -> attemptRegistration());
-        btnLoginLink.setOnClickListener(v -> finish()); // Wróć do LoginActivity
+        btnLoginLink.setOnClickListener(v -> finish());
     }
 
     private void attemptRegistration() {
@@ -72,7 +65,6 @@ public class RegisterActivity extends AppCompatActivity {
         String password = editTextPassword.getText().toString().trim();
         String confirmPassword = editTextConfirmPassword.getText().toString().trim();
 
-        // Walidacja
         if (!Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
             editTextEmail.setError(getString(R.string.register_error_email_invalid));
             editTextEmail.requestFocus();
@@ -89,7 +81,6 @@ public class RegisterActivity extends AppCompatActivity {
             return;
         }
 
-        // Jeśli walidacja OK, wyślij żądanie
         registerUser(email, password);
     }
 
@@ -108,9 +99,8 @@ public class RegisterActivity extends AppCompatActivity {
 
         RequestBody body = RequestBody.create(json.toString(), MediaType.get("application/json; charset=utf-8"));
 
-        // Używamy nowego endpointu, który zdefiniujemy na VPS
         Request request = new Request.Builder()
-                .url(Constants.REGISTER_ANDROID_ENDPOINT) // Musimy dodać to do Constants!
+                .url(Constants.REGISTER_ANDROID_ENDPOINT)
                 .post(body)
                 .build();
 
@@ -133,10 +123,9 @@ public class RegisterActivity extends AppCompatActivity {
                         Log.i(TAG, "Rejestracja wysłana pomyślnie. Czekanie na aktywację.");
                         runOnUiThread(() -> {
                             showLoading(false);
-                            // Pokaż dialog o sukcesie i potrzebie weryfikacji
                             showSuccessDialog();
                         });
-                    } else if (resp.code() == 409) { // 409 Conflict (Email zajęty)
+                    } else if (resp.code() == 409) {
                         Log.w(TAG, "Rejestracja nieudana: E-mail zajęty.");
                         runOnUiThread(() -> {
                             showLoading(false);
@@ -161,9 +150,9 @@ public class RegisterActivity extends AppCompatActivity {
                 .setMessage(R.string.register_success_message)
                 .setPositiveButton(R.string.register_button_ok, (dialog, which) -> {
                     dialog.dismiss();
-                    finish(); // Zamknij RegisterActivity i wróć do LoginActivity
+                    finish();
                 })
-                .setCancelable(false) // Nie można zamknąć dialogu back-pressem
+                .setCancelable(false)
                 .show();
     }
 

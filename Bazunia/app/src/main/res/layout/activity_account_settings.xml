@@ -38,6 +38,7 @@
                 android:id="@+id/btnToggle2FA"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:minHeight="?attr/appButtonHeight"
                 android:layout_gravity="center_horizontal"
                 android:layout_marginBottom="16dp"
                 tools:text="@string/enable_2fa" />
@@ -47,6 +48,7 @@
                 style="?attr/materialButtonOutlinedStyle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:minHeight="?attr/appButtonHeight"
                 android:layout_gravity="center_horizontal"
                 android:layout_marginBottom="16dp"
                 android:text="@string/settings_account_change_password" />
@@ -77,6 +79,7 @@
                     android:id="@+id/btnCopySecret"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:minHeight="?attr/appButtonHeight"
                     android:text="@string/account_copy_secret_key"
                     style="?attr/materialButtonOutlinedStyle"
                     android:layout_marginTop="8dp"/>
@@ -97,6 +100,7 @@
                         android:id="@+id/editText2FA"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:minHeight="?attr/appButtonHeight"
                         android:inputType="number"
                         android:maxLength="6"
                         android:textAlignment="center"/>
@@ -106,6 +110,7 @@
                     android:id="@+id/btnVerify2FA"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:minHeight="?attr/appButtonHeight"
                     android:layout_marginTop="8dp"
                     android:text="@string/verify_2fa_code"/>
             </LinearLayout>
@@ -135,6 +140,7 @@
                         android:id="@+id/editTextDisable2FA"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:minHeight="?attr/appButtonHeight"
                         android:inputType="number"
                         android:maxLength="6"
                         android:textAlignment="center"/>
@@ -144,6 +150,7 @@
                     android:id="@+id/btnConfirmDisable2FA"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:minHeight="?attr/appButtonHeight"
                     android:layout_marginTop="8dp"
                     android:text="@string/disable_2fa"
                     app:backgroundTint="?attr/colorError"/>

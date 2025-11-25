@@ -5,6 +5,7 @@ import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.graphics.Color;
 import android.util.Pair;
+import android.util.TypedValue; // Ważne dla motywów
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -12,7 +13,7 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
-import androidx.core.content.ContextCompat;
+import androidx.core.content.ContextCompat; // ✅ TO JEST IMPORT, KTÓREGO BRAKOWAŁO
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.testserwera.bazunia.R;
@@ -43,7 +44,8 @@ public class FolderAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
         void onSensorLongClicked(SensorItem sensor, View view);
     }
 
-    // --- Modele Widoków ---
+    // --- Modele Danych ---
+
     public static class SectionHeader {
         final String title;
         public SectionHeader(String title) { this.title = title; }
@@ -112,12 +114,9 @@ public class FolderAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
 
         public SensorItem(Cursor cursor, String gatewayName, long parentFolderId, String parentColor) {
             this.id = cursor.getLong(cursor.getColumnIndexOrThrow("_id"));
-
-            // Używamy bezpośrednich nazw kolumn
             this.sensorIdString = cursor.getString(cursor.getColumnIndexOrThrow("sensor_id"));
             this.gatewayIdString = cursor.getString(cursor.getColumnIndexOrThrow("gateway_id"));
             this.gatewayId = cursor.getLong(cursor.getColumnIndexOrThrow("gateway_id"));
-
             this.name = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.S_COLUMN_NAME));
             this.type = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.S_COLUMN_TYPE));
             this.value = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.S_COLUMN_VALUE));
@@ -133,7 +132,7 @@ public class FolderAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
         }
     }
 
-    // --- Konstruktor ---
+    // --- Adapter ---
 
     public FolderAdapter(Context context, List<Object> displayItems, FolderCallback callback) {
         this.context = context;
@@ -249,9 +248,25 @@ public class FolderAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
             itemView.setOnLongClickListener(v -> { callback.onFolderLongClicked(item, v); return true; });
         }
         private void restoreDefaultColors() {
-            int defaultColor = ContextCompat.getColor(itemView.getContext(), android.R.color.tab_indicator_text);
+            int defaultColor;
+            try {
+                TypedValue typedValue = new TypedValue();
+                // ZMIANA: Używamy com.google.android.material.R.attr.colorOnSurface zamiast android.R.attr.textColorPrimary
+                // To gwarantuje widoczność (Ciemny grafit w dzień, Jasny szary w nocy)
+                itemView.getContext().getTheme().resolveAttribute(com.google.android.material.R.attr.colorOnSurface, typedValue, true);
+
+                // Jeśli resourceId != 0, to znaczy że to referencja do koloru (np. z colors.xml)
+                if (typedValue.resourceId != 0) {
+                    defaultColor = ContextCompat.getColor(itemView.getContext(), typedValue.resourceId);
+                } else {
+                    defaultColor = typedValue.data;
+                }
+            } catch (Exception e) {
+                defaultColor = Color.BLACK; // Fallback
+            }
+
             textName.setTextColor(defaultColor);
-            iconExpansion.clearColorFilter();
+            iconExpansion.setColorFilter(defaultColor); // Ikona strzałki też musi mieć ten kolor
         }
         private boolean isColorDark(int color) {
             double darkness = 1 - (0.299 * Color.red(color) + 0.587 * Color.green(color) + 0.114 * Color.blue(color)) / 255;
@@ -332,54 +347,37 @@ public class FolderAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
                 textSensorName.setText(item.name);
             }
 
-            // LOGIKA KOLOROWANIA (ALARM = CZERWONY)
             boolean isAlarmState = false;
 
-            // Teraz isThresholdSupported zwraca TRUE dla Analogowych (Temp) i FALSE dla Binarnych (Drzwi)
             if (thresholdManager.isThresholdSupported(item.type)) {
-                // --- LOGIKA DLA ANALOGOWYCH (Suwaki) ---
                 try {
                     float val = Float.parseFloat(item.value);
                     Pair<Float, Float> defRange = thresholdManager.getDefaultRangeForType(item.type);
-
                     float min = thresholdManager.getMinThreshold(item.gatewayIdString, item.sensorIdString, defRange.first);
                     float max = thresholdManager.getMaxThreshold(item.gatewayIdString, item.sensorIdString, defRange.second);
-
-                    // Jeśli wartość poza zakresem -> Alarm
-                    if (val < min || val > max) {
-                        isAlarmState = true;
-                    }
-                } catch (NumberFormatException e) {
-                    // Ignoruj błędy
-                }
+                    if (val < min || val > max) isAlarmState = true;
+                } catch (NumberFormatException ignored) { }
             } else {
-                // --- LOGIKA DLA BINARNYCH (0/1) ---
-                // Tu wpada: Contact, Light, Motion...
                 try {
                     float val = Float.parseFloat(item.value);
-                    // Jeśli > 0.5 (czyli 1) uznajemy za stan aktywny -> Alarm/Czerwony
-                    if (val > 0.5f) {
-                        isAlarmState = true;
-                    }
-                } catch (NumberFormatException e) {
-                    // Ignoruj błędy
-                }
+                    if (val > 0.5f) isAlarmState = true;
+                } catch (NumberFormatException ignored) { }
             }
 
-            // Ustaw kolor tekstu
-            if (isAlarmState || item.batteryLevel <= 20) {
-                textSensorName.setTextColor(Color.parseColor("#FF990000")); // Czerwony
+            // --- KOLOROWANIE TEKSTU ---
+            if (isAlarmState || (item.batteryLevel > 0 && item.batteryLevel <= 20)) {
+                // Alarm / Słaba bateria -> Użyj colorError (Czerwony)
+                textSensorName.setTextColor(getThemeColor(context, com.google.android.material.R.attr.colorError));
             } else {
-                textSensorName.setTextColor(getDefaultTextColor(context)); // Domyślny
+                // Normalny stan -> Użyj colorOnSurface (Grafit/Biały w zależności od trybu)
+                textSensorName.setTextColor(getThemeColor(context, com.google.android.material.R.attr.colorOnSurface));
             }
 
-            // Ikony wyciszenia
             boolean isThreshMuted = mutePrefs.getBoolean("thresh_sensor_" + item.id, false);
             boolean isBattMuted = mutePrefs.getBoolean("batt_sensor_" + item.id, false);
             if (iconMuteThresh != null) iconMuteThresh.setVisibility(isThreshMuted ? View.VISIBLE : View.GONE);
             if (iconMuteBatt != null) iconMuteBatt.setVisibility(isBattMuted ? View.VISIBLE : View.GONE);
 
-            // Bateria
             if (item.batteryLevel > 0) {
                 textBatteryLevel.setText(context.getString(R.string.battery_percentage_format, item.batteryLevel));
                 textBatteryLevel.setVisibility(View.VISIBLE);
@@ -394,7 +392,6 @@ public class FolderAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
                 iconBattery.setVisibility(View.GONE);
             }
 
-            // Tło
             if (item.parentColor != null) {
                 try {
                     int color = Color.parseColor(item.parentColor);
@@ -407,8 +404,16 @@ public class FolderAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
             itemView.setOnLongClickListener(v -> { callback.onSensorLongClicked(item, v); return true; });
         }
 
-        private int getDefaultTextColor(Context ctx) {
-            return ContextCompat.getColor(ctx, android.R.color.tab_indicator_text);
+        private int getThemeColor(Context ctx, int attrResId) {
+            TypedValue typedValue = new TypedValue();
+            boolean resolved = ctx.getTheme().resolveAttribute(attrResId, typedValue, true);
+            if (resolved) {
+                if (typedValue.resourceId != 0) {
+                    return ContextCompat.getColor(ctx, typedValue.resourceId);
+                }
+                return typedValue.data;
+            }
+            return Color.BLACK;
         }
 
         private int getIcon(String type, String keyword, String value) {
@@ -425,7 +430,6 @@ public class FolderAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
             }
             if (type == null) return R.drawable.ic_sensor;
 
-            // Poprawiona logika dla kontaktronu
             switch (type.toLowerCase()) {
                 case "button_press": return R.drawable.ic_button;
                 case "temperature": return R.drawable.ic_temp;
@@ -439,7 +443,6 @@ public class FolderAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
                 case "level": return R.drawable.ic_level;
                 case "valve": return R.drawable.ic_valve;
                 case "contact":
-                    // Bezpieczne parsowanie float dla ikony otwarcia/zamknięcia
                     try {
                         float v = Float.parseFloat(value);
                         return (v > 0.5f) ? R.drawable.ic_open : R.drawable.ic_closed;

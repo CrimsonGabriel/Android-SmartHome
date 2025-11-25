@@ -13,10 +13,11 @@
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btnBackSensorDetail"
         style="@style/Widget.Material3.Button.IconButton"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_width="?attr/appButtonHeight"
+        android:layout_height="?attr/appButtonHeight"
         android:contentDescription="@string/back_content_description"
         app:icon="@drawable/ic_arrow_back"
+        app:iconSize="?attr/appIconSize"
         app:iconTint="?attr/colorOnSurface"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
@@ -31,8 +32,8 @@
 
         <ImageButton
             android:id="@+id/btnRefresh"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
+            android:layout_width="?attr/appButtonHeight"
+            android:layout_height="?attr/appButtonHeight"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="@string/action_refresh"
             android:padding="12dp"
@@ -42,22 +43,14 @@
 
         <ImageButton
             android:id="@+id/btnFavorite"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
+            android:layout_width="?attr/appButtonHeight"
+            android:layout_height="?attr/appButtonHeight"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="@string/favorite_button_desc"
             android:padding="12dp"
             android:scaleType="fitCenter"
             app:srcCompat="@drawable/ic_sensor" />
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnSettings"
-            style="@style/Widget.Material3.Button.IconButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:visibility="gone"
-            android:contentDescription="@string/settings_content_description"
-            app:icon="@drawable/ic_settings" />
     </LinearLayout>
 
     <TextView
@@ -80,7 +73,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="12dp"
-        app:cardCornerRadius="16dp"
+        app:cardCornerRadius="?attr/appCardCornerRadius"
         app:cardElevation="0dp"
         app:layout_constraintTop_toBottomOf="@+id/textSensorTitle">
 
@@ -98,18 +91,16 @@
                 android:lineSpacingExtra="6dp"
                 android:text="@string/waiting_for_data"
                 android:textAppearance="@style/TextAppearance.Material3.BodyLarge"
-                android:textSize="18sp" />
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:gravity="center"
-                android:text="@string/status_live_label"
-                android:textAllCaps="true"
-                android:textSize="12sp"
-                android:letterSpacing="0.1"
-                android:textColor="?attr/colorOnSurfaceVariant" />
+                android:textSize="22sp" /> <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:gravity="center"
+            android:text="@string/status_live_label"
+            android:textAllCaps="true"
+            android:textSize="12sp"
+            android:letterSpacing="0.1"
+            android:textColor="?attr/colorOnSurfaceVariant" />
         </LinearLayout>
 
     </com.google.android.material.card.MaterialCardView>

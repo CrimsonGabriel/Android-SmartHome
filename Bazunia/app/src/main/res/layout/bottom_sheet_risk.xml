@@ -4,14 +4,16 @@
     android:layout_height="wrap_content"
     android:orientation="vertical"
     android:padding="24dp"
-    android:background="@drawable/spinner_background"> <ImageView
-    android:id="@+id/imgMainStatus"
-    android:layout_width="80dp"
-    android:layout_height="80dp"
-    android:layout_gravity="center_horizontal"
-    android:layout_marginBottom="16dp"
-    android:src="@drawable/ic_security"
-    android:contentDescription="@string/risk_status_check"/>
+    android:background="@drawable/spinner_background">
+
+    <ImageView
+        android:id="@+id/imgMainStatus"
+        android:layout_width="80dp"
+        android:layout_height="80dp"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginBottom="16dp"
+        android:src="@drawable/ic_security"
+        android:contentDescription="@string/risk_status_check"/>
 
     <TextView
         android:id="@+id/tvMainTitle"
@@ -44,6 +46,7 @@
         android:id="@+id/btnCloseSheet"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:minHeight="?attr/appButtonHeight"
         android:text="@string/btn_close"
         style="@style/Widget.MaterialComponents.Button.OutlinedButton"/>
 

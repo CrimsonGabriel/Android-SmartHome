@@ -3,4 +3,8 @@
     <attr name="myIconButtonStyle" format="reference" />
     <attr name="myIconButtonOutlinedStyle" format="reference" />
     <attr name="myIconButtonTextStyle" format="reference" />
+
+    <attr name="appButtonHeight" format="reference|dimension" />
+    <attr name="appIconSize" format="reference|dimension" />
+    <attr name="appCardCornerRadius" format="reference|dimension" />
 </resources>

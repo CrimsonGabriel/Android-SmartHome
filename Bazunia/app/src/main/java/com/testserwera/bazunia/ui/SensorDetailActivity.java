@@ -21,8 +21,7 @@ import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.annotation.NonNull; // ✅ Dodano wymagany import
-import androidx.appcompat.app.AppCompatActivity;
+import androidx.annotation.NonNull;
 import androidx.cardview.widget.CardView;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
@@ -59,7 +58,7 @@ import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
 
-public class SensorDetailActivity extends AppCompatActivity {
+public class SensorDetailActivity extends BaseActivity {
 
     private static final String TAG = "SensorDetailActivity";
     private static final int HISTORY_LIMIT = 50;
@@ -72,7 +71,7 @@ public class SensorDetailActivity extends AppCompatActivity {
     // --- UI BOTTOM SHEET ---
     private TextView textThresholdMin, textThresholdMax;
     private SeekBar seekBarThresholdMin, seekBarThresholdMax;
-    private CardView cardThresholds; // ✅ Używamy tego zamiast thresholdContainer
+    private CardView cardThresholds;
 
     private TextInputEditText editSensorInterval;
     private SwitchMaterial switchReporting;
@@ -84,7 +83,9 @@ public class SensorDetailActivity extends AppCompatActivity {
     private DatabaseHelper dbHelper;
     private ThresholdManager thresholdManager;
     private NotificationFrequencyManager notificationFrequencyManager;
+
     private AppearanceManager appearanceManager;
+
     private OkHttpClient httpClient;
     private SharedPreferences authPrefs;
     private BroadcastReceiver syncStatusReceiver;
@@ -111,7 +112,6 @@ public class SensorDetailActivity extends AppCompatActivity {
         appearanceManager = new AppearanceManager(this);
         currentTextScale = appearanceManager.getTextScale();
         currentButtonScale = appearanceManager.getButtonScale();
-        appearanceManager.applyAppearance(this);
 
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_sensor_detail);
@@ -142,12 +142,9 @@ public class SensorDetailActivity extends AppCompatActivity {
         btnFavorite = findViewById(R.id.btnFavorite);
         FloatingActionButton fabSettings = findViewById(R.id.fabSettings);
 
-        // Ukrycie starego przycisku jeśli istnieje
-        View oldBtnSettings = findViewById(R.id.btnSettings);
-        if (oldBtnSettings != null) oldBtnSettings.setVisibility(View.GONE);
+        // USUNIĘTO: Kod odwołujący się do nieistniejącego btnSettings
 
         textSensorTitle.setText(String.format(getString(R.string.sensor_detail_title), sensorIdString, gatewayIdString));
-        appearanceManager.applyIconScale(btnBack);
 
         btnRefresh.setOnClickListener(v -> forceReadingsSync());
         btnBack.setOnClickListener(v -> finish());
@@ -203,7 +200,6 @@ public class SensorDetailActivity extends AppCompatActivity {
         View sheetView = getLayoutInflater().inflate(R.layout.layout_sensor_settings_sheet, findViewById(android.R.id.content), false);
         bottomSheetDialog.setContentView(sheetView);
 
-        // ✅ Teraz pobieramy CardView (card_thresholds) z XML-a, który właśnie utworzyliśmy
         cardThresholds = sheetView.findViewById(R.id.card_thresholds);
 
         seekBarThresholdMin = sheetView.findViewById(R.id.seekBarThresholdMin);
@@ -239,7 +235,6 @@ public class SensorDetailActivity extends AppCompatActivity {
             });
         }
 
-        // Wczytaj dane i ustaw widoczność
         loadSensorMetadata();
         loadSensorNotificationSettings();
         setupThresholdControls();
@@ -266,29 +261,21 @@ public class SensorDetailActivity extends AppCompatActivity {
 
         textSensorDetails.setText(displayData);
 
-        // Pobranie domyślnego koloru tekstu z motywu (żeby wracał do normalnego koloru)
         TypedValue typedValue = new TypedValue();
         getTheme().resolveAttribute(com.google.android.material.R.attr.colorOnSurface, typedValue, true);
         int defaultColor = typedValue.data;
 
-        // ⭐️ NOWA LOGIKA KOLOROWANIA (Spójna z listą) ⭐️
         boolean isAlarmState = false;
 
         if (!thresholdManager.isThresholdSupported(model.type)) {
-            // --- LOGIKA DLA BINARNYCH (Światło, Drzwi, Ruch itp.) ---
-            // Używamy Float.parseFloat, żeby "1" i "1.0" działały tak samo
             try {
                 float val = Float.parseFloat(model.value);
-                // Jeśli > 0.5 (czyli 1) uznajemy za stan aktywny/alarmowy -> CZERWONY
                 if (val > 0.5f) {
                     isAlarmState = true;
                 }
-            } catch (NumberFormatException e) {
-                // Jak przyjdą śmieci zamiast liczby, to nie robimy alarmu
+            } catch (NumberFormatException ignored) {
             }
         } else {
-            // --- LOGIKA DLA ANALOGOWYCH (Suwaki: Temp, Wilgotność itp.) ---
-            // Czerwony tylko jeśli wyjdzie poza suwaki (Thresholds)
             Pair<Float, Float> defaultRange = thresholdManager.getDefaultRangeForType(model.type);
             float min = thresholdManager.getMinThreshold(gatewayIdString, sensorIdString, defaultRange.first);
             float max = thresholdManager.getMaxThreshold(gatewayIdString, sensorIdString, defaultRange.second);
@@ -302,7 +289,6 @@ public class SensorDetailActivity extends AppCompatActivity {
             }
         }
 
-        // Aplikujemy kolor: Czerwony (Alarm) lub Domyślny (Norma)
         if (isAlarmState) {
             textSensorDetails.setTextColor(Color.RED);
         } else {
@@ -328,24 +314,16 @@ public class SensorDetailActivity extends AppCompatActivity {
         listSensorHistory.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, historyList));
     }
 
-    // --- SUWAKI I PROGI ---
     private void setupThresholdControls() {
         if (seekBarThresholdMin == null || seekBarThresholdMax == null) return;
 
-        // ⭐️ POPRAWKA LOGIKI ⭐️
-        // thresholdManager.isThresholdSupported zwraca TRUE dla Analogowych (Temp, Power)
-        // i FALSE dla Binarnych (Light, Flow, Button).
-
         if (thresholdManager.isThresholdSupported(currentSensorType)) {
-            // JEST Analogowy -> POKAZUJEMY suwaki
             if (cardThresholds != null) cardThresholds.setVisibility(View.VISIBLE);
         } else {
-            // JEST Binarny -> UKRYWAMY suwaki
             if (cardThresholds != null) cardThresholds.setVisibility(View.GONE);
-            return; // Wychodzimy, nie ma sensu ustawiać paska
+            return;
         }
 
-        // Dalsza część kodu wykonuje się tylko dla Analogowych (tych widocznych)
         Pair<Float, Float> range = thresholdManager.getDefaultRangeForType(currentSensorType);
         float absMin = range.first;
         float absMax = range.second;

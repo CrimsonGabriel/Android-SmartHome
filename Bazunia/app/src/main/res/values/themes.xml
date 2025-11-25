@@ -1,4 +1,5 @@
 <resources>
+
     <style name="Base.Theme.Bazunia" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="colorPrimary">@color/colorPrimary</item>
         <item name="colorOnPrimary">@color/colorOnPrimary</item>
@@ -12,84 +13,32 @@
         <item name="colorOnSurface">@color/colorOnSurface</item>
         <item name="colorSurfaceVariant">@color/colorSurfaceVariant</item>
         <item name="colorOnSurfaceVariant">@color/colorOnSurfaceVariant</item>
+
+        <item name="appButtonHeight">@dimen/button_height_medium</item>
+        <item name="appIconSize">@dimen/icon_size_medium</item>
+        <item name="appCardCornerRadius">@dimen/corner_radius_medium</item>
+
+        <item name="android:alertDialogTheme">@style/Theme.Material3.DayNight.Dialog.Alert</item>
     </style>
 
     <style name="Theme.Bazunia" parent="Base.Theme.Bazunia" />
 
-    <style name="TextScale_Small">
-        <item name="android:textSize">@dimen/textSizeSmall</item>
-    </style>
-    <style name="TextScale_Medium">
-        <item name="android:textSize">@dimen/textSizeMedium</item>
-    </style>
-    <style name="TextScale_Large">
-        <item name="android:textSize">@dimen/textSizeLarge</item>
+    <style name="Theme.Bazunia.ButtonSize.Small" parent="Theme.Bazunia">
+        <item name="appButtonHeight">@dimen/button_height_small</item>
+        <item name="appIconSize">@dimen/icon_size_small</item>
+        <item name="appCardCornerRadius">@dimen/corner_radius_small</item>
     </style>
 
-    <!-- PRZEZROCZYSTY STYL BAZOWY DLA PRZYCISKÓW-IKON -->
-    <style name="Widget.App.Button.Icon" parent="Widget.Material3.Button.IconButton">
-        <item name="backgroundTint">@android:color/transparent</item>
-        <item name="elevation">0dp</item>
-        <item name="strokeWidth">0dp</item>
+    <style name="Theme.Bazunia.ButtonSize.Medium" parent="Theme.Bazunia">
+        <item name="appButtonHeight">@dimen/button_height_medium</item>
+        <item name="appIconSize">@dimen/icon_size_medium</item>
+        <item name="appCardCornerRadius">@dimen/corner_radius_medium</item>
     </style>
 
-    <!-- Style dla standardowych przycisków-ikon (nieużywane bezpośrednio przez myIconButtonTextStyle) -->
-    <style name="AppIconButton.Small" parent="Widget.App.Button.Icon">
-        <item name="android:minWidth">@dimen/iconButtonSizeSmall</item>
-        <item name="android:minHeight">@dimen/iconButtonSizeSmall</item>
-    </style>
-    <style name="AppIconButton.Medium" parent="Widget.App.Button.Icon">
-        <item name="android:minWidth">@dimen/iconButtonSizeMedium</item>
-        <item name="android:minHeight">@dimen/iconButtonSizeMedium</item>
-    </style>
-    <style name="AppIconButton.Large" parent="Widget.App.Button.Icon">
-        <item name="android:minWidth">@dimen/iconButtonSizeLarge</item>
-        <item name="android:minHeight">@dimen/iconButtonSizeLarge</item>
-    </style>
-
-    <!-- Style dla przycisków z obramowaniem (teraz też przezroczyste) -->
-    <style name="AppIconButton.Outlined.Small" parent="Widget.App.Button.Icon">
-        <item name="android:minWidth">@dimen/iconButtonSizeSmall</item>
-        <item name="android:minHeight">@dimen/iconButtonSizeSmall</item>
-    </style>
-    <style name="AppIconButton.Outlined.Medium" parent="Widget.App.Button.Icon">
-        <item name="android:minWidth">@dimen/iconButtonSizeMedium</item>
-        <item name="android:minHeight">@dimen/iconButtonSizeMedium</item>
-    </style>
-    <style name="AppIconButton.Outlined.Large" parent="Widget.App.Button.Icon">
-        <item name="android:minWidth">@dimen/iconButtonSizeLarge</item>
-        <item name="android:minHeight">@dimen/iconButtonSizeLarge</item>
-    </style>
-
-    <!-- OSTATECZNA POPRAWKA: Użycie TextButton jako stylu bazowego dla przezroczystych ikon -->
-    <style name="AppTextButton.Icon.Small" parent="Widget.Material3.Button.TextButton">
-        <item name="android:minWidth">@dimen/iconButtonSizeSmall</item>
-        <item name="android:minHeight">@dimen/iconButtonSizeSmall</item>
-    </style>
-    <style name="AppTextButton.Icon.Medium" parent="Widget.Material3.Button.TextButton">
-        <item name="android:minWidth">@dimen/iconButtonSizeMedium</item>
-        <item name="android:minHeight">@dimen/iconButtonSizeMedium</item>
-    </style>
-    <style name="AppTextButton.Icon.Large" parent="Widget.Material3.Button.TextButton">
-        <item name="android:minWidth">@dimen/iconButtonSizeLarge</item>
-        <item name="android:minHeight">@dimen/iconButtonSizeLarge</item>
-    </style>
-
-    <!-- Definicje atrybutów motywu (bez zmian) -->
-    <style name="ButtonScale_Small">
-        <item name="myIconButtonStyle">@style/AppIconButton.Small</item>
-        <item name="myIconButtonOutlinedStyle">@style/AppIconButton.Outlined.Small</item>
-        <item name="myIconButtonTextStyle">@style/AppTextButton.Icon.Small</item>
-    </style>
-    <style name="ButtonScale_Medium">
-        <item name="myIconButtonStyle">@style/AppIconButton.Medium</item>
-        <item name="myIconButtonOutlinedStyle">@style/AppIconButton.Outlined.Medium</item>
-        <item name="myIconButtonTextStyle">@style/AppTextButton.Icon.Medium</item>
-    </style>
-    <style name="ButtonScale_Large">
-        <item name="myIconButtonStyle">@style/AppIconButton.Large</item>
-        <item name="myIconButtonOutlinedStyle">@style/AppIconButton.Outlined.Large</item>
-        <item name="myIconButtonTextStyle">@style/AppTextButton.Icon.Large</item>
+    <style name="Theme.Bazunia.ButtonSize.Large" parent="Theme.Bazunia">
+        <item name="appButtonHeight">@dimen/button_height_large</item>
+        <item name="appIconSize">@dimen/icon_size_large</item>
+        <item name="appCardCornerRadius">@dimen/corner_radius_large</item>
     </style>
 
 </resources>

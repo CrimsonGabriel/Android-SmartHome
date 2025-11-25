@@ -52,6 +52,7 @@
                     android:id="@+id/seekBarThresholdMin"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:minHeight="?attr/appButtonHeight"
                     android:layout_marginBottom="8dp" />
 
                 <TextView
@@ -63,7 +64,8 @@
                 <SeekBar
                     android:id="@+id/seekBarThresholdMax"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content" />
+                    android:layout_height="wrap_content"
+                    android:minHeight="?attr/appButtonHeight" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
@@ -78,7 +80,7 @@
                 android:id="@+id/switchReporting"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:minHeight="48dp"
+                android:minHeight="?attr/appButtonHeight"
                 android:text="@string/sensor_detail_reporting_label"
                 android:textAppearance="@style/TextAppearance.Material3.BodyLarge" />
 
@@ -116,6 +118,7 @@
                     android:id="@+id/editSensorInterval"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:minHeight="?attr/appButtonHeight"
                     android:inputType="number"
                     android:maxLength="5" />
             </com.google.android.material.textfield.TextInputLayout>
@@ -133,6 +136,7 @@
                 android:id="@+id/btnSaveInterval"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:minHeight="?attr/appButtonHeight"
                 android:layout_marginTop="8dp"
                 android:text="@string/sensor_detail_save_button" />
         </LinearLayout>
@@ -162,6 +166,7 @@
                     android:id="@+id/editSensorNotificationInterval"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:minHeight="?attr/appButtonHeight"
                     android:inputType="number"
                     android:maxLength="5" />
             </com.google.android.material.textfield.TextInputLayout>
@@ -179,6 +184,7 @@
                 android:id="@+id/btnSaveNotificationInterval"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:minHeight="?attr/appButtonHeight"
                 android:layout_marginTop="8dp"
                 android:text="@string/sensor_detail_save_notification_button"
                 style="@style/Widget.Material3.Button.TonalButton" />

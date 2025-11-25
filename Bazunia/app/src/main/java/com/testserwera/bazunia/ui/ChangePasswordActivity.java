@@ -10,12 +10,9 @@ import android.widget.ProgressBar;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
-import androidx.appcompat.app.AppCompatActivity;
 
 import com.testserwera.bazunia.R;
-import com.testserwera.bazunia.utils.AppearanceManager;
 import com.testserwera.bazunia.utils.Constants;
-import com.testserwera.bazunia.utils.LocaleManager;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.button.MaterialButton;
 
@@ -32,7 +29,8 @@ import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
 
-public class ChangePasswordActivity extends AppCompatActivity {
+// ZMIANA: BaseActivity
+public class ChangePasswordActivity extends BaseActivity {
 
     private static final String TAG = "ChangePasswordActivity";
 
@@ -42,21 +40,16 @@ public class ChangePasswordActivity extends AppCompatActivity {
     private OkHttpClient httpClient;
     private String currentJwtToken;
 
-    @Override
-    protected void attachBaseContext(Context newBase) {
-        LocaleManager localeManager = new LocaleManager(newBase);
-        super.attachBaseContext(localeManager.setLocale(newBase));
-    }
+    // ZMIANA: Usunięto attachBaseContext
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        new AppearanceManager(this).applyAppearance(this);
+        // ZMIANA: Usunięto ręczne AppearanceManager
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_change_password);
 
         httpClient = new OkHttpClient();
 
-        // Pobierz token JWT zapisany przez LoginActivity
         SharedPreferences authPrefs = getSharedPreferences(LoginActivity.AUTH_PREFS, Context.MODE_PRIVATE);
         currentJwtToken = authPrefs.getString(LoginActivity.KEY_JWT_TOKEN, null);
 
@@ -67,11 +60,9 @@ public class ChangePasswordActivity extends AppCompatActivity {
             return;
         }
 
-        // Podpięcie Toolbara
         MaterialToolbar toolbar = findViewById(R.id.toolbarChangePassword);
         toolbar.setNavigationOnClickListener(v -> finish());
 
-        // Podpięcie pól i przycisków
         editTextCurrentPassword = findViewById(R.id.editTextCurrentPassword);
         editTextNewPassword = findViewById(R.id.editTextNewPassword);
         editTextConfirmNewPassword = findViewById(R.id.editTextConfirmNewPassword);
@@ -86,7 +77,6 @@ public class ChangePasswordActivity extends AppCompatActivity {
         String newPass = editTextNewPassword.getText().toString().trim();
         String confirmPass = editTextConfirmNewPassword.getText().toString().trim();
 
-        // Walidacja
         if (currentPass.isEmpty()) {
             editTextCurrentPassword.setError(getString(R.string.toast_error_current_password_empty));
             editTextCurrentPassword.requestFocus();
@@ -103,7 +93,6 @@ public class ChangePasswordActivity extends AppCompatActivity {
             return;
         }
 
-        // Jeśli walidacja OK, wyślij do serwera
         sendPasswordChangeToVps(currentPass, newPass);
     }
 
@@ -123,8 +112,8 @@ public class ChangePasswordActivity extends AppCompatActivity {
         RequestBody body = RequestBody.create(json.toString(), MediaType.get("application/json; charset=utf-8"));
 
         Request request = new Request.Builder()
-                .url(Constants.CHANGE_PASSWORD_ENDPOINT) // ⭐️ Używamy nowego endpointu
-                .header("Authorization", "Bearer " + currentJwtToken) // Używamy tokena z logowania
+                .url(Constants.CHANGE_PASSWORD_ENDPOINT)
+                .header("Authorization", "Bearer " + currentJwtToken)
                 .post(body)
                 .build();
 
@@ -144,21 +133,18 @@ public class ChangePasswordActivity extends AppCompatActivity {
                     Log.i(TAG, "Hasło pomyślnie zmienione na serwerze.");
                     runOnUiThread(() -> {
                         Toast.makeText(ChangePasswordActivity.this, R.string.toast_password_changed_success, Toast.LENGTH_SHORT).show();
-                        finish(); // Zamknij aktywność i wróć do ustawień
+                        finish();
                     });
                 } else {
-                    // Obsługa błędów serwera
                     final String errorBody = response.body() != null ? response.body().string() : "Brak ciała odpowiedzi";
                     Log.w(TAG, "Serwer odrzucił zmianę hasła, kod: " + response.code() + ", Body: " + errorBody);
 
                     runOnUiThread(() -> {
                         showLoading(false);
                         if (response.code() == 403 || response.code() == 401) {
-                            // 403 lub 401 (Forbidden/Unauthorized) - zakładamy, że to złe obecne hasło
                             Toast.makeText(ChangePasswordActivity.this, R.string.toast_error_current_password_wrong, Toast.LENGTH_LONG).show();
                             editTextCurrentPassword.requestFocus();
                         } else {
-                            // Inne błędy (np. 400 - za krótkie hasło - serwer też to waliduje)
                             Toast.makeText(ChangePasswordActivity.this, R.string.toast_password_change_error, Toast.LENGTH_LONG).show();
                         }
                     });

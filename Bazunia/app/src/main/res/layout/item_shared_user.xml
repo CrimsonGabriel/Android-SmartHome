@@ -10,11 +10,11 @@
     android:background="?android:attr/selectableItemBackground">
 
     <ImageView
-        android:layout_width="32dp"
-        android:layout_height="32dp"
+        android:layout_width="?attr/appIconSize"
+        android:layout_height="?attr/appIconSize"
         android:src="@drawable/ic_launcher_foreground"
         android:layout_marginEnd="12dp"
-        app:tint="@color/colorPrimary"
+        app:tint="?attr/colorPrimary"
         android:contentDescription="@string/app_logo_description"/>
 
     <LinearLayout
@@ -42,8 +42,8 @@
 
     <ImageButton
         android:id="@+id/btnDeleteShare"
-        android:layout_width="40dp"
-        android:layout_height="40dp"
+        android:layout_width="?attr/appButtonHeight"
+        android:layout_height="?attr/appButtonHeight"
         android:src="@drawable/ic_delete"
         android:background="?android:attr/selectableItemBackgroundBorderless"
         android:contentDescription="@string/menu_delete"

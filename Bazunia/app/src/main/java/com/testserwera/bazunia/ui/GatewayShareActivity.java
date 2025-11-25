@@ -18,7 +18,7 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
-import androidx.appcompat.app.AppCompatActivity;
+// import androidx.appcompat.app.AppCompatActivity; // ZMIANA: Niepotrzebne
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -45,7 +45,8 @@ import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
 
-public class GatewayShareActivity extends AppCompatActivity {
+// ZMIANA: BaseActivity
+public class GatewayShareActivity extends BaseActivity {
 
     private static final String TAG = "GatewayShareActivity";
     private SharedPreferences authPrefs;
@@ -56,11 +57,9 @@ public class GatewayShareActivity extends AppCompatActivity {
     private AutoCompleteTextView spinnerGateways;
     private AutoCompleteTextView spinnerUsers;
 
-    // 1. POPRAWKA: radioView usunięte (nieużywane), radioFull zostaje (używane w performShare)
     private RadioButton radioFull;
     private MaterialButton btnShare;
 
-    // 2. POPRAWKA: recyclerShares zmieniony na zmienną lokalną
     private ProgressBar progressBar;
     private TextView txtEmptyList;
 
@@ -72,9 +71,11 @@ public class GatewayShareActivity extends AppCompatActivity {
     private UserPickDto selectedUser;
     private Long currentUserId;
 
+    // ZMIANA: Usunięto attachBaseContext
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
+        super.onCreate(savedInstanceState); // BaseActivity załatwia motywy
         setContentView(R.layout.activity_gateway_share);
 
         authPrefs = getSharedPreferences(LoginActivity.AUTH_PREFS, Context.MODE_PRIVATE);
@@ -136,7 +137,6 @@ public class GatewayShareActivity extends AppCompatActivity {
                 showError("Błąd sieci (User): " + e.getMessage());
             }
 
-            // 3. POPRAWKA: Usunięto "throws IOException", bo wyjątek jest łapany w bloku try-catch
             @Override public void onResponse(@NonNull Call call, @NonNull Response response) {
                 if (response.isSuccessful() && response.body() != null) {
                     try {
@@ -177,7 +177,6 @@ public class GatewayShareActivity extends AppCompatActivity {
                     Type listType = new TypeToken<List<Gateway>>() {}.getType();
                     List<Gateway> allGateways = gson.fromJson(json, listType);
 
-                    // Filtrujemy: Tylko te, gdzie ownerId == currentUserId
                     List<Gateway> ownedGateways = allGateways.stream()
                             .filter(g -> g.getOwnerId() != null && g.getOwnerId().equals(currentUserId))
                             .collect(Collectors.toList());
@@ -347,11 +346,9 @@ public class GatewayShareActivity extends AppCompatActivity {
             btnShare.setEnabled(false);
             return;
         }
-        // Adapter dla AutoCompleteTextView
         ArrayAdapter<Gateway> adapter = new ArrayAdapter<>(this, android.R.layout.simple_dropdown_item_1line, gateways);
         spinnerGateways.setAdapter(adapter);
 
-        // Domyślnie wybierz pierwszą
         if (!gateways.isEmpty()) {
             selectedGateway = gateways.get(0);
             spinnerGateways.setText(selectedGateway.toString(), false);
@@ -385,7 +382,6 @@ public class GatewayShareActivity extends AppCompatActivity {
         long id;
         String email;
 
-        // 4. POPRAWKA: Dodano @NonNull
         @NonNull
         @Override public String toString() { return email; }
     }
@@ -408,7 +404,6 @@ public class GatewayShareActivity extends AppCompatActivity {
             this.listener = listener;
         }
 
-        // 5. POPRAWKA: Ignorowanie ostrzeżenia, bo wymieniamy całą listę
         @SuppressLint("NotifyDataSetChanged")
         void updateData(List<SharedUserDto> newList) {
             this.list = newList;

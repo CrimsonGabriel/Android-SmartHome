@@ -6,8 +6,6 @@ import android.util.Log;
 import android.view.View;
 import android.widget.TextView;
 
-import androidx.appcompat.app.AppCompatActivity;
-import android.content.Context;
 import com.testserwera.bazunia.utils.AppearanceManager;
 import com.testserwera.bazunia.data.DatabaseHelper;
 import com.testserwera.bazunia.R;
@@ -45,13 +43,16 @@ import org.json.JSONException;
 import org.json.JSONObject;
 import android.widget.Toast;
 
-public class MainActivity extends AppCompatActivity {
+// ZMIANA: BaseActivity
+public class MainActivity extends BaseActivity {
 
     private DatabaseHelper dbHelper;
     private BottomSheetDialog riskSheetDialog;
+
     private AppearanceManager appearanceManager;
     private String currentTextScale;
     private String currentButtonScale;
+
     private ThresholdManager thresholdManager;
 
     private MaterialCardView cardAlerts;
@@ -71,21 +72,20 @@ public class MainActivity extends AppCompatActivity {
                 }
             });
 
-    @Override
-    protected void attachBaseContext(Context newBase) {
-        LocaleManager localeManager = new LocaleManager(newBase);
-        super.attachBaseContext(localeManager.setLocale(newBase));
-    }
+    // ZMIANA: Usunięto attachBaseContext (BaseActivity to robi)
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        // Inicjalizacja Managera do śledzenia zmian w onResume
         appearanceManager = new AppearanceManager(this);
         currentTextScale = appearanceManager.getTextScale();
         currentButtonScale = appearanceManager.getButtonScale();
-        appearanceManager.applyAppearance(this);
+
+        // ZMIANA: Usunięto ręczne applyAppearance
 
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
         askNotificationPermission();
         dbHelper = new DatabaseHelper(this);
         thresholdManager = new ThresholdManager(this);
@@ -98,8 +98,6 @@ public class MainActivity extends AppCompatActivity {
         MaterialButton btnSettings = findViewById(R.id.btnSettings);
         MaterialButton btnLogout = findViewById(R.id.btnLogout);
 
-        appearanceManager.applyIconScale(btnSettings);
-        appearanceManager.applyIconScale(btnLogout);
 
         credentialManager = CredentialManager.create(this);
 
@@ -168,6 +166,7 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
 
+        // Sprawdzenie czy zmieniła się skala (np. powrót z SettingsActivity)
         if (appearanceManager != null && (!currentTextScale.equals(appearanceManager.getTextScale()) ||
                 !currentButtonScale.equals(appearanceManager.getButtonScale()))) {
             recreate();
@@ -184,18 +183,14 @@ public class MainActivity extends AppCompatActivity {
         int batteryLowCount = 0;
 
         for (SensorModel sensor : latestData) {
-            // 1. Sprawdzanie Stanu Alarmowego (Threshold/Binary)
             if (isSensorValueInAlertState(sensor)) {
                 alertCount++;
             }
-
-            // 2. Sprawdzanie Baterii (Niezależnie od alarmu)
             if (sensor.batteryLevel > 0 && sensor.batteryLevel <= 20) {
                 batteryLowCount++;
             }
         }
 
-        // --- OBSŁUGA KARTY ALARMÓW (CZERWONA) ---
         if (alertCount > 0) {
             textAlertSummary.setText(String.format(Locale.getDefault(),
                     getString(R.string.alert_summary),
@@ -206,7 +201,6 @@ public class MainActivity extends AppCompatActivity {
             cardAlerts.setVisibility(View.GONE);
         }
 
-        // --- OBSŁUGA KARTY BATERII (POMARAŃCZOWA) ---
         if (batteryLowCount > 0) {
             textBatterySummary.setText(String.format(Locale.getDefault(),
                     getString(R.string.battery_summary),
@@ -219,26 +213,21 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private boolean isSensorValueInAlertState(SensorModel sensor) {
-        // Sprawdzamy, czy typ ma suwaki (Analogowy) czy jest binarny (ON/OFF)
         boolean hasThresholds = thresholdManager.isThresholdSupported(sensor.type);
 
         try {
             float val = Float.parseFloat(sensor.value);
 
             if (hasThresholds) {
-                // --- 1. LOGIKA DLA ANALOGOWYCH ---
                 Pair<Float, Float> defRange = thresholdManager.getDefaultRangeForType(sensor.type);
                 float min = thresholdManager.getMinThreshold(sensor.gatewayId, sensor.sensorId, defRange.first);
                 float max = thresholdManager.getMaxThreshold(sensor.gatewayId, sensor.sensorId, defRange.second);
                 return val < min || val > max;
 
             } else {
-                // --- 2. LOGIKA DLA BINARNYCH ---
-                // Specjalny przypadek dla FLOW (Przepływ) > 0.0 -> ALARM
                 if ("flow".equalsIgnoreCase(sensor.type)) {
                     return val > 0.0f;
                 }
-                // Reszta > 0.5 -> ALARM
                 return val > 0.5f;
             }
 
@@ -266,15 +255,11 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    // 1. Zastąp metodę performHomeCheck tą wersją (LOKALNA LOGIKA):
     private void performHomeCheck() {
-        // Pokaż loader
         showRiskBottomSheet(null);
 
-        // Uruchamiamy wątek w tle, żeby nie mrozić UI przy liczeniu
         new Thread(() -> {
             try {
-                // 1. Pobierz wszystkie najnowsze dane lokalnie
                 List<SensorModel> sensors = dbHelper.getLatestUniqueSensorData();
                 JSONArray risksArray = new JSONArray();
                 int riskCount = 0;
@@ -287,7 +272,6 @@ public class MainActivity extends AppCompatActivity {
                     }
                 }
 
-                // 2. Budujemy wynikowy JSON (taki sam format jak kiedyś z serwera, ale lokalny)
                 JSONObject root = new JSONObject();
                 root.put("isSafe", riskCount == 0);
                 root.put("riskCount", riskCount);
@@ -295,7 +279,6 @@ public class MainActivity extends AppCompatActivity {
 
                 String finalJson = root.toString();
 
-                // 3. Wracamy na główny wątek wyświetlić wynik
                 runOnUiThread(() -> showRiskBottomSheet(finalJson));
 
             } catch (Exception e) {
@@ -308,16 +291,13 @@ public class MainActivity extends AppCompatActivity {
         }).start();
     }
 
-    // 2. Metoda pomocnicza do analizy pojedynczego czujnika
     private JSONObject checkSensorRiskLocally(SensorModel sensor) {
-        // Logika identyczna jak w liczniku na Dashboardzie!
         boolean hasThresholds = thresholdManager.isThresholdSupported(sensor.type);
 
         try {
             float val = Float.parseFloat(sensor.value);
 
             if (hasThresholds) {
-                // --- ANALOGOWE (Temp, Lux, Wilgotność) ---
                 Pair<Float, Float> defRange = thresholdManager.getDefaultRangeForType(sensor.type);
                 float min = thresholdManager.getMinThreshold(sensor.gatewayId, sensor.sensorId, defRange.first);
                 float max = thresholdManager.getMaxThreshold(sensor.gatewayId, sensor.sensorId, defRange.second);
@@ -329,36 +309,30 @@ public class MainActivity extends AppCompatActivity {
                 }
 
             } else {
-                // --- BINARNE (Światło, Ruch, Drzwi, Flow) ---
-
-                // Specjalny dla FLOW
                 if ("flow".equalsIgnoreCase(sensor.type)) {
                     if (val > 0.0f) return createRiskJson(sensor, "flow", null);
                 }
-                // Reszta (Light, Motion, Contact)
                 else {
                     if (val > 0.5f) return createRiskJson(sensor, "active", null);
                 }
             }
-        } catch (NumberFormatException e) {
-            // Ignorujemy błędy parsowania
+        } catch (NumberFormatException ignored) {
         }
-        return null; // Brak ryzyka
+        return null;
     }
 
     private JSONObject createRiskJson(SensorModel sensor, String issueType, String limitVal) {
         try {
             JSONObject json = new JSONObject();
             json.put("sensorName", sensor.name != null ? sensor.name : sensor.type);
-            json.put("sensorValue", sensor.value); // Aktualna wartość
+            json.put("sensorValue", sensor.value);
             json.put("sensorType", sensor.type);
-            json.put("issueType", issueType); // low, high, active, flow
-            json.put("limitVal", limitVal);   // Próg, który przekroczono (opcjonalne)
+            json.put("issueType", issueType);
+            json.put("limitVal", limitVal);
             return json;
         } catch (JSONException e) { return null; }
     }
 
-    // 3. Zastąp showRiskBottomSheet (bez zmian w logice wyświetlania, tylko obsługa null)
     private void showRiskBottomSheet(String jsonResponse) {
         if (riskSheetDialog == null) {
             riskSheetDialog = new BottomSheetDialog(this);
@@ -382,7 +356,6 @@ public class MainActivity extends AppCompatActivity {
         }
 
         if (jsonResponse == null) {
-            // Loader
             if (tvTitle != null) tvTitle.setText(R.string.risk_status_check);
             if (tvDesc != null) tvDesc.setText(R.string.please_wait);
             if (imgStatus != null) imgStatus.setImageResource(R.drawable.ic_search);
@@ -426,7 +399,6 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    // 4. Zastąp RiskAdapter (Nowa logika wyświetlania tekstów na podstawie issueType)
     private class RiskAdapter extends RecyclerView.Adapter<RiskAdapter.RiskViewHolder> {
         private final JSONArray data;
 
@@ -454,7 +426,6 @@ public class MainActivity extends AppCompatActivity {
 
                 holder.name.setText(name);
 
-                // Dobieramy ikonę i tekst
                 int iconRes = R.drawable.ic_warning;
                 String msg;
 
@@ -492,11 +463,7 @@ public class MainActivity extends AppCompatActivity {
 
                 holder.issue.setText(msg);
                 holder.icon.setImageResource(iconRes);
-
-                // Kolor tekstu zostawiamy czerwony (ostrzegawczy)
                 holder.issue.setTextColor(ContextCompat.getColor(MainActivity.this, R.color.colorRisk));
-
-                // ⭐️ POPRAWKA: Nie ruszamy koloru ikony (zostaje oryginał)
                 holder.icon.clearColorFilter();
 
             } catch (JSONException e) {

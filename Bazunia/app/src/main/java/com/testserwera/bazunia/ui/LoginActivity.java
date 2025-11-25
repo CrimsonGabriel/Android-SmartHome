@@ -12,21 +12,16 @@ import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.Toast;
 
-// --- DODAŁEM TEN IMPORT (dla @NonNull) ---
 import androidx.annotation.NonNull;
-import androidx.appcompat.app.AppCompatActivity;
+// import androidx.appcompat.app.AppCompatActivity; // ZMIANA: Niepotrzebne
 import androidx.core.content.ContextCompat;
 
-// --- IMPORTY DLA CREDENTIAL MANAGER ---
 import androidx.credentials.CredentialManager;
 import androidx.credentials.GetCredentialRequest;
 import androidx.credentials.CustomCredential;
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption;
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential;
-// ------------------------------------------
 
-import com.testserwera.bazunia.utils.LocaleManager;
-import com.testserwera.bazunia.utils.AppearanceManager;
 import com.testserwera.bazunia.utils.Constants;
 import com.testserwera.bazunia.R;
 import com.testserwera.bazunia.data.VpsClientService;
@@ -47,7 +42,8 @@ import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
 
-public class LoginActivity extends AppCompatActivity {
+// ZMIANA: BaseActivity
+public class LoginActivity extends BaseActivity {
 
     private static final String TAG = "LoginActivity";
 
@@ -58,7 +54,6 @@ public class LoginActivity extends AppCompatActivity {
     private CredentialManager credentialManager;
     private final OkHttpClient httpClient = new OkHttpClient();
 
-    // Widoki, które muszą być polami klasy
     private MaterialButton btnGoogleSignIn;
     private ProgressBar loginProgressBar;
     private LinearLayout logoSection;
@@ -71,19 +66,14 @@ public class LoginActivity extends AppCompatActivity {
 
     private boolean isEmail2FaFlow = false;
 
-    @Override
-    protected void attachBaseContext(Context newBase) {
-        LocaleManager localeManager = new LocaleManager(newBase);
-        super.attachBaseContext(localeManager.setLocale(newBase));
-    }
+    // ZMIANA: Usunięto attachBaseContext
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        new AppearanceManager(this).applyAppearance(this);
+        // ZMIANA: Usunięto AppearanceManager
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_login);
 
-        // --- Inicjalizacja Widoków ---
         btnGoogleSignIn = findViewById(R.id.btnGoogleSignIn);
         loginProgressBar = findViewById(R.id.loginProgressBar);
         logoSection = findViewById(R.id.logoSection);
@@ -95,28 +85,20 @@ public class LoginActivity extends AppCompatActivity {
         editTextEmail = findViewById(R.id.editTextEmail);
         editTextPassword = findViewById(R.id.editTextPassword);
 
-        // Zmienne lokalne
         MaterialButton btnVerifyLogin2FA = findViewById(R.id.btnVerifyLogin2FA);
         MaterialButton btnLogin = findViewById(R.id.btnLogin);
         MaterialButton btnRegisterLink = findViewById(R.id.btnRegisterLink);
         MaterialButton btnForgotPassword = findViewById(R.id.btnForgotPassword);
 
-        // 1. Inicjalizacja Credential Manager
         credentialManager = CredentialManager.create(this);
 
-        // 2. Obsługa kliknięcia Google
         btnGoogleSignIn.setOnClickListener(v -> signInWithGoogle());
-
-        // Reszta listenerów
         btnVerifyLogin2FA.setOnClickListener(v -> verifyLogin2FA());
         btnLogin.setOnClickListener(v -> performEmailLogin());
         btnRegisterLink.setOnClickListener(v -> navigateToRegister());
         btnForgotPassword.setOnClickListener(v -> navigateToPasswordReset());
     }
 
-    /**
-     * ⭐️ NOWA METODA LOGOWANIA GOOGLE (Credential Manager) ⭐️
-     */
     private void signInWithGoogle() {
         showLoading(true);
         Log.d(TAG, "Rozpoczynanie logowania Google (Credential Manager)...");
@@ -145,7 +127,6 @@ public class LoginActivity extends AppCompatActivity {
                     }
 
                     @Override
-                    // ⭐️ DODAŁEM @NonNull TUTAJ ⭐️
                     public void onError(@NonNull androidx.credentials.exceptions.GetCredentialException e) {
                         Log.e(TAG, "Błąd logowania Credential Manager", e);
                         showLoading(false);
@@ -191,8 +172,6 @@ public class LoginActivity extends AppCompatActivity {
 
     private void sendTokenToVps(String idToken) {
         isEmail2FaFlow = false;
-        Log.d(TAG, "Wysyłanie tokena do weryfikacji na VPS...");
-
         JSONObject json = new JSONObject();
         try {
             json.put("token", idToken);
@@ -350,7 +329,6 @@ public class LoginActivity extends AppCompatActivity {
                         }
                     } else {
                         runOnUiThread(() -> {
-
                             showError(getString(R.string.login_error_2fa_invalid));
                             showLoading(false);
                             editTextLogin2FA.setText("");
@@ -406,7 +384,6 @@ public class LoginActivity extends AppCompatActivity {
                         processLoginResponse(responseBody, null);
                     } else {
                         runOnUiThread(() -> {
-                            // ZMIANA: String z XML
                             showError(getString(R.string.login_error_invalid_creds));
                             showLoading(false);
                         });
@@ -468,10 +445,8 @@ public class LoginActivity extends AppCompatActivity {
 
     private void navigateToPasswordReset() {
         Intent intent = new Intent(this, RequestPasswordResetActivity.class);
-
         Editable text = editTextEmail.getText();
         String email = (text != null) ? text.toString().trim() : "";
-
         if (!email.isEmpty()) {
             intent.putExtra("USER_EMAIL", email);
         }
