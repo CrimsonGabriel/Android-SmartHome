@@ -277,7 +277,8 @@
 
     <string name="settings_interval_title">Globalna częstotliwość pomiarów</string>
     <string name="settings_interval_label">Globalny interwał (w sekundach)</string>
-    <string name="settings_interval_desc">Ustawia domyślny interwał (np. 60) dla WSZYSTKICH czujników. RPi pobierze tę wartość automatycznie.</string>
+    <string name="settings_interval_desc">Ustawia interwał (60 s.) czujników.
+    </string>
     <string name="settings_interval_hint">Interwał (sekundy)</string>
     <string name="settings_interval_save_button">Zapisz globalny interwał</string>
     <string name="toast_global_interval_updating">Wysyłanie globalnego interwału…</string>
@@ -324,7 +325,7 @@
 
 
     <string name="settings_notification_interval_title">Globalna częstotliwość powiadomień</string>
-    <string name="settings_notification_interval_desc">Ustawia globalny odstęp między powiadomieniami (np. 60 min) dla WSZYSTKICH czujników. Puste = bez limitu.</string>
+    <string name="settings_notification_interval_desc">Odstęp alertów czujnika.</string>
     <string name="settings_notification_interval_hint">Odstęp (minuty)</string>
     <string name="settings_notification_interval_save_button">Zapisz globalny odstęp</string>
     <string name="toast_global_notification_interval_saved">Zapisano globalną częstotliwość powiadomień.</string>
@@ -507,4 +508,18 @@
     <string name="risk_msg_on">Włączone</string>
     <string name="risk_msg_open">Otwarte</string>
     <string name="risk_msg_flow">Wykryto przepływ</string>
+
+    <string name="size_s">S</string>
+    <string name="size_m">M</string>
+    <string name="size_l">L</string>
+    <string name="settings_system_server_title">System i Serwer</string>
+
+    <string name="cd_server_icon">Ikona ustawień serwera</string>
+    <string name="cd_notification_icon">Ikona powiadomień</string>
+    <string name="cd_cleanup_icon">Ikona czyszczenia danych</string>
+    <string name="cd_account_icon">Ikona bezpieczeństwa konta</string>
+    <string name="cd_sharing_icon">Ikona udostępniania</string>
+
+    <string name="default_interval_value">60</string>
+    <string name="toast_local_settings_saved">Zapisano ustawienia lokalne</string>
 </resources>

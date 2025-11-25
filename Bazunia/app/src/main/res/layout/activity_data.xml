@@ -40,7 +40,7 @@
                 style="?attr/myIconButtonTextStyle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                app:icon="@drawable/ic_check"
+                app:icon="@drawable/ic_connect_test"
                 android:contentDescription="@string/test_connection_desc"
                 android:layout_gravity="end"
                 android:layout_marginEnd="16dp"

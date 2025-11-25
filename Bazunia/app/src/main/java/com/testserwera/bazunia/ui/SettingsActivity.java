@@ -4,8 +4,11 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.text.Editable;
+import android.text.InputType;
 import android.util.Log;
-import android.view.inputmethod.InputMethodManager;
+import android.util.TypedValue;
+import android.view.View;
 import android.widget.LinearLayout;
 import android.widget.RadioGroup;
 import android.widget.TextView;
@@ -18,6 +21,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.materialswitch.MaterialSwitch;
 import com.google.android.material.textfield.TextInputEditText;
+import com.google.android.material.textfield.TextInputLayout;
 import com.testserwera.bazunia.R;
 import com.testserwera.bazunia.data.VpsClientService;
 import com.testserwera.bazunia.utils.AppearanceManager;
@@ -41,21 +45,20 @@ public class SettingsActivity extends AppCompatActivity {
     private static final String TAG = "SettingsActivity";
     public static final String NOTIFICATION_PREFS = "NotificationSettings";
     public static final String KEY_GLOBAL_NOTIFICATION_INTERVAL = "global_notification_interval_minutes";
+
     private AppearanceManager appearanceManager;
     private LocaleManager localeManager;
+    private CleanupManager cleanupManager;
+
+    // UI Controls - Appearance
     private MaterialSwitch switchTheme;
     private RadioGroup radioGroupTextScale;
     private RadioGroup radioGroupButtonScale;
     private RadioGroup radioGroupLanguage;
-    private CleanupManager cleanupManager;
-    private TextInputEditText editCleanupDays;
-    private TextInputEditText editCleanupSize;
-    private MaterialButton btnRequestRetentionChange;
-    private TextView txtCurrentServerSettings;
-    private TextInputEditText editGlobalInterval;
-    private MaterialButton btnSaveGlobalInterval;
-    private TextInputEditText editGlobalNotificationInterval;
-    private MaterialButton btnSaveGlobalNotificationInterval;
+
+    // UI Controls - Summaries
+    private TextView txtRetentionSummary;
+
     private OkHttpClient httpClient;
     private SharedPreferences authPrefs;
     private SharedPreferences notificationPrefs;
@@ -80,71 +83,341 @@ public class SettingsActivity extends AppCompatActivity {
         cleanupManager = new CleanupManager(this);
 
         setupViews();
-
         loadCurrentAppearanceSettings();
-        loadCurrentNotificationSettings();
-
-        fetchCurrentRetentionStatus();
-
+        fetchCurrentRetentionStatus(); // To update the summary text
         setupAppearanceListeners();
         setupClickListeners();
     }
 
     private void setupViews() {
+        // Appearance
         switchTheme = findViewById(R.id.switchThemeSettings);
         radioGroupTextScale = findViewById(R.id.radioGroupTextScale);
         radioGroupButtonScale = findViewById(R.id.radioGroupButtonScale);
         radioGroupLanguage = findViewById(R.id.radioGroupLanguage);
 
-        editCleanupDays = findViewById(R.id.editCleanupDays);
-        editCleanupSize = findViewById(R.id.editCleanupSize);
-
-        btnRequestRetentionChange = findViewById(R.id.btnRequestRetentionChange);
-        txtCurrentServerSettings = findViewById(R.id.txtCurrentServerSettings);
-
-        editGlobalInterval = findViewById(R.id.editGlobalInterval);
-        btnSaveGlobalInterval = findViewById(R.id.btnSaveGlobalInterval);
-        editGlobalNotificationInterval = findViewById(R.id.editGlobalNotificationInterval);
-        btnSaveGlobalNotificationInterval = findViewById(R.id.btnSaveGlobalNotificationInterval);
+        // Summaries
+        txtRetentionSummary = findViewById(R.id.txtRetentionSummary);
     }
 
     private void setupClickListeners() {
-        btnSaveGlobalInterval.setOnClickListener(v -> saveGlobalInterval());
-        btnSaveGlobalNotificationInterval.setOnClickListener(v -> saveGlobalNotificationInterval());
+        // 1. Global Interval (Server Sync)
+        LinearLayout rowGlobalInterval = findViewById(R.id.rowGlobalInterval);
+        rowGlobalInterval.setOnClickListener(v -> showGlobalIntervalDialog());
 
-        if (btnRequestRetentionChange != null) {
-            btnRequestRetentionChange.setOnClickListener(v -> showRetentionRequestDialog());
-        }
+        // 2. Notification Interval
+        LinearLayout rowNotificationInterval = findViewById(R.id.rowNotificationInterval);
+        rowNotificationInterval.setOnClickListener(v -> showNotificationIntervalDialog());
 
-        MaterialButton btnAccountSettings = findViewById(R.id.btnAccountSettings);
-        if (btnAccountSettings != null) {
-            btnAccountSettings.setOnClickListener(v -> {
-                Intent intent = new Intent(SettingsActivity.this, AccountSettingsActivity.class);
-                startActivity(intent);
-            });
-        }
+        // 3. Cleanup & Retention
+        LinearLayout rowCleanup = findViewById(R.id.rowCleanup);
+        rowCleanup.setOnClickListener(v -> showCleanupDialog());
 
-        MaterialButton btnSharingSettings = findViewById(R.id.btnSharingSettings);
-        if (btnSharingSettings != null) {
-            btnSharingSettings.setOnClickListener(v -> {
-                Intent intent = new Intent(SettingsActivity.this, GatewayShareActivity.class);
-                startActivity(intent);
-            });
-        }
+        // 4. Account Settings
+        LinearLayout rowAccount = findViewById(R.id.rowAccountSettings);
+        rowAccount.setOnClickListener(v -> {
+            Intent intent = new Intent(SettingsActivity.this, AccountSettingsActivity.class);
+            startActivity(intent);
+        });
 
+        // 5. Sharing Settings
+        LinearLayout rowSharing = findViewById(R.id.rowSharingSettings);
+        rowSharing.setOnClickListener(v -> {
+            Intent intent = new Intent(SettingsActivity.this, GatewayShareActivity.class);
+            startActivity(intent);
+        });
+
+        // Back Button
         MaterialButton btnBackSettings = findViewById(R.id.btnBackSettings);
-        if (btnBackSettings != null) {
-            btnBackSettings.setOnClickListener(v -> finish());
-        }
+        btnBackSettings.setOnClickListener(v -> finish());
     }
 
     // ============================================================
-    //  LOGIKA RETENCJI DANYCH (SERVER RETENTION POLICY)
+    //  DIALOGI I LOGIKA BIZNESOWA (Nowe podejście "Professional")
     // ============================================================
 
     /**
-     * 1. Pobiera aktualny stan z serwera (obecne ustawienia + status wniosku).
+     * Shows a dialog to edit the Global Synchronization Interval.
+     * Contains logic previously in saveGlobalInterval().
      */
+    private void showGlobalIntervalDialog() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle(getString(R.string.settings_interval_title));
+        builder.setMessage(getString(R.string.settings_interval_hint));
+
+        // Create layout for dialog
+        LinearLayout layout = new LinearLayout(this);
+        layout.setOrientation(LinearLayout.VERTICAL);
+        layout.setPadding(50, 20, 50, 10);
+
+        final TextInputEditText input = new TextInputEditText(this);
+        input.setInputType(InputType.TYPE_CLASS_NUMBER);
+        input.setHint(getString(R.string.default_interval_value));
+
+        // We will default to "60" or empty.
+        input.setText(getString(R.string.default_interval_value));
+
+        layout.addView(input);
+        builder.setView(layout);
+
+        builder.setPositiveButton(getString(R.string.settings_interval_save_button), (dialog, which) -> {
+            Editable text = input.getText();
+            String value = (text != null) ? text.toString() : "";
+            saveGlobalIntervalLogic(value);
+        });
+        builder.setNegativeButton(getString(R.string.dialog_cancel_button), null);
+        builder.show();
+    }
+
+    private void saveGlobalIntervalLogic(String intervalStr) {
+        String jwtToken = authPrefs.getString(LoginActivity.KEY_JWT_TOKEN, null);
+        if (jwtToken == null) {
+            Toast.makeText(this, R.string.toast_error_not_logged_in, Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        int intervalToSend = 60;
+        if (!intervalStr.isEmpty()) {
+            try {
+                intervalToSend = Integer.parseInt(intervalStr);
+                if (intervalToSend <= 5) intervalToSend = 5;
+            } catch (NumberFormatException e) {
+                Toast.makeText(this, getString(R.string.error_invalid_number), Toast.LENGTH_SHORT).show();
+                return;
+            }
+        }
+
+        Toast.makeText(this, R.string.toast_global_interval_updating, Toast.LENGTH_SHORT).show();
+        String url = Constants.VPS_SERVER_IP + "/api/sensors/interval/global";
+
+        JSONObject jsonBody = new JSONObject();
+        try { jsonBody.put("interval", intervalToSend); } catch (Exception e) { Log.e(TAG, "JSON error", e); return; }
+        RequestBody body = RequestBody.create(jsonBody.toString(), MediaType.get("application/json; charset=utf-8"));
+
+        Request request = new Request.Builder()
+                .url(url)
+                .addHeader("Authorization", "Bearer " + jwtToken)
+                .post(body).build();
+
+        httpClient.newCall(request).enqueue(new Callback() {
+            @Override
+            public void onFailure(@NonNull Call call, @NonNull IOException e) {
+                runOnUiThread(() -> Toast.makeText(SettingsActivity.this,
+                        getString(R.string.toast_api_error_with_reason, e.getMessage()),
+                        Toast.LENGTH_LONG).show());
+            }
+            @Override
+            public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
+                final String responseBody = response.body() != null ? response.body().string() : "";
+                if (response.isSuccessful()) {
+                    runOnUiThread(() -> {
+                        try {
+                            JSONObject json = new JSONObject(responseBody);
+                            int updatedCount = json.optInt("updatedCount", 0);
+                            Toast.makeText(SettingsActivity.this, String.format(getString(R.string.toast_global_interval_success), updatedCount), Toast.LENGTH_LONG).show();
+                        } catch (Exception e) {
+                            Toast.makeText(SettingsActivity.this, responseBody, Toast.LENGTH_LONG).show();
+                        }
+                        Intent serviceIntent = new Intent(SettingsActivity.this, VpsClientService.class);
+                        serviceIntent.putExtra("FORCE_SYNC_NOW", true);
+                        serviceIntent.putExtra("IS_SILENT", true);
+                        startService(serviceIntent);
+                    });
+                } else {
+                    runOnUiThread(() -> Toast.makeText(SettingsActivity.this,
+                            getString(R.string.toast_api_error_with_reason, responseBody),
+                            Toast.LENGTH_LONG).show());
+                }
+            }
+        });
+    }
+
+    /**
+     * Shows a dialog to edit the Notification Check Interval (Local preference).
+     */
+    private void showNotificationIntervalDialog() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle(getString(R.string.settings_notification_interval_title));
+
+        LinearLayout layout = new LinearLayout(this);
+        layout.setOrientation(LinearLayout.VERTICAL);
+        layout.setPadding(50, 20, 50, 10);
+
+        final TextInputEditText input = new TextInputEditText(this);
+        input.setInputType(InputType.TYPE_CLASS_NUMBER);
+
+        // Load current value
+        int savedInterval = notificationPrefs.getInt(KEY_GLOBAL_NOTIFICATION_INTERVAL, 0);
+        if (savedInterval > 0) input.setText(String.valueOf(savedInterval));
+
+        layout.addView(input);
+        builder.setView(layout);
+
+        builder.setPositiveButton(getString(R.string.settings_notification_interval_save_button), (dialog, which) -> {
+            Editable text = input.getText();
+            String value = (text != null) ? text.toString() : "";
+            saveGlobalNotificationIntervalLogic(value);
+        });
+        builder.setNegativeButton(getString(R.string.dialog_cancel_button), null);
+        builder.show();
+    }
+
+    private void saveGlobalNotificationIntervalLogic(String intervalStr) {
+        int intervalToSave = 0;
+        if (!intervalStr.isEmpty()) {
+            try {
+                intervalToSave = Integer.parseInt(intervalStr);
+                if (intervalToSave <= 0) intervalToSave = 0;
+            } catch (NumberFormatException e) {
+                Toast.makeText(this, getString(R.string.error_invalid_number), Toast.LENGTH_SHORT).show();
+                return;
+            }
+        }
+        notificationPrefs.edit().putInt(KEY_GLOBAL_NOTIFICATION_INTERVAL, intervalToSave).apply();
+        Toast.makeText(this, R.string.toast_global_notification_interval_saved, Toast.LENGTH_SHORT).show();
+    }
+
+    /**
+     * Shows a complex dialog for Cleanup Settings (Local & Server Request).
+     * This combines the local preferences and the server request button into one clean view.
+     */
+    private void showCleanupDialog() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle(getString(R.string.settings_data_cleanup_title));
+
+        LinearLayout layout = new LinearLayout(this);
+        layout.setOrientation(LinearLayout.VERTICAL);
+        layout.setPadding(40, 30, 40, 10);
+
+        // --- LOCAL SETTINGS ---
+        TextView headerLocal = new TextView(this);
+        headerLocal.setText(getString(R.string.cleanup_local_label));
+        headerLocal.setTextAppearance(androidx.appcompat.R.style.TextAppearance_AppCompat_Medium);
+
+        // FIX: Resolve 'colorPrimary' programmatically instead of hardcoded resource
+        TypedValue typedValue = new TypedValue();
+        getTheme().resolveAttribute(com.google.android.material.R.attr.colorPrimary, typedValue, true);
+        headerLocal.setTextColor(typedValue.data);
+
+        layout.addView(headerLocal);
+
+        final TextInputLayout daysLayout = new TextInputLayout(this);
+        daysLayout.setHint(getString(R.string.cleanup_days_hint));
+        daysLayout.setBoxBackgroundMode(TextInputLayout.BOX_BACKGROUND_OUTLINE);
+        final TextInputEditText inputDays = new TextInputEditText(this);
+        inputDays.setInputType(InputType.TYPE_CLASS_NUMBER);
+        // Load current
+        int currentDays = cleanupManager.getCleanupDays();
+        if (currentDays > 0) inputDays.setText(String.valueOf(currentDays));
+        daysLayout.addView(inputDays);
+        layout.addView(daysLayout);
+
+        // Spacer
+        layout.addView(new View(this), new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 20));
+
+        final TextInputLayout sizeLayout = new TextInputLayout(this);
+        sizeLayout.setHint(getString(R.string.cleanup_size_hint));
+        sizeLayout.setBoxBackgroundMode(TextInputLayout.BOX_BACKGROUND_OUTLINE);
+        final TextInputEditText inputSize = new TextInputEditText(this);
+        inputSize.setInputType(InputType.TYPE_CLASS_NUMBER);
+        // Load current
+        int currentSize = cleanupManager.getCleanupSize();
+        if (currentSize > 0) inputSize.setText(String.valueOf(currentSize));
+        sizeLayout.addView(inputSize);
+        layout.addView(sizeLayout);
+
+        // --- SERVER BUTTON ---
+        // Spacer
+        layout.addView(new View(this), new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 40));
+
+        MaterialButton btnServerRequest = new MaterialButton(this);
+        btnServerRequest.setText(getString(R.string.cleanup_gateway_label));
+        btnServerRequest.setIconResource(R.drawable.ic_settings_server);
+        btnServerRequest.setOnClickListener(v -> {
+            // Close parent dialog and show the specific server request dialog
+            // Note: we just stack the dialogs here, or we could dismiss 'dialog' first if we had reference
+            showRetentionRequestDialog();
+        });
+        layout.addView(btnServerRequest);
+
+        builder.setView(layout);
+
+        builder.setPositiveButton(getString(R.string.settings_interval_save_button), (dialog, which) -> {
+            // FIX: Null check before calling toString()
+            String daysStr = (inputDays.getText() != null) ? inputDays.getText().toString() : "";
+            String sizeStr = (inputSize.getText() != null) ? inputSize.getText().toString() : "";
+
+            saveCleanupSettingsLogic(daysStr, sizeStr);
+        });
+        builder.setNegativeButton(getString(R.string.dialog_cancel_button), null);
+
+        builder.show();
+    }
+
+    private void saveCleanupSettingsLogic(String daysStr, String sizeStr) {
+        int days = 0;
+        if (daysStr != null && !daysStr.isEmpty()) {
+            try {
+                days = Integer.parseInt(daysStr);
+            } catch (NumberFormatException e) {
+                // Ignore invalid number, use 0
+                Log.w(TAG, "Invalid cleanup days number: " + daysStr);
+            }
+        }
+        cleanupManager.saveCleanupDays(days);
+
+        int size = 0;
+        if (sizeStr != null && !sizeStr.isEmpty()) {
+            try {
+                size = Integer.parseInt(sizeStr);
+            } catch (NumberFormatException e) {
+                // Ignore invalid number, use 0
+                Log.w(TAG, "Invalid cleanup size number: " + sizeStr);
+            }
+        }
+        cleanupManager.saveCleanupSize(size);
+
+        // Refresh summary text on main screen
+        fetchCurrentRetentionStatus();
+        Toast.makeText(this, getString(R.string.toast_local_settings_saved), Toast.LENGTH_SHORT).show();
+    }
+
+    /**
+     * Dialog specifically for the SERVER retention request (API call).
+     */
+    private void showRetentionRequestDialog() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle(getString(R.string.cleanup_request_dialog_title));
+        builder.setMessage(getString(R.string.cleanup_request_dialog_message));
+
+        LinearLayout layout = new LinearLayout(this);
+        layout.setOrientation(LinearLayout.VERTICAL);
+        layout.setPadding(50, 40, 50, 10);
+
+        final TextInputEditText inputDays = new TextInputEditText(this);
+        inputDays.setHint(getString(R.string.cleanup_request_days_label));
+        inputDays.setInputType(InputType.TYPE_CLASS_NUMBER);
+        layout.addView(inputDays);
+
+        final TextInputEditText inputSize = new TextInputEditText(this);
+        inputSize.setHint(getString(R.string.cleanup_request_size_label));
+        inputSize.setInputType(InputType.TYPE_CLASS_NUMBER);
+        layout.addView(inputSize);
+
+        builder.setView(layout);
+        builder.setPositiveButton(getString(R.string.cleanup_request_send_button), (dialog, which) -> {
+            String days = inputDays.getText() != null ? inputDays.getText().toString() : "";
+            String size = inputSize.getText() != null ? inputSize.getText().toString() : "";
+            sendRetentionRequest(days, size);
+        });
+        builder.setNegativeButton(getString(R.string.dialog_cancel_button), null);
+        builder.show();
+    }
+
+    // ============================================================
+    //  API LOGIC (Retencja)
+    // ============================================================
+
     private void fetchCurrentRetentionStatus() {
         String jwtToken = authPrefs.getString(LoginActivity.KEY_JWT_TOKEN, null);
         if (jwtToken == null) return;
@@ -163,7 +436,6 @@ public class SettingsActivity extends AppCompatActivity {
             }
 
             @Override
-            // USUNIĘTO "throws IOException" z końca tej linii:
             public void onResponse(@NonNull Call call, @NonNull Response response) {
                 if (response.isSuccessful() && response.body() != null) {
                     try {
@@ -172,22 +444,19 @@ public class SettingsActivity extends AppCompatActivity {
                         String size = json.optString("currentSize", "0");
                         String status = json.optString("status", "NONE");
 
-
                         final String mainSettingsText = String.format(getString(R.string.cleanup_current_settings), days, size);
-
-
                         final String fullText;
                         if ("PENDING".equals(status)) {
                             String pendingLabel = getString(R.string.cleanup_request_status_pending);
                             String suffix = getString(R.string.status_pending_suffix, pendingLabel);
-                            fullText = mainSettingsText + suffix;
+                            fullText = mainSettingsText + " " + suffix;
                         } else {
                             fullText = mainSettingsText;
                         }
 
                         runOnUiThread(() -> {
-                            if (txtCurrentServerSettings != null) {
-                                txtCurrentServerSettings.setText(fullText);
+                            if (txtRetentionSummary != null) {
+                                txtRetentionSummary.setText(fullText);
                             }
                         });
                     } catch (Exception e) {
@@ -198,38 +467,6 @@ public class SettingsActivity extends AppCompatActivity {
         });
     }
 
-    /**
-     * 2. Wyświetla dialog z polami do wpisania propozycji.
-     */
-    private void showRetentionRequestDialog() {
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-
-        LinearLayout layout = new LinearLayout(this);
-        layout.setOrientation(LinearLayout.VERTICAL);
-        layout.setPadding(50, 40, 50, 10);
-
-        final TextInputEditText inputDays = new TextInputEditText(this);
-        inputDays.setHint(getString(R.string.cleanup_request_days_label));
-        inputDays.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
-        layout.addView(inputDays);
-
-        final TextInputEditText inputSize = new TextInputEditText(this);
-        inputSize.setHint(getString(R.string.cleanup_request_size_label));
-        inputSize.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
-        layout.addView(inputSize);
-
-        builder.setView(layout)
-                .setTitle(getString(R.string.cleanup_request_dialog_title))
-                .setMessage(getString(R.string.cleanup_request_dialog_message))
-                .setPositiveButton(getString(R.string.cleanup_request_send_button), (dialog, which) -> {
-                    String days = inputDays.getText() != null ? inputDays.getText().toString() : "";
-                    String size = inputSize.getText() != null ? inputSize.getText().toString() : "";
-                    sendRetentionRequest(days, size);
-                })
-                .setNegativeButton(getString(R.string.dialog_cancel_button), null)
-                .show();
-    }
-
     private void sendRetentionRequest(String days, String size) {
         String jwtToken = authPrefs.getString(LoginActivity.KEY_JWT_TOKEN, null);
         if (jwtToken == null) return;
@@ -238,7 +475,7 @@ public class SettingsActivity extends AppCompatActivity {
         try {
             if (!days.isEmpty()) json.put("days", days);
             if (!size.isEmpty()) json.put("size", size);
-        } catch (Exception e) { return; }
+        } catch (Exception e) { Log.e(TAG, "JSON error", e); return; }
 
         RequestBody body = RequestBody.create(json.toString(), MediaType.get("application/json"));
         String url = Constants.VPS_SERVER_IP + "/api/retention/request";
@@ -259,7 +496,6 @@ public class SettingsActivity extends AppCompatActivity {
                 runOnUiThread(() -> {
                     if (response.isSuccessful()) {
                         Toast.makeText(SettingsActivity.this, getString(R.string.cleanup_request_sent_toast), Toast.LENGTH_LONG).show();
-                        // Odśwież status od razu, żeby zobaczyć "PENDING"
                         fetchCurrentRetentionStatus();
                     } else {
                         Toast.makeText(SettingsActivity.this, getString(R.string.toast_api_error), Toast.LENGTH_SHORT).show();
@@ -270,7 +506,7 @@ public class SettingsActivity extends AppCompatActivity {
     }
 
     // ============================================================
-    // POZOSTAŁE METODY (WYGLĄD, JĘZYK, INTERWAŁY)
+    // APPEARANCE LOGIC
     // ============================================================
 
     private void loadCurrentAppearanceSettings() {
@@ -290,16 +526,6 @@ public class SettingsActivity extends AppCompatActivity {
         String currentLanguage = localeManager.getLanguage();
         if (LocaleManager.LANGUAGE_POLISH.equals(currentLanguage)) radioGroupLanguage.check(R.id.radioLanguagePolish);
         else radioGroupLanguage.check(R.id.radioLanguageEnglish);
-
-        int cleanupDays = cleanupManager.getCleanupDays();
-        if (cleanupDays > 0) editCleanupDays.setText(String.valueOf(cleanupDays));
-        else {
-            editCleanupDays.setText("");
-            editCleanupDays.setHint(getString(R.string.cleanup_disabled_hint));
-        }
-        int cleanupSize = cleanupManager.getCleanupSize();
-        if (cleanupSize > 0) editCleanupSize.setText(String.valueOf(cleanupSize));
-        else editCleanupSize.setText("");
     }
 
     private void setupAppearanceListeners() {
@@ -341,137 +567,5 @@ public class SettingsActivity extends AppCompatActivity {
                 recreate();
             }
         });
-    }
-
-    @Override
-    protected void onPause() {
-        super.onPause();
-        saveCleanupSettings();
-    }
-
-    private void saveCleanupSettings() {
-        String input = editCleanupDays.getText() != null ? editCleanupDays.getText().toString() : "";
-        int days = 0;
-        if (!input.isEmpty()) {
-            try {
-                days = Integer.parseInt(input);
-                if (days < 1) days = 0;
-            } catch (NumberFormatException e) { /* ignoruj */ }
-        }
-        cleanupManager.saveCleanupDays(days);
-
-        String inputSize = editCleanupSize.getText() != null ? editCleanupSize.getText().toString() : "";
-        int size = 0;
-        if (!inputSize.isEmpty()) {
-            try {
-                size = Integer.parseInt(inputSize);
-                if (size < 0) size = 0;
-            } catch (NumberFormatException e) { /* ignoruj */ }
-        }
-        cleanupManager.saveCleanupSize(size);
-    }
-
-    private void loadCurrentNotificationSettings() {
-        int savedInterval = notificationPrefs.getInt(KEY_GLOBAL_NOTIFICATION_INTERVAL, 0);
-        if (savedInterval > 0) editGlobalNotificationInterval.setText(String.valueOf(savedInterval));
-        else editGlobalNotificationInterval.setText("");
-    }
-
-    private void saveGlobalNotificationInterval() {
-        String intervalStr = editGlobalNotificationInterval.getText() != null ? editGlobalNotificationInterval.getText().toString() : "";
-        int intervalToSave = 0;
-        if (!intervalStr.isEmpty()) {
-            try {
-                intervalToSave = Integer.parseInt(intervalStr);
-                if (intervalToSave <= 0) intervalToSave = 0;
-            } catch (NumberFormatException e) {
-                // Używamy zasobu string zamiast tekstu "Nieprawidłowa liczba"
-                editGlobalNotificationInterval.setError(getString(R.string.error_invalid_number));
-                return;
-            }
-        }
-        notificationPrefs.edit().putInt(KEY_GLOBAL_NOTIFICATION_INTERVAL, intervalToSave).apply();
-        Toast.makeText(this, R.string.toast_global_notification_interval_saved, Toast.LENGTH_SHORT).show();
-        hideKeyboard();
-    }
-
-    private void saveGlobalInterval() {
-        String jwtToken = authPrefs.getString(LoginActivity.KEY_JWT_TOKEN, null);
-        if (jwtToken == null) {
-            Toast.makeText(this, R.string.toast_error_not_logged_in, Toast.LENGTH_SHORT).show();
-            return;
-        }
-        String intervalStr = editGlobalInterval.getText() != null ? editGlobalInterval.getText().toString() : "";
-        int intervalToSend = 60;
-
-        if (!intervalStr.isEmpty()) {
-            try {
-                intervalToSend = Integer.parseInt(intervalStr);
-                if (intervalToSend <= 5) {
-                    intervalToSend = 5;
-                    // Używamy String.valueOf, aby uniknąć warningów o hardcodowanym tekście
-                    editGlobalInterval.setText(String.valueOf(5));
-                }
-            } catch (NumberFormatException e) {
-                editGlobalInterval.setError(getString(R.string.error_invalid_number));
-                return;
-            }
-        } else {
-            editGlobalInterval.setText(String.valueOf(60));
-        }
-
-        Toast.makeText(this, R.string.toast_global_interval_updating, Toast.LENGTH_SHORT).show();
-        String url = Constants.VPS_SERVER_IP + "/api/sensors/interval/global";
-
-        JSONObject jsonBody = new JSONObject();
-        try { jsonBody.put("interval", intervalToSend); } catch (Exception e) { return; }
-        RequestBody body = RequestBody.create(jsonBody.toString(), MediaType.get("application/json; charset=utf-8"));
-
-        Request request = new Request.Builder()
-                .url(url)
-                .addHeader("Authorization", "Bearer " + jwtToken)
-                .post(body).build();
-
-        httpClient.newCall(request).enqueue(new Callback() {
-            @Override
-            public void onFailure(@NonNull Call call, @NonNull IOException e) {
-                // Bezpieczniejsze łączenie stringów w Toast
-                runOnUiThread(() -> Toast.makeText(SettingsActivity.this,
-                        getString(R.string.toast_api_error_with_reason, e.getMessage()),
-                        Toast.LENGTH_LONG).show());
-            }
-            @Override
-            public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
-                final String responseBody = response.body() != null ? response.body().string() : "";
-                if (response.isSuccessful()) {
-                    runOnUiThread(() -> {
-                        try {
-                            JSONObject json = new JSONObject(responseBody);
-                            int updatedCount = json.optInt("updatedCount", 0);
-                            Toast.makeText(SettingsActivity.this, String.format(getString(R.string.toast_global_interval_success), updatedCount), Toast.LENGTH_LONG).show();
-                        } catch (Exception e) {
-                            Toast.makeText(SettingsActivity.this, responseBody, Toast.LENGTH_LONG).show();
-                        }
-                        Intent serviceIntent = new Intent(SettingsActivity.this, VpsClientService.class);
-                        serviceIntent.putExtra("FORCE_SYNC_NOW", true);
-                        serviceIntent.putExtra("IS_SILENT", true);
-                        startService(serviceIntent);
-                    });
-                } else {
-                    runOnUiThread(() -> Toast.makeText(SettingsActivity.this,
-                            getString(R.string.toast_api_error_with_reason, responseBody),
-                            Toast.LENGTH_LONG).show());
-                }
-            }
-        });
-    }
-
-    private void hideKeyboard() {
-        try {
-            InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
-            if (imm != null && getCurrentFocus() != null) {
-                imm.hideSoftInputFromWindow(getCurrentFocus().getWindowToken(), 0);
-            }
-        } catch (Exception e) { /* ignoruj */ }
     }
 }

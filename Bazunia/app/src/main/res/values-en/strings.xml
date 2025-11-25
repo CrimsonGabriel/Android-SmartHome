@@ -275,7 +275,7 @@
 
     <string name="settings_interval_title">Global Measurement Frequency</string>
     <string name="settings_interval_label">Global Interval (in seconds)</string>
-    <string name="settings_interval_desc">Sets the default interval (e.g., 60) for ALL sensors. RPi will fetch this value automatically.</string>
+    <string name="settings_interval_desc">Sets the interval (60 s.) for sensors.</string>
     <string name="settings_interval_hint">Interval (seconds)</string>
     <string name="settings_interval_save_button">Save Global Interval</string>
     <string name="toast_global_interval_updating">Sending global interval…</string>
@@ -321,7 +321,7 @@
 
 
     <string name="settings_notification_interval_title">Global notification frequency</string>
-    <string name="settings_notification_interval_desc">Sets the global notification interval (e.g., 60 min) for ALL sensors. Empty = no limit.</string>
+    <string name="settings_notification_interval_desc">Sets the notif interval for sensors.</string>
     <string name="settings_notification_interval_hint">Interval (minutes)</string>
     <string name="settings_notification_interval_save_button">Save global interval</string>
     <string name="toast_global_notification_interval_saved">Global notification frequency saved.</string>
@@ -505,4 +505,18 @@
     <string name="risk_msg_on">Turned ON</string>
     <string name="risk_msg_open">Open</string>
     <string name="risk_msg_flow">Flow detected</string>
+
+    <string name="size_s">S</string>
+    <string name="size_m">M</string>
+    <string name="size_l">L</string>
+    <string name="settings_system_server_title">System &amp; Server</string>
+
+    <string name="cd_server_icon">Server settings icon</string>
+    <string name="cd_notification_icon">Notification settings icon</string>
+    <string name="cd_cleanup_icon">Data cleanup icon</string>
+    <string name="cd_account_icon">Account security icon</string>
+    <string name="cd_sharing_icon">Sharing icon</string>
+
+    <string name="default_interval_value">60</string>
+    <string name="toast_local_settings_saved">Local settings saved</string>
 </resources>
