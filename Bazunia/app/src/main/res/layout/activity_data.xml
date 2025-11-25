@@ -20,7 +20,7 @@
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnBack"
-                style="?attr/myIconButtonTextStyle"
+                style="?attr/materialIconButtonStyle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 app:icon="@drawable/ic_arrow_back"
@@ -43,7 +43,7 @@
                 app:icon="@drawable/ic_connect_test"
                 android:contentDescription="@string/test_connection_desc"
                 android:layout_gravity="end"
-                android:layout_marginEnd="16dp"
+                android:layout_marginEnd="8dp"
                 app:tint="?attr/colorOnSurface" />
 
             <com.google.android.material.button.MaterialButton
@@ -54,7 +54,7 @@
                 app:icon="@drawable/ic_settings"
                 android:contentDescription="@string/settings_content_description"
                 android:layout_gravity="end"
-                android:layout_marginEnd="16dp"
+                android:layout_marginEnd="8dp"
                 app:tint="?attr/colorOnSurface" />
 
             <com.google.android.material.button.MaterialButton
@@ -85,10 +85,24 @@
         tools:listitem="@layout/list_group" />
 
     <com.google.android.material.floatingactionbutton.FloatingActionButton
-    android:id="@+id/fab_add_folder"
-    android:layout_width="wrap_content"
-    android:layout_height="wrap_content"
-    android:layout_gravity="bottom|end"
-    android:layout_margin="16dp"
-    android:contentDescription="@string/fab_add_folder_desc"
-    app:srcCompat="@drawable/ic_folder" /> </androidx.coordinatorlayout.widget.CoordinatorLayout>
+        android:id="@+id/fab_filter"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|start"
+        android:layout_margin="16dp"
+        android:contentDescription="@string/filter_options_title"
+        app:fabSize="mini"
+        app:backgroundTint="?attr/colorSurfaceContainerHigh"
+        app:tint="?attr/colorOnSurface"
+        app:srcCompat="@drawable/ic_filter" />
+
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/fab_add_folder"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:layout_margin="16dp"
+        android:contentDescription="@string/fab_add_folder_desc"
+        app:srcCompat="@drawable/ic_folder" />
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

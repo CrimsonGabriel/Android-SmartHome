@@ -522,4 +522,8 @@
 
     <string name="default_interval_value">60</string>
     <string name="toast_local_settings_saved">Zapisano ustawienia lokalne</string>
+
+    <string name="filter_all_types">Wszystkie typy</string>
+    <string name="filter_all_gateways">Wszystkie bramki</string>
+    <string name="filters_cleared_toast">Filtry wyczyszczone</string>
 </resources>

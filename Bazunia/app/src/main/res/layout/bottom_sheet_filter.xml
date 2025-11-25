@@ -1,76 +1,82 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
     android:padding="24dp"
+    android:background="?android:attr/colorBackground"
     android:fitsSystemWindows="true">
+
+    <com.google.android.material.bottomsheet.BottomSheetDragHandleView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"/>
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="@string/filter_options_title"
-        android:textAppearance="@style/TextAppearance.Material3.TitleLarge"
-        android:layout_marginBottom="16dp"/>
-
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/search_by_id_label"
-        android:textAppearance="@style/TextAppearance.Material3.LabelLarge"/>
+        android:textAppearance="@style/TextAppearance.Material3.HeadlineSmall"
+        android:layout_marginBottom="24dp"
+        android:layout_gravity="center_horizontal"/>
 
     <com.google.android.material.textfield.TextInputLayout
         android:id="@+id/layoutEditSearch"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:hint="@string/search_by_id_hint"
+        app:startIconDrawable="@drawable/ic_search"
         style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
-        android:layout_marginTop="8dp">
+        android:layout_marginBottom="16dp">
 
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/editSearchFilter"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:hint="@string/search_by_id_hint"
-            android:inputType="text" />
+            android:inputType="text"
+            android:maxLines="1"/>
     </com.google.android.material.textfield.TextInputLayout>
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/filter_by_type_label"
-        android:textAppearance="@style/TextAppearance.Material3.LabelLarge"
-        android:layout_marginTop="16dp"/>
-
-    <Spinner
-        android:id="@+id/spinnerTypeFilter"
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/layoutTypeFilter"
+        style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:minHeight="48dp"
-        android:layout_marginTop="8dp"
-        android:background="@drawable/spinner_background" /> <TextView
-    android:layout_width="wrap_content"
-    android:layout_height="wrap_content"
-    android:text="@string/filter_by_gateway_label"
-    android:textAppearance="@style/TextAppearance.Material3.LabelLarge"
-    android:layout_marginTop="16dp"/>
+        android:hint="@string/filter_by_type_label"
+        android:layout_marginBottom="16dp">
 
-    <Spinner
-        android:id="@+id/spinnerGatewayFilter"
+        <AutoCompleteTextView
+            android:id="@+id/autoCompleteType"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="@string/filter_by_type_label"
+            android:inputType="none" />
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/layoutGatewayFilter"
+        style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:minHeight="48dp"
-        android:layout_marginTop="8dp"
-        android:background="@drawable/spinner_background" />
+        android:hint="@string/filter_by_gateway_label"
+        android:layout_marginBottom="24dp">
+
+        <AutoCompleteTextView
+            android:id="@+id/autoCompleteGateway"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="@string/filter_by_gateway_label"
+            android:inputType="none" />
+    </com.google.android.material.textfield.TextInputLayout>
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:layout_marginTop="24dp"
         android:gravity="end">
 
-        <Button
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/btnClearFilter"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -78,11 +84,10 @@
             android:text="@string/clear_filters_button"
             android:layout_marginEnd="8dp"/>
 
-        <Button
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/btnApplyFilter"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            style="@style/Widget.Material3.Button.TextButton"
             android:text="@string/apply_button"/>
     </LinearLayout>
 

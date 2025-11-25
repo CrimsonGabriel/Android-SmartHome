@@ -587,4 +587,38 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             Log.e("DatabaseHelper", "Error updating status", e);
         }
     }
+    // --- METODY DO FILTROWANIA (NOWE) ---
+
+    // Pobiera unikalne typy czujników (do listy rozwijanej)
+    public List<String> getAllSensorTypes() {
+        List<String> types = new ArrayList<>();
+        SQLiteDatabase db = this.getReadableDatabase();
+        String query = "SELECT DISTINCT " + S_COLUMN_TYPE + " FROM " + TABLE_SENSORS + " WHERE " + S_COLUMN_TYPE + " IS NOT NULL ORDER BY " + S_COLUMN_TYPE;
+        try (Cursor cursor = db.rawQuery(query, null)) {
+            while (cursor.moveToNext()) {
+                types.add(cursor.getString(0));
+            }
+        } catch (Exception e) {
+            Log.e("DB_FILTER", "Error fetching types", e);
+        }
+        return types;
+    }
+
+    // Pobiera listę bramek (ID i Nazwa) do listy rozwijanej
+    public List<Gateway> getAllGatewaysList() {
+        List<Gateway> gateways = new ArrayList<>();
+        SQLiteDatabase db = this.getReadableDatabase();
+        String query = "SELECT " + G_COLUMN_ID + ", " + G_COLUMN_NAME + " FROM " + TABLE_GATEWAYS + " ORDER BY " + G_COLUMN_NAME;
+        try (Cursor cursor = db.rawQuery(query, null)) {
+            while (cursor.moveToNext()) {
+                Gateway g = new Gateway();
+                g.id = cursor.getLong(0);
+                g.name = cursor.getString(1);
+                gateways.add(g);
+            }
+        } catch (Exception e) {
+            Log.e("DB_FILTER", "Error fetching gateways list", e);
+        }
+        return gateways;
+    }
 }

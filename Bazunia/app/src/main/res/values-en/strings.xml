@@ -519,4 +519,8 @@
 
     <string name="default_interval_value">60</string>
     <string name="toast_local_settings_saved">Local settings saved</string>
+
+    <string name="filter_all_types">All Types</string>
+    <string name="filter_all_gateways">All Gateways</string>
+    <string name="filters_cleared_toast">Filters cleared</string>
 </resources>

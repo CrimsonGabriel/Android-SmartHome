@@ -7,6 +7,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.database.Cursor;
+import android.graphics.Color;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.ContextMenu;
@@ -15,6 +16,7 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.ArrayAdapter;
+import android.widget.AutoCompleteTextView;
 import android.widget.EditText;
 import android.widget.Toast;
 
@@ -25,12 +27,17 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.flask.colorpicker.ColorPickerView;
+import com.flask.colorpicker.builder.ColorPickerDialogBuilder;
+import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import com.google.android.material.textfield.TextInputEditText;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import com.testserwera.bazunia.R;
 import com.testserwera.bazunia.data.DatabaseHelper;
+import com.testserwera.bazunia.data.Gateway;
 import com.testserwera.bazunia.data.SensorStatusErrorDto;
 import com.testserwera.bazunia.data.VpsClientService;
 import com.testserwera.bazunia.utils.AppearanceManager;
@@ -54,15 +61,12 @@ import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
-import com.flask.colorpicker.ColorPickerView;
-import com.flask.colorpicker.builder.ColorPickerDialogBuilder;
-import android.graphics.Color;
 
 public class DataActivity extends AppCompatActivity implements FolderAdapter.FolderCallback {
 
     private static final String TAG = "DataActivity";
 
-    // ZMIANA: Pola finalne, ponieważ ich referencje się nie zmieniają
+    // Pola finalne dla list i map
     private final List<Object> displayItems = new ArrayList<>();
     private final Map<Long, Boolean> folderExpansionState = new HashMap<>();
     private final Map<String, Boolean> gatewayExpansionState = new HashMap<>();
@@ -88,6 +92,12 @@ public class DataActivity extends AppCompatActivity implements FolderAdapter.Fol
     private Gson gson;
     private boolean showSyncToast = false;
 
+    // --- Stan Filtrów ---
+    private String filterQuery = "";
+    private String filterType = null; // null = wszystkie
+    private Long filterGatewayId = null; // null = wszystkie
+    private FloatingActionButton fabFilter;
+
     @Override
     protected void attachBaseContext(Context newBase) {
         LocaleManager localeManager = new LocaleManager(newBase);
@@ -110,7 +120,6 @@ public class DataActivity extends AppCompatActivity implements FolderAdapter.Fol
         mutePrefs = getSharedPreferences("NotificationMutePrefs", Context.MODE_PRIVATE);
         gson = new Gson();
 
-        // ZMIANA: recyclerView jako zmienna lokalna
         RecyclerView recyclerView = findViewById(R.id.recyclerView);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         adapter = new FolderAdapter(this, displayItems, this);
@@ -121,34 +130,387 @@ public class DataActivity extends AppCompatActivity implements FolderAdapter.Fol
         MaterialButton btnBack = findViewById(R.id.btnBack);
         MaterialButton btnSettings = findViewById(R.id.btnSettings);
         MaterialButton btnRefresh = findViewById(R.id.btnRefresh);
-
-        // ZMIANA: btnTestConnection jako zmienna lokalna
         MaterialButton btnTestConnection = findViewById(R.id.btnTestConnection);
+
         FloatingActionButton fabAddFolder = findViewById(R.id.fab_add_folder);
+        fabFilter = findViewById(R.id.fab_filter);
+
         fabAddFolder.setOnClickListener(v -> showCreateFolderDialog(null));
+        fabFilter.setOnClickListener(v -> showFilterBottomSheet());
 
         btnBack.setOnClickListener(v -> finish());
         btnSettings.setOnClickListener(v -> startActivity(new Intent(this, SettingsActivity.class)));
 
         btnRefresh.setOnClickListener(v -> forceSync());
         btnTestConnection.setOnClickListener(v -> testConnection());
+
         setupBroadcastReceiver();
         loadDisplayListFromDb();
+        updateFilterFabState();
     }
 
-    private void forceSync(boolean notifyUser) {
-        // Ustawiamy flagę. Jeśli true - receiver wyświetli toast. Jeśli false - receiver będzie cicho.
-        this.showSyncToast = notifyUser;
+    // --- LOGIKA FILTROWANIA ---
 
+    private boolean isFilterActive() {
+        return (filterQuery != null && !filterQuery.isEmpty()) ||
+                filterType != null ||
+                filterGatewayId != null;
+    }
+
+    private void updateFilterFabState() {
+        if (isFilterActive()) {
+            // Zmień kolor ikonki na czerwony (lub inny ostrzegawczy), jeśli filtr jest aktywny
+            // Uwaga: Wymaga zdefiniowania koloru error w colors.xml lub użycia systemowego
+            fabFilter.setImageTintList(getColorStateList(android.R.color.holo_red_light));
+        } else {
+            // Domyślny kolor (z tematu)
+            fabFilter.setImageTintList(null);
+        }
+    }
+
+    private void showFilterBottomSheet() {
+        BottomSheetDialog bottomSheetDialog = new BottomSheetDialog(this);
+
+        // ZMIANA: Używamy findViewById(android.R.id.content) jako parent, ale attach=false.
+        // To naprawia ostrzeżenie "Avoid passing null as the view root".
+        View sheetView = getLayoutInflater().inflate(R.layout.bottom_sheet_filter, findViewById(android.R.id.content), false);
+
+        bottomSheetDialog.setContentView(sheetView);
+
+        TextInputEditText editSearch = sheetView.findViewById(R.id.editSearchFilter);
+        AutoCompleteTextView autoType = sheetView.findViewById(R.id.autoCompleteType);
+        AutoCompleteTextView autoGateway = sheetView.findViewById(R.id.autoCompleteGateway);
+        MaterialButton btnClear = sheetView.findViewById(R.id.btnClearFilter);
+        MaterialButton btnApply = sheetView.findViewById(R.id.btnApplyFilter);
+
+        // Ustawienie obecnych wartości
+        editSearch.setText(filterQuery);
+
+        // --- Konfiguracja listy Typów ---
+        List<String> types = dbHelper.getAllSensorTypes();
+        types.add(0, getString(R.string.filter_all_types)); // Opcja "Wszystkie"
+        ArrayAdapter<String> typeAdapter = new ArrayAdapter<>(this, android.R.layout.simple_dropdown_item_1line, types);
+        autoType.setAdapter(typeAdapter);
+        if (filterType != null) {
+            autoType.setText(filterType, false);
+        } else {
+            autoType.setText(types.get(0), false);
+        }
+
+        // --- Konfiguracja listy Bramek ---
+        List<Gateway> gateways = dbHelper.getAllGatewaysList();
+        List<String> gatewayNames = new ArrayList<>();
+        gatewayNames.add(getString(R.string.filter_all_gateways));
+        int selectedGatewayIndex = 0;
+        for (int i = 0; i < gateways.size(); i++) {
+            gatewayNames.add(gateways.get(i).getName());
+            if (filterGatewayId != null && filterGatewayId == gateways.get(i).getId()) {
+                selectedGatewayIndex = i + 1; // +1 bo "Wszystkie" jest na 0
+            }
+        }
+        ArrayAdapter<String> gatewayAdapter = new ArrayAdapter<>(this, android.R.layout.simple_dropdown_item_1line, gatewayNames);
+        autoGateway.setAdapter(gatewayAdapter);
+        autoGateway.setText(gatewayNames.get(selectedGatewayIndex), false);
+
+        // --- Obsługa Przycisków ---
+        btnClear.setOnClickListener(v -> {
+            filterQuery = "";
+            filterType = null;
+            filterGatewayId = null;
+            loadDisplayListFromDb();
+            updateFilterFabState();
+            bottomSheetDialog.dismiss();
+            Toast.makeText(this, R.string.filters_cleared_toast, Toast.LENGTH_SHORT).show();
+        });
+
+        btnApply.setOnClickListener(v -> {
+            filterQuery = editSearch.getText() != null ? editSearch.getText().toString().trim() : "";
+
+            String selectedType = autoType.getText().toString();
+            if (selectedType.equals(getString(R.string.filter_all_types)) || selectedType.isEmpty()) {
+                filterType = null;
+            } else {
+                filterType = selectedType;
+            }
+
+            String selectedGatewayName = autoGateway.getText().toString();
+            filterGatewayId = null;
+            if (!selectedGatewayName.equals(getString(R.string.filter_all_gateways))) {
+                for (Gateway g : gateways) {
+                    if (g.getName().equals(selectedGatewayName)) {
+                        filterGatewayId = g.getId();
+                        break;
+                    }
+                }
+            }
+
+            loadDisplayListFromDb();
+            updateFilterFabState();
+            bottomSheetDialog.dismiss();
+        });
+
+        bottomSheetDialog.show();
+    }
+
+    private boolean sensorMatchesFilter(Cursor cursor, String gwName) {
+        if (!isFilterActive()) return true;
+
+        boolean match = true;
+
+        // 1. Filtr Tekstowy (Nazwa czujnika, ID, Typ, Opis, Nazwa Bramki)
+        if (!filterQuery.isEmpty()) {
+            String name = cursor.getString(cursor.getColumnIndexOrThrow("name"));
+            String type = cursor.getString(cursor.getColumnIndexOrThrow("type"));
+            String desc = cursor.getString(cursor.getColumnIndexOrThrow("description"));
+            String q = filterQuery.toLowerCase();
+
+            boolean textMatch = (name != null && name.toLowerCase().contains(q)) ||
+                    (type != null && type.toLowerCase().contains(q)) ||
+                    (desc != null && desc.toLowerCase().contains(q)) ||
+                    (gwName != null && gwName.toLowerCase().contains(q));
+            if (!textMatch) match = false;
+        }
+
+        // 2. Filtr Typu
+        if (match && filterType != null) {
+            String type = cursor.getString(cursor.getColumnIndexOrThrow("type"));
+            if (type == null || !type.equalsIgnoreCase(filterType)) {
+                match = false;
+            }
+        }
+
+        // 3. Filtr Bramki
+        if (match && filterGatewayId != null) {
+            long gwId = cursor.getLong(cursor.getColumnIndexOrThrow("gateway_id"));
+            if (gwId != filterGatewayId) {
+                match = false;
+            }
+        }
+
+        return match;
+    }
+
+    private boolean gatewayMatchesFilter(Cursor cursor) {
+        if (!isFilterActive()) return true;
+
+        boolean match = true;
+
+        // 1. Filtr Tekstowy dla bramki
+        if (!filterQuery.isEmpty()) {
+            String name = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.G_COLUMN_NAME));
+            String desc = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.G_COLUMN_DESCRIPTION));
+            String q = filterQuery.toLowerCase();
+            if ((name == null || !name.toLowerCase().contains(q)) &&
+                    (desc == null || !desc.toLowerCase().contains(q))) {
+                match = false;
+            }
+        }
+
+        // 2. Filtr ID Bramki (Explicit select)
+        if (match && filterGatewayId != null) {
+            long id = cursor.getLong(cursor.getColumnIndexOrThrow(DatabaseHelper.G_COLUMN_ID));
+            if (id != filterGatewayId) {
+                match = false;
+            }
+        }
+
+        // Jeśli wybrano filtr TYPU czujnika, sama bramka (jako nagłówek) nie pasuje,
+        // chyba że ma dzieci (co sprawdzamy w loadDisplayListFromDb)
+        if (filterType != null) {
+            match = false;
+        }
+
+        return match;
+    }
+
+
+    // --- GŁÓWNA METODA ŁADOWANIA DANYCH ---
+    @SuppressLint("NotifyDataSetChanged")
+    private void loadDisplayListFromDb() {
+        // 1. Uruchamiamy wątek w tle, żeby nie blokować UI (nie lagować)
+        new Thread(() -> {
+
+            // Tutaj robimy całą ciężką pracę na bazie danych
+            List<Object> tempItems = new ArrayList<>();
+            boolean filtering = isFilterActive();
+
+            // --- 1. Sekcja ULUBIONE ---
+            List<Object> favoriteChildren = new ArrayList<>();
+
+            try (Cursor favGateways = dbHelper.getFavoriteGatewaysCursor()) {
+                while (favGateways.moveToNext()) {
+                    long gatewayId = favGateways.getLong(favGateways.getColumnIndexOrThrow(DatabaseHelper.G_COLUMN_ID));
+                    String gwName = favGateways.getString(favGateways.getColumnIndexOrThrow(DatabaseHelper.G_COLUMN_NAME));
+
+                    boolean gwMatches = gatewayMatchesFilter(favGateways);
+
+                    List<FolderAdapter.SensorItem> matchingSensors = new ArrayList<>();
+                    try (Cursor sensors = dbHelper.getSensorsForGateway(gatewayId)) {
+                        while (sensors.moveToNext()) {
+                            if (sensorMatchesFilter(sensors, gwName)) {
+                                matchingSensors.add(new FolderAdapter.SensorItem(sensors, null, PARENT_ID_GATEWAY));
+                            }
+                        }
+                    }
+
+                    if (gwMatches || !matchingSensors.isEmpty()) {
+                        String stateKey = "fav_gw_" + gatewayId;
+                        // Uwaga: dostęp do mapy expansionState musi być ostrożny, ale odczyt jest zazwyczaj ok.
+                        // Dla pewności w przyszłości warto użyć ConcurrentHashMap, ale tu przy odczycie nie powinno wywalić.
+                        boolean gwExpanded = filtering ? !matchingSensors.isEmpty() : Boolean.TRUE.equals(gatewayExpansionState.get(stateKey));
+
+                        favoriteChildren.add(new FolderAdapter.GatewayItem(favGateways, PARENT_ID_FAVORITE, true, gwExpanded));
+
+                        if (gwExpanded) {
+                            favoriteChildren.addAll(matchingSensors);
+                        }
+                    }
+                }
+            }
+            try (Cursor favSensors = dbHelper.getFavoriteSensorsCursor()) {
+                while (favSensors.moveToNext()) {
+                    String gwName = favSensors.getString(favSensors.getColumnIndexOrThrow("gateway_name"));
+                    if (sensorMatchesFilter(favSensors, gwName)) {
+                        favoriteChildren.add(new FolderAdapter.SensorItem(favSensors, gwName, PARENT_ID_FAVORITE));
+                    }
+                }
+            }
+
+            if (!favoriteChildren.isEmpty() || !filtering) {
+                boolean expanded = filtering || Boolean.TRUE.equals(folderExpansionState.get(PARENT_ID_FAVORITE));
+                tempItems.add(new FolderAdapter.FolderItem(
+                        PARENT_ID_FAVORITE,
+                        getString(R.string.section_favorites),
+                        expanded
+                ));
+                if (expanded) {
+                    tempItems.addAll(favoriteChildren);
+                }
+            }
+
+            // --- 2. Sekcje FOLDERÓW ---
+            try (Cursor folders = dbHelper.getFoldersCursor()) {
+                while (folders.moveToNext()) {
+                    long folderId = folders.getLong(folders.getColumnIndexOrThrow("_id"));
+                    String folderColorHex = folders.getString(folders.getColumnIndexOrThrow(DatabaseHelper.F_COLUMN_COLOR));
+
+                    List<Object> folderChildren = new ArrayList<>();
+
+                    // Bramki w folderze
+                    try (Cursor gatewaysInFolder = dbHelper.getGatewaysForFolderCursor(folderId)) {
+                        while (gatewaysInFolder.moveToNext()) {
+                            long gatewayId = gatewaysInFolder.getLong(gatewaysInFolder.getColumnIndexOrThrow(DatabaseHelper.G_COLUMN_ID));
+                            String gwName = gatewaysInFolder.getString(gatewaysInFolder.getColumnIndexOrThrow(DatabaseHelper.G_COLUMN_NAME));
+
+                            boolean gwMatches = gatewayMatchesFilter(gatewaysInFolder);
+
+                            List<FolderAdapter.SensorItem> matchingSensors = new ArrayList<>();
+                            try (Cursor sensors = dbHelper.getSensorsForGateway(gatewayId)) {
+                                while (sensors.moveToNext()) {
+                                    if (sensorMatchesFilter(sensors, gwName)) {
+                                        matchingSensors.add(new FolderAdapter.SensorItem(sensors, null, PARENT_ID_GATEWAY, folderColorHex));
+                                    }
+                                }
+                            }
+
+                            if (gwMatches || !matchingSensors.isEmpty()) {
+                                String stateKey = "folder_" + folderId + "_gw_" + gatewayId;
+                                boolean gwExpanded = filtering ? !matchingSensors.isEmpty() : Boolean.TRUE.equals(gatewayExpansionState.get(stateKey));
+
+                                folderChildren.add(new FolderAdapter.GatewayItem(gatewaysInFolder, folderId, true, gwExpanded, folderColorHex));
+
+                                if (gwExpanded) {
+                                    folderChildren.addAll(matchingSensors);
+                                }
+                            }
+                        }
+                    }
+
+                    // Sensory luzem w folderze
+                    try (Cursor sensorsInFolder = dbHelper.getSensorsForFolderCursor(folderId)) {
+                        while (sensorsInFolder.moveToNext()) {
+                            String gwName = sensorsInFolder.getString(sensorsInFolder.getColumnIndexOrThrow("gateway_name"));
+                            if (sensorMatchesFilter(sensorsInFolder, gwName)) {
+                                folderChildren.add(new FolderAdapter.SensorItem(sensorsInFolder, gwName, folderId, folderColorHex));
+                            }
+                        }
+                    }
+
+                    if (!folderChildren.isEmpty() || !filtering) {
+                        boolean expanded = filtering || Boolean.TRUE.equals(folderExpansionState.get(folderId));
+                        FolderAdapter.FolderItem folderItem = new FolderAdapter.FolderItem(folders, expanded);
+                        tempItems.add(folderItem);
+
+                        if (expanded) {
+                            tempItems.addAll(folderChildren);
+                        }
+                    }
+                }
+            }
+
+            // --- 3. Sekcja "NIEZGRUPOWANE" ---
+            List<Object> uncatChildren = new ArrayList<>();
+            try (Cursor uncategorized = dbHelper.getUncategorizedGatewaysCursor()) {
+                while (uncategorized.moveToNext()) {
+                    long gatewayId = uncategorized.getLong(uncategorized.getColumnIndexOrThrow(DatabaseHelper.G_COLUMN_ID));
+                    String gwName = uncategorized.getString(uncategorized.getColumnIndexOrThrow(DatabaseHelper.G_COLUMN_NAME));
+
+                    boolean gwMatches = gatewayMatchesFilter(uncategorized);
+
+                    List<FolderAdapter.SensorItem> matchingSensors = new ArrayList<>();
+                    try (Cursor sensors = dbHelper.getSensorsForGateway(gatewayId)) {
+                        while (sensors.moveToNext()) {
+                            if (sensorMatchesFilter(sensors, gwName)) {
+                                matchingSensors.add(new FolderAdapter.SensorItem(sensors, null, PARENT_ID_GATEWAY));
+                            }
+                        }
+                    }
+
+                    if (gwMatches || !matchingSensors.isEmpty()) {
+                        String stateKey = "uncat_gw_" + gatewayId;
+                        boolean gwExpanded = filtering ? !matchingSensors.isEmpty() : Boolean.TRUE.equals(gatewayExpansionState.get(stateKey));
+
+                        uncatChildren.add(new FolderAdapter.GatewayItem(uncategorized, UNCATEGORIZED_PARENT_ID, true, gwExpanded));
+                        if (gwExpanded) {
+                            uncatChildren.addAll(matchingSensors);
+                        }
+                    }
+                }
+            }
+
+            if (!uncatChildren.isEmpty() || !filtering) {
+                boolean expanded = filtering || Boolean.TRUE.equals(folderExpansionState.get(UNCATEGORIZED_PARENT_ID));
+                tempItems.add(new FolderAdapter.FolderItem(
+                        UNCATEGORIZED_PARENT_ID,
+                        getString(R.string.section_uncategorized),
+                        expanded
+                ));
+                if (expanded) {
+                    tempItems.addAll(uncatChildren);
+                }
+            }
+
+            // 2. Po zakończeniu pracy w tle, wracamy na wątek główny, żeby odświeżyć widok
+            runOnUiThread(() -> {
+                displayItems.clear();
+                displayItems.addAll(tempItems);
+                adapter.notifyDataSetChanged();
+            });
+
+        }).start(); // Start wątku
+    }
+
+    // --- POZOSTAŁE METODY (LOGIKA BIZNESOWA) ---
+
+    private void forceSync(boolean notifyUser) {
+        this.showSyncToast = notifyUser;
         Intent serviceIntent = new Intent(this, VpsClientService.class);
         serviceIntent.putExtra("FORCE_SYNC_NOW", true);
         startService(serviceIntent);
     }
 
-    // Przeciążenie dla wygody (domyślnie cicho), żeby stary kod się nie sypał,
-// ale lepiej używać wszędzie wersji z parametrem.
     private void forceSync() {
-        forceSync(true); // Domyślnie głośno dla starych wywołań (np. przycisk refresh)
+        forceSync(true);
     }
 
     private void forceBatteryCheck() {
@@ -158,128 +520,8 @@ public class DataActivity extends AppCompatActivity implements FolderAdapter.Fol
         Toast.makeText(this, R.string.toast_battery_check_started, Toast.LENGTH_SHORT).show();
     }
 
-    // ZMIANA: Ignorujemy warning NotifyDataSetChanged, bo w tej logice przeładowujemy całą listę
-    @SuppressLint("NotifyDataSetChanged")
-    private void loadDisplayListFromDb() {
-        displayItems.clear();
-
-        // --- 1. Sekcja ULUBIONE ---
-        boolean isFavoritesExpanded = Boolean.TRUE.equals(folderExpansionState.get(PARENT_ID_FAVORITE));
-
-        displayItems.add(new FolderAdapter.FolderItem(
-                PARENT_ID_FAVORITE,
-                getString(R.string.section_favorites),
-                isFavoritesExpanded
-        ));
-
-        if (isFavoritesExpanded) {
-            try (Cursor favGateways = dbHelper.getFavoriteGatewaysCursor()) {
-                while (favGateways.moveToNext()) {
-                    long gatewayId = favGateways.getLong(favGateways.getColumnIndexOrThrow(DatabaseHelper.G_COLUMN_ID));
-                    String stateKey = "fav_gw_" + gatewayId;
-                    boolean gwExpanded = Boolean.TRUE.equals(gatewayExpansionState.get(stateKey));
-
-                    // TU: Używamy konstruktora pomocniczego (4 argumenty), bo ulubione nie mają koloru tła
-                    displayItems.add(new FolderAdapter.GatewayItem(favGateways, PARENT_ID_FAVORITE, true, gwExpanded));
-
-                    if (gwExpanded) {
-                        try (Cursor sensors = dbHelper.getSensorsForGateway(gatewayId)) {
-                            while (sensors.moveToNext()) {
-                                // TU: Używamy konstruktora pomocniczego dla sensora
-                                displayItems.add(new FolderAdapter.SensorItem(sensors, null, PARENT_ID_GATEWAY));
-                            }
-                        }
-                    }
-                }
-            }
-            try (Cursor favSensors = dbHelper.getFavoriteSensorsCursor()) {
-                while (favSensors.moveToNext()) {
-                    String gwName = favSensors.getString(favSensors.getColumnIndexOrThrow("gateway_name"));
-                    displayItems.add(new FolderAdapter.SensorItem(favSensors, gwName, PARENT_ID_FAVORITE));
-                }
-            }
-        }
-
-        // --- 2. Sekcje FOLDERÓW ---
-        try (Cursor folders = dbHelper.getFoldersCursor()) {
-            while (folders.moveToNext()) {
-                long folderId = folders.getLong(folders.getColumnIndexOrThrow("_id"));
-                boolean isExpanded = Boolean.TRUE.equals(folderExpansionState.get(folderId));
-
-                // Pobieramy kolor folderu
-                String folderColorHex = folders.getString(folders.getColumnIndexOrThrow(DatabaseHelper.F_COLUMN_COLOR));
-
-                FolderAdapter.FolderItem folderItem = new FolderAdapter.FolderItem(folders, isExpanded);
-                displayItems.add(folderItem);
-
-                if (isExpanded) {
-                    try (Cursor gatewaysInFolder = dbHelper.getGatewaysForFolderCursor(folderId)) {
-                        while (gatewaysInFolder.moveToNext()) {
-                            long gatewayId = gatewaysInFolder.getLong(gatewaysInFolder.getColumnIndexOrThrow(DatabaseHelper.G_COLUMN_ID));
-                            String stateKey = "folder_" + folderId + "_gw_" + gatewayId;
-                            boolean gwExpanded = Boolean.TRUE.equals(gatewayExpansionState.get(stateKey));
-
-                            // TU: Używamy konstruktora GŁÓWNEGO (5 argumentów), przekazując kolor
-                            FolderAdapter.GatewayItem gatewayItem = new FolderAdapter.GatewayItem(gatewaysInFolder, folderId, true, gwExpanded, folderColorHex);
-                            displayItems.add(gatewayItem);
-
-                            if (gwExpanded) {
-                                try (Cursor sensors = dbHelper.getSensorsForGateway(gatewayId)) {
-                                    while (sensors.moveToNext()) {
-                                        // TU: Sensor też dostaje kolor tła
-                                        displayItems.add(new FolderAdapter.SensorItem(sensors, null, PARENT_ID_GATEWAY, folderColorHex));
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    try (Cursor sensorsInFolder = dbHelper.getSensorsForFolderCursor(folderId)) {
-                        while (sensorsInFolder.moveToNext()) {
-                            String gwName = sensorsInFolder.getString(sensorsInFolder.getColumnIndexOrThrow("gateway_name"));
-                            displayItems.add(new FolderAdapter.SensorItem(sensorsInFolder, gwName, folderId, folderColorHex));
-                        }
-                    }
-                }
-            }
-        }
-
-        // --- 3. Sekcja "NIEZGRUPOWANE" ---
-        boolean isUncategorizedExpanded = Boolean.TRUE.equals(folderExpansionState.get(UNCATEGORIZED_PARENT_ID));
-
-        displayItems.add(new FolderAdapter.FolderItem(
-                UNCATEGORIZED_PARENT_ID,
-                getString(R.string.section_uncategorized),
-                isUncategorizedExpanded
-        ));
-
-        if (isUncategorizedExpanded) {
-            try (Cursor uncategorized = dbHelper.getUncategorizedGatewaysCursor()) {
-                while (uncategorized.moveToNext()) {
-                    long gatewayId = uncategorized.getLong(uncategorized.getColumnIndexOrThrow(DatabaseHelper.G_COLUMN_ID));
-                    String stateKey = "uncat_gw_" + gatewayId;
-                    boolean gwExpanded = Boolean.TRUE.equals(gatewayExpansionState.get(stateKey));
-
-                    // TU: Konstruktor pomocniczy (bez koloru)
-                    FolderAdapter.GatewayItem gatewayItem = new FolderAdapter.GatewayItem(uncategorized, UNCATEGORIZED_PARENT_ID, true, gwExpanded);
-                    displayItems.add(gatewayItem);
-
-                    if (gwExpanded) {
-                        try (Cursor sensors = dbHelper.getSensorsForGateway(gatewayId)) {
-                            while (sensors.moveToNext()) {
-                                displayItems.add(new FolderAdapter.SensorItem(sensors, null, PARENT_ID_GATEWAY));
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        adapter.notifyDataSetChanged();
-    }
-
     @Override
     public void onFolderClicked(FolderAdapter.FolderItem folder) {
-        // ZMIANA: Bezpieczne odwracanie stanu Boolean
         boolean isExpanded = Boolean.TRUE.equals(folderExpansionState.get(folder.id));
         folderExpansionState.put(folder.id, !isExpanded);
         loadDisplayListFromDb();
@@ -295,7 +537,6 @@ public class DataActivity extends AppCompatActivity implements FolderAdapter.Fol
         } else {
             stateKey = "folder_" + gateway.parentFolderId + "_gw_" + gateway.id;
         }
-        // ZMIANA: Bezpieczne odwracanie stanu Boolean
         boolean isExpanded = Boolean.TRUE.equals(gatewayExpansionState.get(stateKey));
         gatewayExpansionState.put(stateKey, !isExpanded);
         loadDisplayListFromDb();
@@ -409,7 +650,6 @@ public class DataActivity extends AppCompatActivity implements FolderAdapter.Fol
         }
     }
 
-    // ZMIANA: Ignorujemy warning o notifyDataSetChanged w tej metodzie
     @SuppressLint("NotifyDataSetChanged")
     @Override
     public boolean onContextItemSelected(@NonNull MenuItem item) {
@@ -540,8 +780,6 @@ public class DataActivity extends AppCompatActivity implements FolderAdapter.Fol
         return super.onContextItemSelected(item);
     }
 
-    // --- DIALOGI I METODY SIECIOWE ---
-
     private void showCreateFolderDialog(FolderAdapter.FolderItem folder) {
         LayoutInflater inflater = getLayoutInflater();
         View dialogView = inflater.inflate(R.layout.dialog_create_folder, null);
@@ -570,7 +808,6 @@ public class DataActivity extends AppCompatActivity implements FolderAdapter.Fol
         colorPreview.setBackgroundColor(initialColor);
         final int[] currentColor = {initialColor};
 
-        // --- Live Preview przy wpisywaniu ręcznym ---
         editColor.addTextChangedListener(new android.text.TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
@@ -588,18 +825,12 @@ public class DataActivity extends AppCompatActivity implements FolderAdapter.Fol
             }
         });
 
-        // --- OBSŁUGA PICKERA "HUE STYLE" (KOŁO) ---
         colorPreview.setOnClickListener(v -> ColorPickerDialogBuilder
                 .with(this)
                 .setTitle(getString(R.string.dialog_folder_color_hint))
                 .initialColor(currentColor[0])
-                // WHEEL_TYPE.FLOWER daje efekt tęczowego koła (jak Hue)
-                // Możesz też użyć WHEEL_TYPE.CIRCLE dla prostszego koła
                 .wheelType(ColorPickerView.WHEEL_TYPE.FLOWER)
-                .density(12) // Gęstość kolorów na kole
-                .setOnColorSelectedListener(selectedColor -> {
-                    // Opcjonalnie: Reakcja na przesuwanie palcem (np. toast z hexem)
-                })
+                .density(12)
                 .setPositiveButton(getString(R.string.dialog_save), (dialog, selectedColor, allColors) -> {
                     currentColor[0] = selectedColor;
                     String hexColor = String.format("#%06X", (0xFFFFFF & selectedColor));
@@ -844,7 +1075,7 @@ public class DataActivity extends AppCompatActivity implements FolderAdapter.Fol
             }
 
             @Override
-            public void onResponse(@NonNull Call call, @NonNull Response response) { // Usunięto "throws IOException"
+            public void onResponse(@NonNull Call call, @NonNull Response response) {
                 if (response.isSuccessful()) {
                     runOnUiThread(() -> {
                         Toast.makeText(DataActivity.this, getString(R.string.toast_added_to_folder, folderName), Toast.LENGTH_SHORT).show();
@@ -1073,13 +1304,18 @@ public class DataActivity extends AppCompatActivity implements FolderAdapter.Fol
         });
     }
 
-    // --- Metody cyklu życia ---
+    private long lastUpdateTimestamp = 0;
 
     private void setupBroadcastReceiver() {
         dataUpdateReceiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
-                loadDisplayListFromDb();
+                long now = System.currentTimeMillis();
+               
+                if (now - lastUpdateTimestamp > 500) {
+                    lastUpdateTimestamp = now;
+                    loadDisplayListFromDb();
+                }
             }
         };
 
@@ -1089,13 +1325,10 @@ public class DataActivity extends AppCompatActivity implements FolderAdapter.Fol
                 boolean success = intent.getBooleanExtra("SYNC_SUCCESS", false);
                 long now = System.currentTimeMillis();
 
-                // --- NOWA LOGIKA: Pokaż TYLKO jeśli użytkownik o to prosił ---
                 if (!showSyncToast) {
-                    return; // Wychodzimy. Nie ma toasta. Cisza.
+                    return;
                 }
-                // Resetujemy flagę, żeby kolejne automatyczne synchronizacje też były ciche
                 showSyncToast = false;
-                // -------------------------------------------------------------
 
                 if (now - lastSyncToastTime < 3000) {
                     return;
