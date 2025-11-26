@@ -20,4 +20,9 @@
     <color name="colorSurfaceVariant">#41484D</color>
     <color name="colorOnSurfaceVariant">#C1C7CE</color>
 
-    <color name="colorSafe">#81C784</color>   <color name="colorRisk">#E57373</color>   <color name="colorWarning">#FFB74D</color> <color name="colorDelete">#EF5350</color> </resources>
+    <color name="colorSafe">#81C784</color>
+    <color name="colorRisk">#E57373</color>
+    <color name="colorWarning">#FFB74D</color>
+    <color name="colorDelete">#EF5350</color>
+    <color name="color_list_divider">#FFFFFFFF</color>
+</resources>

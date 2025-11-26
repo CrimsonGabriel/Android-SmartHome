@@ -1,5 +1,6 @@
 package com.testserwera.bazunia.ui;
-
+import androidx.recyclerview.widget.DividerItemDecoration;
+import androidx.core.content.ContextCompat;
 import android.annotation.SuppressLint;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -113,6 +114,9 @@ public class DataActivity extends BaseActivity implements FolderAdapter.FolderCa
 
         RecyclerView recyclerView = findViewById(R.id.recyclerView);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
+        DividerItemDecoration itemDecoration = new DividerItemDecoration(this, DividerItemDecoration.VERTICAL);
+        itemDecoration.setDrawable(ContextCompat.getDrawable(this, R.drawable.list_divider));
+        recyclerView.addItemDecoration(itemDecoration);
         adapter = new FolderAdapter(this, displayItems, this);
         recyclerView.setAdapter(adapter);
 
@@ -537,7 +541,7 @@ public class DataActivity extends BaseActivity implements FolderAdapter.FolderCa
         currentContextMenuItem = item;
         BottomSheetDialog bottomSheetDialog = new BottomSheetDialog(this);
         NavigationView navigationView = new NavigationView(this);
-
+        navigationView.setItemBackgroundResource(R.drawable.menu_item_with_divider);
         // 1. Wybierz odpowiednie menu
         Menu menu = navigationView.getMenu();
         if (item instanceof FolderAdapter.FolderItem) {

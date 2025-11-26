@@ -21,4 +21,5 @@
     <color name="colorWarning">#FF9800</color>
 
     <color name="colorDelete">#D32F2F</color>
+    <color name="color_list_divider">#FF000000</color>
 </resources>
