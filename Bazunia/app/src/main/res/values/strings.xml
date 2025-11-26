@@ -526,4 +526,7 @@
     <string name="filter_all_types">Wszystkie typy</string>
     <string name="filter_all_gateways">Wszystkie bramki</string>
     <string name="filters_cleared_toast">Filtry wyczyszczone</string>
+
+    <string name="dashboard_title">Panel główny</string>
+
 </resources>

@@ -523,4 +523,6 @@
     <string name="filter_all_types">All Types</string>
     <string name="filter_all_gateways">All Gateways</string>
     <string name="filters_cleared_toast">Filters cleared</string>
+
+    <string name="dashboard_title">Dashboard</string>
 </resources>

@@ -19,8 +19,7 @@
             android:id="@+id/logoImageView"
             android:layout_width="96dp"
             android:layout_height="96dp"
-            android:src="@drawable/ic_sensor"
-            app:tint="?attr/colorPrimary"
+            android:src="@drawable/ic_launcher_foreground"
             android:contentDescription="@string/app_logo_description" />
         <TextView
             android:id="@+id/titleTextView"

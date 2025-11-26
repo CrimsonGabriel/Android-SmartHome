@@ -13,7 +13,8 @@
         android:layout_height="wrap_content"
         android:minHeight="?attr/actionBarSize"
         app:title="@string/settings_account_section_title"
-        app:navigationIcon="@drawable/ic_arrow_back" />
+        app:navigationIcon="@drawable/ic_arrow_back"
+        app:navigationIconTint="?attr/colorOnSurface" />
 
     <ScrollView
         android:layout_width="match_parent"

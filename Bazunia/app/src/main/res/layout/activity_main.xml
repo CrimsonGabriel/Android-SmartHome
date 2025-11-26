@@ -9,32 +9,48 @@
     tools:context=".ui.MainActivity">
 
     <com.google.android.material.button.MaterialButton
-        android:id="@+id/btnSettings"
-        style="?attr/myIconButtonTextStyle"
-        android:layout_width="?attr/appButtonHeight"
-        android:layout_height="?attr/appButtonHeight"
-        app:icon="@drawable/ic_settings"
-        app:iconSize="?attr/appIconSize"
-        app:iconPadding="0dp"
-        android:contentDescription="@string/settings_content_description"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        android:layout_margin="16dp"
-        app:tint="?attr/colorOnSurface" />
-
-    <com.google.android.material.button.MaterialButton
         android:id="@+id/btnLogout"
-        style="?attr/myIconButtonTextStyle"
+        style="?attr/materialIconButtonStyle"
         android:layout_width="?attr/appButtonHeight"
         android:layout_height="?attr/appButtonHeight"
+        android:layout_margin="16dp"
+        android:contentDescription="@string/logout_button_description"
         app:icon="@drawable/ic_logout"
         app:iconSize="?attr/appIconSize"
-        app:iconPadding="0dp"
-        android:contentDescription="@string/logout_button_description"
-        app:layout_constraintTop_toTopOf="parent"
+        app:tint="?attr/colorOnSurface"
         app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <TextView
+        android:id="@+id/textTitle"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:text="@string/dashboard_title"
+        android:textAppearance="?attr/textAppearanceTitleLarge"
+        android:textColor="?attr/colorOnSurface"
+        android:gravity="center"
+        android:maxLines="1"
+        android:ellipsize="end"
+        app:layout_constraintStart_toEndOf="@id/btnLogout"
+        app:layout_constraintEnd_toStartOf="@id/btnSettings"
+        app:layout_constraintTop_toTopOf="@id/btnLogout"
+        app:layout_constraintBottom_toBottomOf="@id/btnLogout" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnSettings"
+        style="?attr/materialIconButtonStyle"
+        android:layout_width="?attr/appButtonHeight"
+        android:layout_height="?attr/appButtonHeight"
         android:layout_margin="16dp"
-        app:tint="?attr/colorOnSurface" />
+        android:contentDescription="@string/settings_content_description"
+        app:icon="@drawable/ic_settings"
+        app:iconSize="?attr/appIconSize"
+        app:tint="?attr/colorOnSurface"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+
+    
 
     <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
@@ -63,7 +79,7 @@
                 android:id="@+id/textAlertSummary"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                app:drawableStartCompat="@drawable/ic_notification_alert"
+                app:drawableStartCompat="@drawable/ic_danger"
                 android:drawablePadding="16dp"
                 android:gravity="center_vertical"
                 android:padding="16dp"
@@ -119,7 +135,7 @@
                     android:contentDescription="@string/sensor_icon_description"
                     android:src="@drawable/ic_gateway"
                     android:padding="8dp"
-                    app:tint="?attr/colorPrimary" />
+                     />
 
                 <TextView
                     android:layout_width="wrap_content"
