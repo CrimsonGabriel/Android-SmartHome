@@ -10,22 +10,19 @@ import android.database.Cursor;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.util.Log;
-import android.view.ContextMenu;
 import android.view.LayoutInflater;
-import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
 import android.widget.EditText;
 import android.widget.Toast;
-
+import android.view.Menu;
 import androidx.annotation.NonNull;
-import androidx.appcompat.app.AlertDialog;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
-
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.flask.colorpicker.ColorPickerView;
 import com.flask.colorpicker.builder.ColorPickerDialogBuilder;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
@@ -42,7 +39,7 @@ import com.testserwera.bazunia.data.VpsClientService;
 import com.testserwera.bazunia.utils.AppearanceManager;
 import com.testserwera.bazunia.utils.Constants;
 import com.testserwera.bazunia.utils.LocaleManager;
-
+import com.google.android.material.navigation.NavigationView;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -119,7 +116,6 @@ public class DataActivity extends BaseActivity implements FolderAdapter.FolderCa
         adapter = new FolderAdapter(this, displayItems, this);
         recyclerView.setAdapter(adapter);
 
-        registerForContextMenu(recyclerView);
 
         MaterialButton btnBack = findViewById(R.id.btnBack);
         MaterialButton btnSettings = findViewById(R.id.btnSettings);
@@ -524,36 +520,33 @@ public class DataActivity extends BaseActivity implements FolderAdapter.FolderCa
 
     @Override
     public void onFolderLongClicked(FolderAdapter.FolderItem folder, View view) {
-        currentContextMenuItem = folder;
-        openContextMenu(view);
+        showBottomSheetMenu(folder);
     }
 
     @Override
     public void onGatewayLongClicked(FolderAdapter.GatewayItem gateway, View view) {
-        currentContextMenuItem = gateway;
-        openContextMenu(view);
+        showBottomSheetMenu(gateway);
     }
 
     @Override
     public void onSensorLongClicked(FolderAdapter.SensorItem sensor, View view) {
-        currentContextMenuItem = sensor;
-        openContextMenu(view);
+        showBottomSheetMenu(sensor);
     }
 
-    @Override
-    public void onCreateContextMenu(ContextMenu menu, View v, ContextMenu.ContextMenuInfo menuInfo) {
-        super.onCreateContextMenu(menu, v, menuInfo);
-        if (currentContextMenuItem == null) return;
+    private void showBottomSheetMenu(Object item) {
+        currentContextMenuItem = item;
+        BottomSheetDialog bottomSheetDialog = new BottomSheetDialog(this);
+        NavigationView navigationView = new NavigationView(this);
 
-        MenuInflater inflater = getMenuInflater();
-
-        if (currentContextMenuItem instanceof FolderAdapter.FolderItem) {
-            FolderAdapter.FolderItem folder = (FolderAdapter.FolderItem) currentContextMenuItem;
-            inflater.inflate(R.menu.folder_context_menu, menu);
-
+        // 1. Wybierz odpowiednie menu
+        Menu menu = navigationView.getMenu();
+        if (item instanceof FolderAdapter.FolderItem) {
+            navigationView.inflateMenu(R.menu.folder_context_menu);
+            FolderAdapter.FolderItem folder = (FolderAdapter.FolderItem) item;
             long folderId = folder.id;
             boolean isSpecialFolder = (folderId == PARENT_ID_FAVORITE || folderId == UNCATEGORIZED_PARENT_ID);
 
+            // Logika ukrywania opcji (skopiowana z Twojego onCreateContextMenu)
             menu.findItem(R.id.menu_edit_folder).setVisible(!isSpecialFolder);
             menu.findItem(R.id.menu_delete_folder).setVisible(!isSpecialFolder);
 
@@ -573,9 +566,10 @@ public class DataActivity extends BaseActivity implements FolderAdapter.FolderCa
                     battItem.setTitle(isBattMuted ? R.string.action_enable_battery : R.string.action_disable_battery);
                 }
             }
-        } else if (currentContextMenuItem instanceof FolderAdapter.GatewayItem) {
-            inflater.inflate(R.menu.gateway_context_menu, menu);
-            FolderAdapter.GatewayItem gateway = (FolderAdapter.GatewayItem) currentContextMenuItem;
+
+        } else if (item instanceof FolderAdapter.GatewayItem) {
+            navigationView.inflateMenu(R.menu.gateway_context_menu);
+            FolderAdapter.GatewayItem gateway = (FolderAdapter.GatewayItem) item;
 
             boolean isFav = dbHelper.isFavoriteGateway(gateway.id);
             menu.findItem(R.id.menu_add_gateway_to_favorites).setVisible(!isFav);
@@ -601,9 +595,9 @@ public class DataActivity extends BaseActivity implements FolderAdapter.FolderCa
                 battItem.setTitle(R.string.action_disable_battery);
             }
 
-        } else if (currentContextMenuItem instanceof FolderAdapter.SensorItem) {
-            inflater.inflate(R.menu.sensor_context_menu, menu);
-            FolderAdapter.SensorItem sensor = (FolderAdapter.SensorItem) currentContextMenuItem;
+        } else if (item instanceof FolderAdapter.SensorItem) {
+            navigationView.inflateMenu(R.menu.sensor_context_menu);
+            FolderAdapter.SensorItem sensor = (FolderAdapter.SensorItem) item;
 
             boolean isFav = dbHelper.isFavoriteSensor(sensor.id);
             menu.findItem(R.id.menu_add_sensor_to_favorites).setVisible(!isFav);
@@ -620,6 +614,16 @@ public class DataActivity extends BaseActivity implements FolderAdapter.FolderCa
             menu.findItem(R.id.menu_disable_battery_notifications).setVisible(!isBattMuted);
             menu.findItem(R.id.menu_enable_battery_notifications).setVisible(isBattMuted);
         }
+
+        // 2. Obsługa kliknięcia (Reużywamy Twojej istniejącej metody!)
+        navigationView.setNavigationItemSelectedListener(menuItem -> {
+            onContextItemSelected(menuItem); // Wywołujemy starą logikę
+            bottomSheetDialog.dismiss();
+            return true;
+        });
+
+        bottomSheetDialog.setContentView(navigationView);
+        bottomSheetDialog.show();
     }
 
     @SuppressLint("NotifyDataSetChanged")
@@ -813,7 +817,7 @@ public class DataActivity extends BaseActivity implements FolderAdapter.FolderCa
                 .build()
                 .show());
 
-        new AlertDialog.Builder(this)
+        new MaterialAlertDialogBuilder(this)
                 .setTitle(title)
                 .setView(dialogView)
                 .setPositiveButton(R.string.dialog_save, (dialog, which) -> {
@@ -831,7 +835,7 @@ public class DataActivity extends BaseActivity implements FolderAdapter.FolderCa
     }
 
     private void showDeleteFolderDialog(FolderAdapter.FolderItem folder) {
-        new AlertDialog.Builder(this)
+        new MaterialAlertDialogBuilder(this)
                 .setTitle(R.string.menu_delete_folder)
                 .setMessage(getString(R.string.dialog_delete_folder_msg, folder.name))
                 .setIcon(R.drawable.ic_warning)
@@ -855,7 +859,7 @@ public class DataActivity extends BaseActivity implements FolderAdapter.FolderCa
             return;
         }
         ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, folderNames);
-        new AlertDialog.Builder(this)
+        new MaterialAlertDialogBuilder(this)
                 .setTitle(R.string.dialog_select_folder_title)
                 .setAdapter(adapter, (dialog, which) -> {
                     FolderAdapter.FolderItem selectedFolder = folders.get(which);
@@ -872,7 +876,7 @@ public class DataActivity extends BaseActivity implements FolderAdapter.FolderCa
         editName.setText(oldName);
         editDesc.setText(oldDescription);
         String title = isGateway ? getString(R.string.dialog_rename_gateway_title) : getString(R.string.dialog_rename_sensor_title);
-        new AlertDialog.Builder(this)
+        new MaterialAlertDialogBuilder(this)
                 .setTitle(title)
                 .setView(dialogView)
                 .setPositiveButton(R.string.dialog_save, (dialog, which) -> {
@@ -921,7 +925,7 @@ public class DataActivity extends BaseActivity implements FolderAdapter.FolderCa
     }
 
     private void showDeleteGatewayDialog(long gatewayId, String gatewayName) {
-        new AlertDialog.Builder(this)
+        new MaterialAlertDialogBuilder(this)
                 .setTitle(R.string.dialog_delete_gateway_title)
                 .setMessage(String.format(getString(R.string.dialog_delete_gateway_message), gatewayName))
                 .setIcon(R.drawable.ic_warning)
@@ -1159,7 +1163,7 @@ public class DataActivity extends BaseActivity implements FolderAdapter.FolderCa
             return;
         }
         ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, folderNames);
-        new AlertDialog.Builder(this)
+        new MaterialAlertDialogBuilder(this)
                 .setTitle(R.string.dialog_select_folder_title)
                 .setAdapter(adapter, (dialog, which) -> {
                     FolderAdapter.FolderItem selectedFolder = folders.get(which);

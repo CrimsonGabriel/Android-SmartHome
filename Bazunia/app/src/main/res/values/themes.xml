@@ -18,7 +18,7 @@
         <item name="appIconSize">@dimen/icon_size_medium</item>
         <item name="appCardCornerRadius">@dimen/corner_radius_medium</item>
 
-        <item name="android:alertDialogTheme">@style/Theme.Material3.DayNight.Dialog.Alert</item>
+        <item name="android:alertDialogTheme">@style/ThemeOverlay.Material3.MaterialAlertDialog</item>
     </style>
 
     <style name="Theme.Bazunia" parent="Base.Theme.Bazunia" />
