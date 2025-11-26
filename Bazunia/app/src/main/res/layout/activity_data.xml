@@ -114,7 +114,6 @@
         android:layout_gravity="bottom|start"
         android:layout_margin="16dp"
         android:contentDescription="@string/filter_options_title"
-        app:fabSize="mini"
         app:backgroundTint="?attr/colorSurfaceContainerHigh"
         app:tint="?attr/colorOnSurface"
         app:srcCompat="@drawable/ic_filter" />
@@ -126,6 +125,8 @@
         android:layout_gravity="bottom|end"
         android:layout_margin="16dp"
         android:contentDescription="@string/fab_add_folder_desc"
+        app:backgroundTint="?attr/colorSurfaceContainerHigh"
+        app:tint="?attr/colorOnSurface"
         app:srcCompat="@drawable/ic_folder" />
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

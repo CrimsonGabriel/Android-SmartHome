@@ -25,7 +25,8 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:hint="@string/search_by_id_hint"
-        app:startIconDrawable="@drawable/ic_search"
+        app:startIconDrawable="@drawable/ic_glass"
+        app:startIconTint="?attr/colorOnSurface"
         style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
         android:layout_marginBottom="16dp">
 

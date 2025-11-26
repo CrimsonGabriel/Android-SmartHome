@@ -153,9 +153,15 @@ public class DataActivity extends BaseActivity implements FolderAdapter.FolderCa
 
     private void updateFilterFabState() {
         if (isFilterActive()) {
+            // Jeśli filtr aktywny - na czerwono
             fabFilter.setImageTintList(getColorStateList(android.R.color.holo_red_light));
         } else {
-            fabFilter.setImageTintList(null);
+            // Jeśli filtr nieaktywny - pobierz kolor z motywu (?attr/colorOnSurface)
+            android.util.TypedValue typedValue = new android.util.TypedValue();
+            getTheme().resolveAttribute(com.google.android.material.R.attr.colorOnSurface, typedValue, true);
+            int colorOnSurface = typedValue.data;
+
+            fabFilter.setImageTintList(android.content.res.ColorStateList.valueOf(colorOnSurface));
         }
     }
 
