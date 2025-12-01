@@ -132,8 +132,6 @@ public class FolderAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
         }
     }
 
-    // --- Adapter ---
-
     public FolderAdapter(Context context, List<Object> displayItems, FolderCallback callback) {
         this.context = context;
         this.displayItems = displayItems;
@@ -198,7 +196,6 @@ public class FolderAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
         return displayItems.size();
     }
 
-    // --- ViewHoldery ---
 
     static class HeaderViewHolder extends RecyclerView.ViewHolder {
         TextView textHeader;
@@ -251,22 +248,19 @@ public class FolderAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
             int defaultColor;
             try {
                 TypedValue typedValue = new TypedValue();
-                // ZMIANA: Używamy com.google.android.material.R.attr.colorOnSurface zamiast android.R.attr.textColorPrimary
-                // To gwarantuje widoczność (Ciemny grafit w dzień, Jasny szary w nocy)
-                itemView.getContext().getTheme().resolveAttribute(com.google.android.material.R.attr.colorOnSurface, typedValue, true);
 
-                // Jeśli resourceId != 0, to znaczy że to referencja do koloru (np. z colors.xml)
+                itemView.getContext().getTheme().resolveAttribute(com.google.android.material.R.attr.colorOnSurface, typedValue, true);
                 if (typedValue.resourceId != 0) {
                     defaultColor = ContextCompat.getColor(itemView.getContext(), typedValue.resourceId);
                 } else {
                     defaultColor = typedValue.data;
                 }
             } catch (Exception e) {
-                defaultColor = Color.BLACK; // Fallback
+                defaultColor = Color.BLACK;
             }
 
             textName.setTextColor(defaultColor);
-            iconExpansion.setColorFilter(defaultColor); // Ikona strzałki też musi mieć ten kolor
+            iconExpansion.setColorFilter(defaultColor);
         }
         private boolean isColorDark(int color) {
             double darkness = 1 - (0.299 * Color.red(color) + 0.587 * Color.green(color) + 0.114 * Color.blue(color)) / 255;
@@ -364,12 +358,9 @@ public class FolderAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
                 } catch (NumberFormatException ignored) { }
             }
 
-            // --- KOLOROWANIE TEKSTU ---
             if (isAlarmState || (item.batteryLevel > 0 && item.batteryLevel <= 20)) {
-                // Alarm / Słaba bateria -> Użyj colorError (Czerwony)
                 textSensorName.setTextColor(getThemeColor(context, com.google.android.material.R.attr.colorError));
             } else {
-                // Normalny stan -> Użyj colorOnSurface (Grafit/Biały w zależności od trybu)
                 textSensorName.setTextColor(getThemeColor(context, com.google.android.material.R.attr.colorOnSurface));
             }
 

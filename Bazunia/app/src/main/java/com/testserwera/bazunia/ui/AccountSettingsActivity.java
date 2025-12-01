@@ -15,23 +15,16 @@ import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
-
 import androidx.annotation.NonNull;
-// import androidx.appcompat.app.AppCompatActivity; // ZMIANA: Niepotrzebne
-
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.button.MaterialButton;
 import com.google.zxing.BarcodeFormat;
 import com.journeyapps.barcodescanner.BarcodeEncoder;
 import com.testserwera.bazunia.R;
 import com.testserwera.bazunia.utils.Constants;
-// import com.testserwera.bazunia.utils.LocaleManager; // ZMIANA: Obsługiwane w BaseActivity
-
 import org.json.JSONException;
 import org.json.JSONObject;
-
 import java.io.IOException;
-
 import okhttp3.Call;
 import okhttp3.Callback;
 import okhttp3.MediaType;
@@ -40,7 +33,6 @@ import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
 
-// ZMIANA: BaseActivity
 public class AccountSettingsActivity extends BaseActivity {
 
     private static final String TAG = "AccountSettingsActivity";
@@ -64,11 +56,8 @@ public class AccountSettingsActivity extends BaseActivity {
     private String currentJwtToken;
     private String currentSecretKey;
 
-    // ZMIANA: Usunięto attachBaseContext (BaseActivity to robi)
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        // ZMIANA: Usunięto AppearanceManager (BaseActivity to robi)
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_account_settings);
 

@@ -8,18 +8,16 @@ import java.util.Locale;
 public class SensorModel implements Serializable {
     public final String gatewayId;
     public final String sensorId;
-    // ⭐️ DODANO POLE NAME
     public final String name;
     public final String type;
     public final String value;
     public final long timestamp;
     public final int batteryLevel;
 
-    // ⭐️ ZAKTUALIZOWANY KONSTRUKTOR (7 argumentów)
     public SensorModel(String gatewayId, String sensorId, String name, String type, String value, long timestamp, int batteryLevel) {
         this.gatewayId = gatewayId;
         this.sensorId = sensorId;
-        this.name = name; // Przypisanie nazwy
+        this.name = name;
         this.type = type;
         this.value = value;
         this.timestamp = timestamp;

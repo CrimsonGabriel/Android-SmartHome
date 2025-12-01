@@ -16,7 +16,6 @@ public class LocaleManager {
     private final SharedPreferences sharedPreferences;
 
     public LocaleManager(Context context) {
-        // Używamy getApplicationContext, aby uniknąć potencjalnych wycieków pamięci
         this.sharedPreferences = context.getApplicationContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
     }
 

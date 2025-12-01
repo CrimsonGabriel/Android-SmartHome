@@ -20,11 +20,9 @@ import android.widget.ListView;
 import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
-
 import androidx.annotation.NonNull;
 import androidx.cardview.widget.CardView;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
-
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
@@ -40,16 +38,13 @@ import com.testserwera.bazunia.data.VpsClientService;
 import com.testserwera.bazunia.utils.AppearanceManager;
 import com.testserwera.bazunia.utils.Constants;
 import com.testserwera.bazunia.utils.LocaleManager;
-
 import org.json.JSONObject;
-
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
-
 import okhttp3.Call;
 import okhttp3.Callback;
 import okhttp3.MediaType;
@@ -62,34 +57,23 @@ public class SensorDetailActivity extends BaseActivity {
 
     private static final String TAG = "SensorDetailActivity";
     private static final int HISTORY_LIMIT = 50;
-
-    // --- UI GŁÓWNE ---
     private TextView textSensorDetails;
     private ListView listSensorHistory;
     private ImageButton btnFavorite;
-
-    // --- UI BOTTOM SHEET ---
     private TextView textThresholdMin, textThresholdMax;
     private SeekBar seekBarThresholdMin, seekBarThresholdMax;
     private CardView cardThresholds;
-
     private TextInputEditText editSensorInterval;
     private SwitchMaterial switchReporting;
-
     private TextInputEditText editSensorNotificationInterval;
     private LinearLayout notificationIntervalContainer;
-
-    // --- LOGIKA ---
     private DatabaseHelper dbHelper;
     private ThresholdManager thresholdManager;
     private NotificationFrequencyManager notificationFrequencyManager;
-
     private AppearanceManager appearanceManager;
-
     private OkHttpClient httpClient;
     private SharedPreferences authPrefs;
     private BroadcastReceiver syncStatusReceiver;
-
     private long sensorIdLong;
     private String gatewayIdString;
     private String sensorIdString;
@@ -141,11 +125,7 @@ public class SensorDetailActivity extends BaseActivity {
         ImageButton btnRefresh = findViewById(R.id.btnRefresh);
         btnFavorite = findViewById(R.id.btnFavorite);
         FloatingActionButton fabSettings = findViewById(R.id.fabSettings);
-
-        // USUNIĘTO: Kod odwołujący się do nieistniejącego btnSettings
-
         textSensorTitle.setText(String.format(getString(R.string.sensor_detail_title), sensorIdString, gatewayIdString));
-
         btnRefresh.setOnClickListener(v -> forceReadingsSync());
         btnBack.setOnClickListener(v -> finish());
         btnFavorite.setOnClickListener(v -> toggleFavoriteStatus());
@@ -193,8 +173,6 @@ public class SensorDetailActivity extends BaseActivity {
         LocalBroadcastManager.getInstance(this).unregisterReceiver(dataUpdateReceiver);
         if (syncStatusReceiver != null) LocalBroadcastManager.getInstance(this).unregisterReceiver(syncStatusReceiver);
     }
-
-    // --- BOTTOM SHEET ---
     private void openSettingsSheet() {
         BottomSheetDialog bottomSheetDialog = new BottomSheetDialog(this);
         View sheetView = getLayoutInflater().inflate(R.layout.layout_sensor_settings_sheet, findViewById(android.R.id.content), false);

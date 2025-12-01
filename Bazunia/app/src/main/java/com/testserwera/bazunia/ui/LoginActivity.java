@@ -11,29 +11,21 @@ import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.Toast;
-
 import androidx.annotation.NonNull;
-// import androidx.appcompat.app.AppCompatActivity; // ZMIANA: Niepotrzebne
 import androidx.core.content.ContextCompat;
-
 import androidx.credentials.CredentialManager;
 import androidx.credentials.GetCredentialRequest;
 import androidx.credentials.CustomCredential;
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption;
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential;
-
 import com.testserwera.bazunia.utils.Constants;
 import com.testserwera.bazunia.R;
 import com.testserwera.bazunia.data.VpsClientService;
-
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textfield.TextInputEditText;
-
 import org.json.JSONException;
 import org.json.JSONObject;
-
 import java.io.IOException;
-
 import okhttp3.Call;
 import okhttp3.Callback;
 import okhttp3.MediaType;
@@ -42,18 +34,14 @@ import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
 
-// ZMIANA: BaseActivity
 public class LoginActivity extends BaseActivity {
 
     private static final String TAG = "LoginActivity";
-
     public static final String AUTH_PREFS = "AuthPrefs";
     public static final String KEY_JWT_TOKEN = "jwtToken";
     public static final String KEY_USER_EMAIL = "userEmail";
-
     private CredentialManager credentialManager;
     private final OkHttpClient httpClient = new OkHttpClient();
-
     private MaterialButton btnGoogleSignIn;
     private ProgressBar loginProgressBar;
     private LinearLayout logoSection;
@@ -63,14 +51,10 @@ public class LoginActivity extends BaseActivity {
     private TextInputEditText editTextEmail;
     private TextInputEditText editTextPassword;
     private EditText editTextLogin2FA;
-
     private boolean isEmail2FaFlow = false;
-
-    // ZMIANA: Usunięto attachBaseContext
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        // ZMIANA: Usunięto AppearanceManager
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_login);
 
@@ -284,9 +268,7 @@ public class LoginActivity extends BaseActivity {
         }
 
         RequestBody body = RequestBody.create(jsonBody.toString(), MediaType.get("application/json; charset=utf-8"));
-
         String endpointUrl = isEmail2FaFlow ? Constants.LOGIN_EMAIL_2FA_VERIFY_ENDPOINT : Constants.LOGIN_2FA_VERIFY_ENDPOINT;
-
         Request request = new Request.Builder()
                 .url(endpointUrl)
                 .header("Authorization", "Bearer " + tempToken)

@@ -3,7 +3,6 @@ package com.testserwera.bazunia.data;
 import com.google.gson.annotations.SerializedName;
 import java.util.Set;
 
-// Ten model pasuje do FolderDto z backendu
 public class Folder {
 
     @SerializedName("id")

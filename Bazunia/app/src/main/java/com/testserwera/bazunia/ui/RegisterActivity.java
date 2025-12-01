@@ -8,20 +8,14 @@ import android.view.View;
 import android.widget.EditText;
 import android.widget.ProgressBar;
 import android.widget.Toast;
-
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
-// import androidx.appcompat.app.AppCompatActivity; // ZMIANA: Niepotrzebne
-
 import com.testserwera.bazunia.R;
 import com.testserwera.bazunia.utils.Constants;
 import com.google.android.material.button.MaterialButton;
-
 import org.json.JSONException;
 import org.json.JSONObject;
-
 import java.io.IOException;
-
 import okhttp3.Call;
 import okhttp3.Callback;
 import okhttp3.MediaType;
@@ -30,22 +24,17 @@ import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
 
-// ZMIANA: BaseActivity
 public class RegisterActivity extends BaseActivity {
 
     private static final String TAG = "RegisterActivity";
-
     private EditText editTextEmail, editTextPassword, editTextConfirmPassword;
     private MaterialButton btnRegister, btnLoginLink;
     private ProgressBar registerProgressBar;
-
     private final OkHttpClient httpClient = new OkHttpClient();
 
-    // ZMIANA: Usunięto attachBaseContext
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        // ZMIANA: Usunięto AppearanceManager
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_register);
 
@@ -98,7 +87,6 @@ public class RegisterActivity extends BaseActivity {
         }
 
         RequestBody body = RequestBody.create(json.toString(), MediaType.get("application/json; charset=utf-8"));
-
         Request request = new Request.Builder()
                 .url(Constants.REGISTER_ANDROID_ENDPOINT)
                 .post(body)

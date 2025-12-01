@@ -54,7 +54,6 @@ public class VpsClientService extends Service {
     private static final int POLLING_INTERVAL_GATEWAYS_SECONDS = 60;
     private static final int POLLING_INTERVAL_FOLDERS_SECONDS = 60;
 
-    // <<< 1. POPRAWKA: Dodanie brakującej stałej
     private static final String BATTERY_PREFS = "BatteryNotificationPrefs";
 
     private OkHttpClient httpClient;
@@ -64,7 +63,6 @@ public class VpsClientService extends Service {
     private NotificationHelper notificationHelper;
     private CleanupManager cleanupManager;
     private SharedPreferences authPrefs;
-    // <<< 2. POPRAWKA: Dodanie brakującej deklaracji pola
     private SharedPreferences batteryPrefs;
     private Gson gson;
     private SharedPreferences mutePrefs;
@@ -74,7 +72,6 @@ public class VpsClientService extends Service {
 
     @Override
     protected void attachBaseContext(Context newBase) {
-        // "Owijamy" kontekst serwisu wybranym językiem
         LocaleManager localeManager = new LocaleManager(newBase);
         super.attachBaseContext(localeManager.setLocale(newBase));
     }
@@ -92,7 +89,6 @@ public class VpsClientService extends Service {
         notificationHelper = new NotificationHelper(this);
         cleanupManager = new CleanupManager(this);
         authPrefs = getSharedPreferences(LoginActivity.AUTH_PREFS, Context.MODE_PRIVATE);
-        // Ta linia jest już poprawna, bo 'batteryPrefs' i 'BATTERY_PREFS' są zadeklarowane
         batteryPrefs = getSharedPreferences(BATTERY_PREFS, Context.MODE_PRIVATE);
         mutePrefs = getSharedPreferences("NotificationMutePrefs", Context.MODE_PRIVATE);
         executorService = Executors.newSingleThreadScheduledExecutor();
@@ -112,7 +108,7 @@ public class VpsClientService extends Service {
     }
 
     private Notification createNotification() {
-        // ... (bez zmian)
+
         NotificationChannel channel = new NotificationChannel(
                 CHANNEL_ID, "Serwis Klienta VPS", NotificationManager.IMPORTANCE_LOW
         );
@@ -128,7 +124,6 @@ public class VpsClientService extends Service {
     }
 
     private String getJwtToken() {
-        // ... (bez zmian)
         String token = authPrefs.getString(LoginActivity.KEY_JWT_TOKEN, null);
         if (token == null) {
             Log.e(TAG, getString(R.string.log_error_no_token));
@@ -162,7 +157,7 @@ public class VpsClientService extends Service {
                 try (Response resp = response) {
                     if (resp.isSuccessful() && resp.body() != null) {
                         String jsonResponse = resp.body().string();
-                        processSensorData(jsonResponse); // To wysyła ACTION_DATA_UPDATED
+                        processSensorData(jsonResponse);
                         if (isManual) sendSyncStatusBroadcast(true);
                     } else {
                         Log.w(TAG, String.format(Locale.getDefault(),
@@ -208,7 +203,6 @@ public class VpsClientService extends Service {
                         }.getType();
                         List<Gateway> gateways = gson.fromJson(jsonResponse, listType);
 
-                        // Ta sekcja jest już poprawna
                         if (gateways != null && !gateways.isEmpty()) {
                             checkAllBatteryThresholds(gateways);
                         }
@@ -303,7 +297,6 @@ public class VpsClientService extends Service {
             }
 
             // --- 4. Zapisz wszystko do bazy w jednej transakcji ---
-            // Zmienne folders, favoriteGateways, favoriteSensors są wypełnione powyżej
             dbHelper.syncFoldersAndFavorites(folders, favoriteGateways, favoriteSensors);
 
             // 5. Powiadom UI (DataActivity), że dane się zmieniły
@@ -355,7 +348,6 @@ public class VpsClientService extends Service {
 
     private void processUpdateList(String json) {
         try {
-            // Oczekujemy tablicy JSON obiektów ClientUpdateResponse
             JSONArray updatesArray = new JSONArray(json);
             SharedPreferences updatePrefs = getSharedPreferences(UPDATE_PREFS, Context.MODE_PRIVATE);
             long now = System.currentTimeMillis();
@@ -365,7 +357,7 @@ public class VpsClientService extends Service {
 
                 long assignmentId = update.getLong("assignmentId");
                 String title = update.getString("title");
-                String urgency = update.getString("urgency"); // REQUIRED, OPTIONAL, CUSTOM
+                String urgency = update.getString("urgency");
                 String version = update.getString("version");
 
                 // Sprawdź, czy ta aktualizacja nie jest wyciszona lokalnie (Snooze 5 min)
@@ -375,14 +367,6 @@ public class VpsClientService extends Service {
                     continue;
                 }
 
-                // Pobierz deferCount (ilość odroczeń z backendu, jeśli jest w JSON,
-                // jeśli nie ma - przyjmij 0. Backend w AssignmentDto to wysyła, w ClientResponse może nie być,
-                // ale załóżmy że dodaliśmy to do DTO backendu lub klient musi śledzić.
-                // Wg backendu wysłanego wcześniej: ClientUpdateResponse nie ma pola deferCount,
-                // ale logika "tylko raz" jest walidowana przez backend.
-                // Tutaj po prostu wyświetlamy powiadomienie).
-
-                // Wyświetl powiadomienie
                 notificationHelper.showUpdateNotification(assignmentId, title, version, urgency);
             }
         } catch (JSONException e) {
@@ -390,10 +374,9 @@ public class VpsClientService extends Service {
         }
     }
 
-    // --- Reszta metod ---
+
 
     private void processSensorData(String json) {
-        // ... (bez zmian)
         try {
             JSONObject root = new JSONObject(json);
             JSONArray jsonArray = root.getJSONArray("sensors");
@@ -415,7 +398,6 @@ public class VpsClientService extends Service {
             }
             int cleanupSize = cleanupManager.getCleanupSize();
             if (cleanupSize > 0) {
-                // Zakładam, że dodałeś metodę cleanSensorDataBySize do DatabaseHelper w poprzednim kroku
                 dbHelper.cleanSensorDataBySize(cleanupSize);
             }
             sendDataUpdateBroadcast();
@@ -427,20 +409,15 @@ public class VpsClientService extends Service {
     private void checkThresholds(SensorModel sensor) {
         if (sensor == null || sensor.type == null) return;
 
-        // Sprawdź czy wyciszone
         String muteKey = "thresh_sensor_" + sensor.sensorId;
         if (mutePrefs.getBoolean(muteKey, false)) return;
 
-        // 1. Sprawdzamy, czy typ ma suwaki (Analogowy) czy jest binarny (ON/OFF)
-        // Używamy tego samego ThresholdManagera co w UI
         boolean hasThresholds = thresholdManager.isThresholdSupported(sensor.type);
 
         try {
             float val = Float.parseFloat(sensor.value);
 
             if (hasThresholds) {
-                // --- LOGIKA DLA ANALOGOWYCH (Temp, Humidity, Power) ---
-                // Sprawdzamy min/max z suwaków
 
                 android.util.Pair<Float, Float> defRange = thresholdManager.getDefaultRangeForType(sensor.type);
                 float min = thresholdManager.getMinThreshold(sensor.gatewayId, sensor.sensorId, defRange.first);
@@ -453,27 +430,21 @@ public class VpsClientService extends Service {
                 }
 
             } else {
-                // --- LOGIKA DLA BINARNYCH (Światło, Ruch, Drzwi, Flow) ---
-                // Alarm, jeśli wartość > 0.5 (czyli 1) lub > 0.0 dla Flow
 
                 boolean isAlarm = false;
 
                 if ("flow".equalsIgnoreCase(sensor.type)) {
-                    // Dla przepływu każdy ruch > 0 to alarm
                     if (val > 0.0f) isAlarm = true;
                 } else {
-                    // Dla reszty (światło, ruch, drzwi) alarm gdy 1
                     if (val > 0.5f) isAlarm = true;
                 }
 
                 if (isAlarm) {
-                    // Wysyłamy typ BINARY_ACTIVE - NotificationHelper sam dobierze tekst (Ruch/Światło/Drzwi)
                     notificationHelper.showThresholdAlert(sensor, val, 0, NotificationHelper.ThresholdType.BINARY_ACTIVE);
                 }
             }
 
-        } catch (NumberFormatException e) {
-            // Ignorujemy wartości nieliczbowe
+        } catch (NumberFormatException ignored) {
         }
     }
 
@@ -483,7 +454,6 @@ public class VpsClientService extends Service {
     }
 
     private void registerAndroidIp() {
-        // ... (bez zmian)
         JSONObject jsonBody = new JSONObject();
         try {
             jsonBody.put("password", Constants.SECRET_PASSWORD);
@@ -520,7 +490,7 @@ public class VpsClientService extends Service {
         Log.d(TAG, "Serwis klienta VPS: onStartCommand");
 
         if (intent != null) {
-            // Blok dla pełnej synchronizacji (bez zmian)
+
             if (intent.getBooleanExtra("FORCE_SYNC_NOW", false)) {
                 boolean isSilent = intent.getBooleanExtra("IS_SILENT", false);
                 boolean isManual = !isSilent;
@@ -537,7 +507,6 @@ public class VpsClientService extends Service {
                 }
             }
 
-            // Blok dla odczytów (bez zmian)
             if (intent.getBooleanExtra("FORCE_READINGS_NOW", false)) {
                 Log.d(TAG, "Wymuszono natychmiastową synchronizację ODCZYTÓW (ręcznie)!");
                 if (executorService != null && !executorService.isShutdown()) {
@@ -545,16 +514,13 @@ public class VpsClientService extends Service {
                 }
             }
 
-            // 🔽🔽🔽 NOWY BLOK TYLKO DLA BATERII 🔽🔽🔽
+
             if (intent.getBooleanExtra("FORCE_BATTERY_CHECK_NOW", false)) {
                 Log.d(TAG, "Wymuszono natychmiastową synchronizację BATERII (ręcznie)!");
                 if (executorService != null && !executorService.isShutdown()) {
-                    // Uruchamiamy tylko `syncGatewayDefinitions`, bo tam są dane o baterii.
-                    // Oznaczamy jako "manual" (true), aby serwis wysłał Toasta (przez ACTION_SYNC_STATUS)
                     executorService.submit(() -> syncGatewayDefinitions(true));
                 }
             }
-            // 🔼🔼🔼 KONIEC NOWEGO BLOKU 🔼🔼🔼
         }
         return START_STICKY;
     }
@@ -587,7 +553,6 @@ public class VpsClientService extends Service {
         for (Gateway gateway : gateways) {
             if (gateway.getSensors() != null) {
                 for (Sensor sensor : gateway.getSensors()) {
-                    // Sprawdź tylko sensory, które raportują poziom baterii
                     if (sensor.getBatteryLevel() != null && sensor.getBatteryLevel() > 0) {
                         checkSensorBattery(sensor, gateway.getName());
                     }
@@ -602,39 +567,29 @@ public class VpsClientService extends Service {
      */
     private void checkSensorBattery(Sensor sensor, String gatewayName) {
         int newLevel = sensor.getBatteryLevel();
-        // Sprawdź, czy alerty baterii są wyciszone dla tego sensora
         String muteKey = "batt_sensor_" + sensor.getId();
         if (mutePrefs.getBoolean(muteKey, false)) {
-            // Log.d(TAG, "Alerty baterii dla " + sensor.getId() + " są wyciszone.");
-            return; // Zakończ, nie wysyłaj powiadomienia
+            return;
         }
         String prefKey = "battery_notified_" + sensor.getId();
 
-        // Ta linia jest już poprawna, bo 'batteryPrefs' jest zadeklarowane
         int lastNotifiedLevel = batteryPrefs.getInt(prefKey, 100);
 
         SharedPreferences.Editor editor = batteryPrefs.edit();
 
-        // Logika progów: powiadamiaj tylko przy *przejściu* przez próg w dół.
-
-        // PRÓG 1: Krytyczny (1%)
         if (newLevel <= 1 && lastNotifiedLevel > 1) {
             notificationHelper.showBatteryAlert(sensor.getName(), gatewayName, newLevel);
             editor.putInt(prefKey, 1).apply();
         }
-        // PRÓG 2: Bardzo niski (10%)
         else if (newLevel <= 10 && lastNotifiedLevel > 10) {
             notificationHelper.showBatteryAlert(sensor.getName(), gatewayName, newLevel);
             editor.putInt(prefKey, 10).apply();
         }
-        // PRÓG 3: Niski (20%)
         else if (newLevel <= 20 && lastNotifiedLevel > 20) {
             notificationHelper.showBatteryAlert(sensor.getName(), gatewayName, newLevel);
             editor.putInt(prefKey, 20).apply();
         }
-        // RESET: Jeśli bateria została naładowana/wymieniona (np. > 20%)
         else if (newLevel > 20 && lastNotifiedLevel <= 20) {
-            // Resetuj stan, aby przyszłe powiadomienia mogły być wysłane
             editor.putInt(prefKey, 100).apply();
         }
     }
@@ -648,7 +603,6 @@ public class VpsClientService extends Service {
             return;
         }
 
-        // Upewnij się, że dodałeś ten endpoint do pliku Constants.java
         Request request = new Request.Builder()
                 .url(Constants.SENSOR_STATUS_ENDPOINT)
                 .addHeader("Authorization", "Bearer " + jwtToken)
@@ -667,8 +621,6 @@ public class VpsClientService extends Service {
                     if (resp.isSuccessful() && resp.body() != null) {
                         String jsonResponse = resp.body().string();
 
-                        // Używamy GSON, tak jak w syncGatewayDefinitions
-                        // Będziemy potrzebować nowej klasy SensorStatusErrorDto
                         Type listType = new TypeToken<List<SensorStatusErrorDto>>() {}.getType();
                         List<SensorStatusErrorDto> errors = gson.fromJson(jsonResponse, listType);
 
@@ -676,8 +628,6 @@ public class VpsClientService extends Service {
                             Log.w(TAG, "Wykryto " + errors.size() + " błędów statusu czujników.");
                             for (SensorStatusErrorDto error : errors) {
 
-                                // Użyj nazwy encji (np. "Bramka Kuchnia") jeśli jest dostępna,
-                                // w przeciwnym razie użyj ID (np. "sensor_123")
                                 String entityIdentifier;
                                 if (error.entityName != null && !error.entityName.isEmpty()) {
                                     entityIdentifier = error.entityName;
@@ -685,30 +635,24 @@ public class VpsClientService extends Service {
                                     entityIdentifier = error.entityType + "_" + error.entityId;
                                 }
 
-                                // Wywołaj nową metodę z NotificationHelpera
                                 notificationHelper.showSensorCommsError(entityIdentifier, error.readableMessage);
                             }
                         } else {
-                            // To jest normalne, oznacza że nie ma błędów
                             Log.d(TAG, "Brak błędów statusu czujników.");
                         }
                     } else {
                         Log.w(TAG, "Pobieranie statusu błędów nieudane, kod: " + resp.code());
                     }
                 } catch (Exception e) {
-                    // Np. błąd parsowania JSON
                     Log.e(TAG, "KRYTYCZNY BLAD w onResponse (Status Błędów): " + e.getMessage());
                 }
             }
         });
     }
-    // ⭐️⭐️⭐️ ZADANIE 6: RETENCJA (To czego brakowało) ⭐️⭐️⭐️
     private void checkRetentionStatus() {
         String jwtToken = getJwtToken();
         if (jwtToken == null) return;
 
-        // UWAGA: Upewnij się, że w Constants.java masz VPS_SERVER_IP
-        // Jeśli nie, użyj swojego adresu IP na sztywno do testów
         String url = Constants.VPS_SERVER_IP + "/api/retention/status";
 
         Request request = new Request.Builder()
@@ -718,7 +662,7 @@ public class VpsClientService extends Service {
 
         httpClient.newCall(request).enqueue(new Callback() {
             @Override
-            public void onFailure(@NonNull Call call, @NonNull IOException e) { /* ignoruj błędy sieci */ }
+            public void onFailure(@NonNull Call call, @NonNull IOException e) {}
 
             @Override
             public void onResponse(@NonNull Call call, @NonNull Response response) {
@@ -727,17 +671,15 @@ public class VpsClientService extends Service {
                         JSONObject json = new JSONObject(resp.body().string());
                         String serverStatus = json.optString("status", "NONE");
 
-                        // Odczytaj ostatnio znany status
+
                         String localStatus = retentionPrefs.getString("last_status", "NONE");
 
-                        // Jeśli status się zmienił i jest decyzją końcową
                         if (!serverStatus.equals(localStatus)) {
                             if ("ACCEPTED".equals(serverStatus)) {
                                 notificationHelper.showRetentionStatusNotification(true);
                             } else if ("REJECTED".equals(serverStatus)) {
                                 notificationHelper.showRetentionStatusNotification(false);
                             }
-                            // Zapisz, żeby nie spamować powiadomieniami
                             retentionPrefs.edit().putString("last_status", serverStatus).apply();
                         }
                     }

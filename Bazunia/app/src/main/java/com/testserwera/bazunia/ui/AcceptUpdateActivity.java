@@ -12,18 +12,11 @@ import android.widget.Button;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
-
 import androidx.annotation.NonNull;
-// ZMIANA: Nie importujemy już AppCompatActivity, bo dziedziczymy po BaseActivity (w tym samym pakiecie)
-// import androidx.appcompat.app.AppCompatActivity;
-
 import com.testserwera.bazunia.R;
 import com.testserwera.bazunia.utils.Constants;
-
 import org.json.JSONObject;
-
 import java.io.IOException;
-
 import okhttp3.Call;
 import okhttp3.Callback;
 import okhttp3.MediaType;
@@ -32,11 +25,9 @@ import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
 
-// ZMIANA: Dziedziczymy po BaseActivity
 public class AcceptUpdateActivity extends BaseActivity {
 
     private static final String TAG = "AcceptUpdateActivity";
-
     private ProgressBar progressBar;
     private TextView tvStatus;
     private TextView tvPercent;
@@ -45,7 +36,7 @@ public class AcceptUpdateActivity extends BaseActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState); // BaseActivity załatwia motywy
+        super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_accept_update);
 
         progressBar = findViewById(R.id.progressBar);

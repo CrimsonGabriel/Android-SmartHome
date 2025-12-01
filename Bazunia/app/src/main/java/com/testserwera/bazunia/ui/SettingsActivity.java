@@ -13,11 +13,8 @@ import android.widget.LinearLayout;
 import android.widget.RadioGroup;
 import android.widget.TextView;
 import android.widget.Toast;
-
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
-// import androidx.appcompat.app.AppCompatActivity; // ZMIANA: Niepotrzebne
-
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.materialswitch.MaterialSwitch;
 import com.google.android.material.textfield.TextInputEditText;
@@ -28,11 +25,8 @@ import com.testserwera.bazunia.utils.AppearanceManager;
 import com.testserwera.bazunia.utils.CleanupManager;
 import com.testserwera.bazunia.utils.Constants;
 import com.testserwera.bazunia.utils.LocaleManager;
-
 import org.json.JSONObject;
-
 import java.io.IOException;
-
 import okhttp3.Call;
 import okhttp3.Callback;
 import okhttp3.MediaType;
@@ -41,7 +35,6 @@ import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
 
-// ZMIANA: BaseActivity
 public class SettingsActivity extends BaseActivity {
     private static final String TAG = "SettingsActivity";
     public static final String NOTIFICATION_PREFS = "NotificationSettings";
@@ -50,29 +43,20 @@ public class SettingsActivity extends BaseActivity {
     private AppearanceManager appearanceManager;
     private LocaleManager localeManager;
     private CleanupManager cleanupManager;
-
-    // UI Controls - Appearance
     private MaterialSwitch switchTheme;
     private RadioGroup radioGroupTextScale;
     private RadioGroup radioGroupButtonScale;
     private RadioGroup radioGroupLanguage;
-
-    // UI Controls - Summaries
     private TextView txtRetentionSummary;
 
     private OkHttpClient httpClient;
     private SharedPreferences authPrefs;
     private SharedPreferences notificationPrefs;
 
-    // ZMIANA: Usunięto attachBaseContext
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        // ZMIANA: Usunięto ręczne applyAppearance
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_settings);
-
-        // Inicjalizacja menedżerów (potrzebne do zapisu ustawień)
         appearanceManager = new AppearanceManager(this);
         localeManager = new LocaleManager(this);
         cleanupManager = new CleanupManager(this);
@@ -89,13 +73,10 @@ public class SettingsActivity extends BaseActivity {
     }
 
     private void setupViews() {
-        // Appearance
         switchTheme = findViewById(R.id.switchThemeSettings);
         radioGroupTextScale = findViewById(R.id.radioGroupTextScale);
         radioGroupButtonScale = findViewById(R.id.radioGroupButtonScale);
         radioGroupLanguage = findViewById(R.id.radioGroupLanguage);
-
-        // Summaries
         txtRetentionSummary = findViewById(R.id.txtRetentionSummary);
     }
 
@@ -125,10 +106,6 @@ public class SettingsActivity extends BaseActivity {
         btnBackSettings.setOnClickListener(v -> finish());
     }
 
-    // ============================================================
-    //  DIALOGI I LOGIKA BIZNESOWA
-    // ============================================================
-
     private void showGlobalIntervalDialog() {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle(getString(R.string.settings_interval_title));
@@ -142,14 +119,8 @@ public class SettingsActivity extends BaseActivity {
         input.setInputType(InputType.TYPE_CLASS_NUMBER);
         input.setHint(getString(R.string.default_interval_value));
         input.setText(getString(R.string.default_interval_value));
-
-        // Dodajemy minimalną wysokość dla inputu w kodzie, jeśli to dialog programowy
-        // Choć lepiej byłoby użyć layoutu XML, tutaj robimy to programowo:
-        // (Opcjonalnie, BaseActivity zajmuje się głównie XMLami, tu zostawiamy standard)
-
         layout.addView(input);
         builder.setView(layout);
-
         builder.setPositiveButton(getString(R.string.settings_interval_save_button), (dialog, which) -> {
             Editable text = input.getText();
             String value = (text != null) ? text.toString() : "";
@@ -378,10 +349,6 @@ public class SettingsActivity extends BaseActivity {
         builder.show();
     }
 
-    // ============================================================
-    //  API LOGIC (Retencja)
-    // ============================================================
-
     private void fetchCurrentRetentionStatus() {
         String jwtToken = authPrefs.getString(LoginActivity.KEY_JWT_TOKEN, null);
         if (jwtToken == null) return;
@@ -469,10 +436,6 @@ public class SettingsActivity extends BaseActivity {
         });
     }
 
-    // ============================================================
-    // APPEARANCE LOGIC
-    // ============================================================
-
     private void loadCurrentAppearanceSettings() {
         int currentTheme = appearanceManager.getTheme();
         switchTheme.setChecked(currentTheme == AppearanceManager.THEME_DARK);
@@ -493,10 +456,6 @@ public class SettingsActivity extends BaseActivity {
     }
 
     private void setupAppearanceListeners() {
-        // KIEDY UŻYTKOWNIK ZMIENIA USTAWIENIE:
-        // 1. Zapisujemy do SharedPreferences
-        // 2. Wołamy recreate()
-        // 3. BaseActivity.onCreate() wstaje, czyta nowe prefsy i nakłada odpowiedni Theme Overlay.
 
         switchTheme.setOnCheckedChangeListener((buttonView, isChecked) -> {
             int newTheme = isChecked ? AppearanceManager.THEME_DARK : AppearanceManager.THEME_LIGHT;

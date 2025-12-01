@@ -47,21 +47,19 @@ public class ThresholdManager {
 
         switch (type.toLowerCase()) {
             case "temperature":
-                return new Pair<>(-10f, 40f); // Typowa temperatura otoczenia
+                return new Pair<>(-10f, 40f);
             case "humidity":
-                return new Pair<>(0f, 100f);  // Wilgotność %
+                return new Pair<>(0f, 100f);
             case "power":
-                return new Pair<>(0f, 2500f); // Moc do 2.5kW (czajnik itp.)
+                return new Pair<>(0f, 2500f);
             case "voltage":
-                return new Pair<>(180f, 260f); // Napięcie sieciowe
+                return new Pair<>(180f, 260f);
             case "smoke":
-                return new Pair<>(0f, 500f);   // PPM dymu
+                return new Pair<>(0f, 500f);
             case "level":
-                return new Pair<>(0f, 100f);   // Poziom %
+                return new Pair<>(0f, 100f);
             case "sunlight":
-                return new Pair<>(0f, 10000f); // Luxy
-
-            // Flow usunięty stąd, bo ma nie mieć suwaków
+                return new Pair<>(0f, 10000f);
 
             default:
                 return new Pair<>(0f, 100f);
@@ -75,7 +73,6 @@ public class ThresholdManager {
     public boolean isThresholdSupported(String type) {
         if (type == null) return false;
         switch (type.toLowerCase()) {
-            // GRUPA BEZ SUWAKÓW (Alarm gdy > 0 lub > 0.5)
             case "contact":
             case "motion":
             case "button":
@@ -86,10 +83,9 @@ public class ThresholdManager {
             case "socket":
             case "switch":
             case "lock":
-            case "flow": // Flow też tu jest -> zwróci FALSE -> wejdzie w GONE w Activity
+            case "flow":
                 return false;
 
-            // GRUPA Z SUWAKAMI (Temp, Power, Smoke itp.)
             default:
                 return true;
         }

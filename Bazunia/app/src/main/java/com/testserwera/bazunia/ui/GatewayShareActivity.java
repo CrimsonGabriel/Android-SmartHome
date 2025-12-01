@@ -15,28 +15,22 @@ import android.widget.ProgressBar;
 import android.widget.RadioButton;
 import android.widget.TextView;
 import android.widget.Toast;
-
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
-// import androidx.appcompat.app.AppCompatActivity; // ZMIANA: Niepotrzebne
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
-
 import com.google.android.material.button.MaterialButton;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import com.testserwera.bazunia.R;
 import com.testserwera.bazunia.data.Gateway;
 import com.testserwera.bazunia.utils.Constants;
-
 import org.json.JSONObject;
-
 import java.io.IOException;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
-
 import okhttp3.Call;
 import okhttp3.Callback;
 import okhttp3.MediaType;
@@ -45,37 +39,28 @@ import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
 
-// ZMIANA: BaseActivity
 public class GatewayShareActivity extends BaseActivity {
 
     private static final String TAG = "GatewayShareActivity";
     private SharedPreferences authPrefs;
     private OkHttpClient httpClient;
     private Gson gson;
-
-    // UI Components
     private AutoCompleteTextView spinnerGateways;
     private AutoCompleteTextView spinnerUsers;
-
     private RadioButton radioFull;
     private MaterialButton btnShare;
-
     private ProgressBar progressBar;
     private TextView txtEmptyList;
-
     private List<Gateway> myGateways = new ArrayList<>();
     private List<UserPickDto> availableUsers = new ArrayList<>();
     private ShareAdapter adapter;
-
     private Gateway selectedGateway;
     private UserPickDto selectedUser;
     private Long currentUserId;
 
-    // ZMIANA: Usunięto attachBaseContext
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState); // BaseActivity załatwia motywy
+        super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_gateway_share);
 
         authPrefs = getSharedPreferences(LoginActivity.AUTH_PREFS, Context.MODE_PRIVATE);
@@ -116,7 +101,6 @@ public class GatewayShareActivity extends BaseActivity {
         spinnerUsers.setOnItemClickListener((parent, view, position, id) -> selectedUser = availableUsers.get(position));
     }
 
-    // --- KROK 1: Pobierz ID Usera ---
     private void fetchCurrentUserAndData() {
         progressBar.setVisibility(View.VISIBLE);
         String token = getJwtToken();
@@ -157,7 +141,6 @@ public class GatewayShareActivity extends BaseActivity {
         });
     }
 
-    // --- KROK 2: Pobierz bramki (FILTROWANIE WŁAŚCICIELA) ---
     private void fetchGateways() {
         String token = getJwtToken();
         Request request = new Request.Builder()
@@ -189,7 +172,6 @@ public class GatewayShareActivity extends BaseActivity {
         });
     }
 
-    // --- KROK 3: Pobierz listę userów do wyboru ---
     private void fetchAvailableUsers() {
         String token = getJwtToken();
         Request request = new Request.Builder()
@@ -216,7 +198,6 @@ public class GatewayShareActivity extends BaseActivity {
         });
     }
 
-    // --- KROK 4: Pobierz udziały ---
     private void fetchSharesForGateway(Long gatewayId) {
         progressBar.setVisibility(View.VISIBLE);
         String token = getJwtToken();
@@ -248,7 +229,6 @@ public class GatewayShareActivity extends BaseActivity {
         });
     }
 
-    // --- AKCJA: Udostępnij ---
     private void performShare() {
         if (selectedGateway == null) {
             Toast.makeText(this, "Wybierz bramkę!", Toast.LENGTH_SHORT).show();
@@ -338,7 +318,6 @@ public class GatewayShareActivity extends BaseActivity {
         });
     }
 
-    // --- UI Helpers ---
     private void setupGatewaySpinner(List<Gateway> gateways) {
         this.myGateways = gateways;
         if (gateways.isEmpty()) {
@@ -377,7 +356,6 @@ public class GatewayShareActivity extends BaseActivity {
         return authPrefs.getString(LoginActivity.KEY_JWT_TOKEN, null);
     }
 
-    // --- DTO ---
     private static class UserPickDto {
         long id;
         String email;
@@ -392,7 +370,6 @@ public class GatewayShareActivity extends BaseActivity {
         String permissionLevel;
     }
 
-    // --- Adapter ---
     private static class ShareAdapter extends RecyclerView.Adapter<ShareAdapter.ViewHolder> {
         private List<SharedUserDto> list;
         private final OnDeleteListener listener;

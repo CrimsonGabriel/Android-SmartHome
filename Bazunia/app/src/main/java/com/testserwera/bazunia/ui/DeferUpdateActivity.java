@@ -8,13 +8,10 @@ import android.os.Bundle;
 import android.util.Log;
 import android.widget.Toast;
 import androidx.annotation.NonNull;
-// ZMIANA: BaseActivity
 import com.testserwera.bazunia.utils.Constants;
 import okhttp3.*;
 import org.json.JSONObject;
 import java.io.IOException;
-
-// ZMIANA: Dziedziczenie po BaseActivity (nawet dla Activity bez UI warto zachować spójność)
 public class DeferUpdateActivity extends BaseActivity {
 
     private static final String TAG = "DeferUpdateActivity";
@@ -23,7 +20,6 @@ public class DeferUpdateActivity extends BaseActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        // Bez UI - działamy w tle, ale BaseActivity się zainicjuje (Locale/Theme)
 
         long assignmentId = getIntent().getLongExtra("ASSIGNMENT_ID", -1);
         String urgency = getIntent().getStringExtra("URGENCY");

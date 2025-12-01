@@ -9,19 +9,14 @@ import android.view.View;
 import android.widget.EditText;
 import android.widget.ProgressBar;
 import android.widget.Toast;
-
 import androidx.annotation.NonNull;
-
 import com.testserwera.bazunia.R;
 import com.testserwera.bazunia.data.VpsClientService;
 import com.testserwera.bazunia.utils.Constants;
 import com.google.android.material.button.MaterialButton;
-
 import org.json.JSONException;
 import org.json.JSONObject;
-
 import java.io.IOException;
-
 import okhttp3.Call;
 import okhttp3.Callback;
 import okhttp3.MediaType;
@@ -30,22 +25,17 @@ import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
 
-// ZMIANA: BaseActivity
 public class CreatePasswordActivity extends BaseActivity {
 
     private static final String TAG = "CreatePasswordActivity";
-
     private EditText editTextPassword, editTextConfirmPassword;
     private MaterialButton btnSetPassword;
     private ProgressBar progressBar;
     private OkHttpClient httpClient;
     private String currentJwtToken;
 
-    // ZMIANA: Usunięto attachBaseContext - BaseActivity to obsługuje
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        // ZMIANA: Usunięto ręczne AppearanceManager
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_create_password);
 

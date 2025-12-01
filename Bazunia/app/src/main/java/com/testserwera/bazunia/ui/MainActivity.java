@@ -5,7 +5,6 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.widget.TextView;
-
 import com.testserwera.bazunia.utils.AppearanceManager;
 import com.testserwera.bazunia.data.DatabaseHelper;
 import com.testserwera.bazunia.R;
@@ -20,7 +19,6 @@ import android.util.Pair;
 import androidx.credentials.CredentialManager;
 import androidx.credentials.ClearCredentialStateRequest;
 import android.os.CancellationSignal;
-
 import android.content.pm.PackageManager;
 import android.os.Build;
 import androidx.activity.result.ActivityResultLauncher;
@@ -30,8 +28,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
-
-
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -43,26 +39,19 @@ import org.json.JSONException;
 import org.json.JSONObject;
 import android.widget.Toast;
 
-// ZMIANA: BaseActivity
 public class MainActivity extends BaseActivity {
 
     private DatabaseHelper dbHelper;
     private BottomSheetDialog riskSheetDialog;
-
     private AppearanceManager appearanceManager;
     private String currentTextScale;
     private String currentButtonScale;
-
     private ThresholdManager thresholdManager;
-
     private MaterialCardView cardAlerts;
     private TextView textAlertSummary;
-
     private CredentialManager credentialManager;
-
     private MaterialCardView cardBattery;
     private TextView textBatterySummary;
-
     private final ActivityResultLauncher<String> requestPermissionLauncher =
             registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
                 if (isGranted) {
@@ -72,16 +61,12 @@ public class MainActivity extends BaseActivity {
                 }
             });
 
-    // ZMIANA: Usunięto attachBaseContext (BaseActivity to robi)
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        // Inicjalizacja Managera do śledzenia zmian w onResume
         appearanceManager = new AppearanceManager(this);
         currentTextScale = appearanceManager.getTextScale();
         currentButtonScale = appearanceManager.getButtonScale();
-
-        // ZMIANA: Usunięto ręczne applyAppearance
 
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
@@ -98,18 +83,12 @@ public class MainActivity extends BaseActivity {
         MaterialButton btnSettings = findViewById(R.id.btnSettings);
         MaterialButton btnLogout = findViewById(R.id.btnLogout);
 
-
         credentialManager = CredentialManager.create(this);
-
         btnSettings.setOnClickListener(v -> startActivity(new Intent(this, SettingsActivity.class)));
-
         btnLogout.setOnClickListener(v -> showLogoutDialog());
-
         cardAllSensors.setOnClickListener(v -> startActivity(new Intent(MainActivity.this, DataActivity.class)));
-
         com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton fabCheck
                 = findViewById(R.id.fabCheckHome);
-
         fabCheck.setOnClickListener(v -> performHomeCheck());
     }
 
@@ -166,7 +145,6 @@ public class MainActivity extends BaseActivity {
             return;
         }
 
-        // Sprawdzenie czy zmieniła się skala (np. powrót z SettingsActivity)
         if (appearanceManager != null && (!currentTextScale.equals(appearanceManager.getTextScale()) ||
                 !currentButtonScale.equals(appearanceManager.getButtonScale()))) {
             recreate();

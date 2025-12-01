@@ -28,10 +28,9 @@ public class NotificationHelper {
     private final NotificationManager notificationManager;
 
     public enum ThresholdType {
-        LOW,            // Za nisko (np. zimno)
-        HIGH,           // Za wysoko (np. gorąco)
-        BINARY_ACTIVE,  // ⭐️ NOWOŚĆ: Stan aktywny (Otwarte, Ruch, Światło, Wyciek)
-        BATTERY         // Bateria
+        LOW,
+        HIGH,
+        BINARY_ACTIVE
     }
 
     public NotificationHelper(Context context) {
@@ -80,16 +79,12 @@ public class NotificationHelper {
      * Główna metoda wyświetlania alarmów czujników.
      * Obsługuje logikę tekstów dla różnych typów (Ruch, Drzwi, Temp).
      */
-    /**
-     * Główna metoda wyświetlania alarmów czujników.
-     * NAPRAWIONE: Używa poprawnego formatowania stringów (%s) zamiast .replace
-     */
+
     public void showThresholdAlert(SensorModel sensor, float currentValue, float threshold, ThresholdType type) {
         String title;
         String message;
         int notificationId = (sensor.gatewayId + "_" + sensor.sensorId).hashCode();
 
-        // Formatowanie wartości liczbowych (dla analogowych)
         String valStr = String.format(Locale.US, "%.1f", currentValue);
         String thrStr = String.format(Locale.US, "%.1f", threshold);
 
@@ -98,40 +93,32 @@ public class NotificationHelper {
                 String sensorType = sensor.type != null ? sensor.type.toLowerCase() : "";
 
                 if (sensorType.contains("motion")) {
-                    // RUCH
                     title = context.getString(R.string.alert_title_motion);
-                    // Używamy argumentów (sensorId, gatewayId) pod %1$s i %2$s
                     message = context.getString(R.string.alert_msg_motion, sensor.sensorId, sensor.gatewayId);
                 }
                 else if (sensorType.contains("light") || sensorType.contains("socket") || sensorType.contains("switch")) {
-                    // ŚWIATŁO
                     title = context.getString(R.string.alert_title_light);
                     message = context.getString(R.string.alert_msg_light, sensor.sensorId, sensor.gatewayId);
                 }
                 else if (sensorType.contains("flow") || sensorType.contains("leak") || sensorType.contains("valve")) {
-                    // WYCIEK
                     title = context.getString(R.string.alert_title_leak);
                     message = context.getString(R.string.alert_msg_leak, sensor.sensorId, sensor.gatewayId);
                 }
                 else {
-                    // DRZWI (Domyślne)
                     title = context.getString(R.string.alert_title_door_window);
                     message = context.getString(R.string.alert_msg_door_open, sensor.sensorId, sensor.gatewayId);
                 }
                 break;
 
             case LOW:
-                // ANALOGOWE - ZA NISKO
                 title = context.getString(R.string.alert_title_temp_humidity)
-                        .replace("[TYP]", sensor.type) // Tu w tytule nie dawaliśmy %s, więc replace jest OK (chyba że w XML zmieniłeś)
+                        .replace("[TYP]", sensor.type)
                         .replace("[ID]", sensor.sensorId);
 
-                // W treści używamy argumentów: TYP, WARTOŚĆ, PRÓG
                 message = context.getString(R.string.alert_msg_too_low, sensor.type, valStr, thrStr);
                 break;
 
             case HIGH:
-                // ANALOGOWE - ZA WYSOKO
                 title = context.getString(R.string.alert_title_temp_humidity)
                         .replace("[TYP]", sensor.type)
                         .replace("[ID]", sensor.sensorId);
@@ -146,7 +133,6 @@ public class NotificationHelper {
         showNotification(title, message, notificationId);
     }
 
-    // --- Metody Aktualizacji (System) ---
     public void showUpdateNotification(long assignmentId, String title, String version, String urgency) {
         String notifTitle = "Aktualizacja: " + title + " (" + version + ")";
         String notifBody = "Dostępna nowa aktualizacja. Status: " + urgency;
@@ -188,7 +174,6 @@ public class NotificationHelper {
         if (notificationManager != null) notificationManager.notify(notificationId, builder.build());
     }
 
-    // --- Metody Baterii i Błędów ---
     public void showBatteryAlert(String sensorName, String gatewayName, int batteryLevel) {
         String title = context.getString(R.string.alert_title_battery_low);
         String message;

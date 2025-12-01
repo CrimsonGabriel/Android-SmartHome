@@ -23,7 +23,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     public static final String TABLE_READINGS = "readings";
     private static final String COLUMN_ID = "id";
     public static final String COLUMN_GATE_ID = "gate_id";
-    public static final String COLUMN_SENSOR_ID = "sensor_id"; // Nazwa kolumny w readings
+    public static final String COLUMN_SENSOR_ID = "sensor_id";
     public static final String COLUMN_TYPE = "type";
     public static final String COLUMN_VALUE = "value";
     public static final String COLUMN_TIMESTAMP = "timestamp";
@@ -49,9 +49,9 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     public static final String S_COLUMN_INTERVAL = "interval_seconds";
     public static final String S_COLUMN_REPORTING_ENABLED = "reporting_enabled";
 
-    public static final String S_COLUMN_VALUE = "value"; // Alias do wynikow zlaczen
+    public static final String S_COLUMN_VALUE = "value";
 
-    // Tabele v3 (Foldery i Ulubione)
+    // Tabele (Foldery i Ulubione)
     public static final String TABLE_FOLDERS = "folders";
     public static final String F_COLUMN_ID = "id";
     public static final String F_COLUMN_NAME = "name";
@@ -67,11 +67,9 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     public static final String FS_COLUMN_FOLDER_ID = "folder_id";
     public static final String FS_COLUMN_SENSOR_ID = "sensor_id";
 
-    // USUNIĘTO: private final Context context; - nie jest już potrzebne jako pole klasy
 
     public DatabaseHelper(Context context) {
         super(context, DATABASE_NAME, null, DATABASE_VERSION);
-        // USUNIĘTO: this.context = context;
     }
 
     @Override
@@ -147,16 +145,13 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             try {
                 db.execSQL("ALTER TABLE " + TABLE_SENSORS + " ADD COLUMN " + S_COLUMN_REPORTING_ENABLED + " INTEGER NOT NULL DEFAULT 1");
             } catch (SQLException e) {
-                // POPRAWKA: Przekazanie wyjątku do Log.e
                 Log.e("DB_UPGRADE", "Nie udało się dodać kolumny reporting_enabled", e);
             }
         }
-        // Migracje (bez zmian)
         if (oldVersion < 2) {
             try {
                 db.execSQL("ALTER TABLE sensors RENAME TO " + TABLE_READINGS);
             } catch (SQLException e) {
-                // Fallback
                 db.execSQL("DROP TABLE IF EXISTS " + TABLE_READINGS);
                 db.execSQL("DROP TABLE IF EXISTS " + TABLE_GATEWAYS);
                 db.execSQL("DROP TABLE IF EXISTS " + TABLE_SENSORS);
@@ -172,7 +167,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             try {
                 db.execSQL("ALTER TABLE " + TABLE_SENSORS + " ADD COLUMN " + S_COLUMN_INTERVAL + " INTEGER");
             } catch (SQLException e) {
-                // POPRAWKA: Przekazanie wyjątku do Log.e
                 Log.e("DB_UPGRADE", "Nie udało się dodać kolumny interval_seconds", e);
             }
         }
@@ -191,7 +185,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         try {
             db.insertOrThrow(TABLE_READINGS, null, values);
         } catch (SQLException e) {
-            // POPRAWKA: Usunięcie e.getMessage() i przekazanie wyjątku
             Log.e("DB_INSERT", "SQLException while adding data", e);
         }
     }
@@ -215,8 +208,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 latestModel = new SensorModel(gatewayId, sId, null, type, value, timestamp, 0);
             }
         } catch (Exception e) {
-            // POPRAWKA: Usunięcie zależności od context i e.getMessage()
-            // Zamiast pobierać string z zasobów, logujemy techniczny błąd bezpośrednio.
             Log.e("DB_QUERY_ERROR", "Error fetching latest data", e);
         }
         return latestModel;
@@ -258,7 +249,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 } while (cursor.moveToNext());
             }
         } catch (Exception e) {
-            // POPRAWKA: Przekazanie wyjątku
             Log.e("DB_FILTER_ERROR", "Error filtering unique data", e);
         }
         return latestDataList;
@@ -280,7 +270,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         try {
             db.delete(TABLE_READINGS, COLUMN_TIMESTAMP + " < ?", new String[]{String.valueOf(cutoffTime)});
         } catch (SQLException e) {
-            // POPRAWKA: Przekazanie wyjątku
             Log.e("DB_CLEAN", "Error cleaning old data", e);
         }
     }
@@ -295,7 +284,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                     " LIMIT " + maxRecords + ")";
             db.delete(TABLE_READINGS, whereClause, null);
         } catch (SQLException e) {
-            // POPRAWKA: Przekazanie wyjątku
             Log.e("DB_CLEAN", "Error cleaning by size", e);
         }
     }
@@ -328,7 +316,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             }
             db.setTransactionSuccessful();
         } catch (Exception e) {
-            // POPRAWKA: Przekazanie wyjątku
             Log.e("DB_SYNC", "Error syncing gateways", e);
         } finally {
             if (db.inTransaction()) {
@@ -406,7 +393,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             }
             db.setTransactionSuccessful();
         } catch (Exception e) {
-            // POPRAWKA: Przekazanie wyjątku
             Log.e("DB_SYNC", "Error syncing folders", e);
         } finally {
             if (db.inTransaction()) {
@@ -570,7 +556,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 sensorData.reportingEnabled = cursor.getInt(reportingIndex) != 0;
             }
         } catch (Exception e) {
-            // POPRAWKA: Przekazanie wyjątku
             Log.e("DatabaseHelper", "Error getting metadata", e);
         }
         return sensorData;
@@ -583,13 +568,11 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         try {
             db.update(TABLE_SENSORS, values, S_COLUMN_ID + " = ?", new String[]{String.valueOf(sensorId)});
         } catch (Exception e) {
-            // POPRAWKA: Przekazanie wyjątku
             Log.e("DatabaseHelper", "Error updating status", e);
         }
     }
-    // --- METODY DO FILTROWANIA (NOWE) ---
+    // --- METODY DO FILTROWANIA  ---
 
-    // Pobiera unikalne typy czujników (do listy rozwijanej)
     public List<String> getAllSensorTypes() {
         List<String> types = new ArrayList<>();
         SQLiteDatabase db = this.getReadableDatabase();

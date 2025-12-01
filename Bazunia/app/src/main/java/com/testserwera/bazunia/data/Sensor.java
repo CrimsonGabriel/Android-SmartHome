@@ -5,7 +5,6 @@ package com.testserwera.bazunia.data;
  * Używa Gson do deserializacji.
  */
 public class Sensor {
-    // Nazwy pól muszą pasować do JSON-a z serwera (z backendu Sensor.java)
     long id;
     String name;
     String type;
@@ -14,7 +13,6 @@ public class Sensor {
     String keyword;
     Integer intervalSeconds;
 
-    // Nazwa musi pasować do DTO z backendu (SensorDto)
     boolean reportingEnabled;
 
     public long getId() { return id; }
